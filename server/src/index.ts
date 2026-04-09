@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
+import { MongoMemoryServer } from 'mongodb-memory-server';
 import { stationRoutes } from './routes/stationRoutes.js';
 import { workOrderRoutes } from './routes/workOrderRoutes.js';
 import { alertRoutes } from './routes/alertRoutes.js';
@@ -10,7 +11,8 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3003;
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/smartsolar';
+const MONGO_URI = process.env.MONGO_URI;
+const USE_MEMORY = process.env.MONGO_MEMORY === 'true' || !MONGO_URI;
 
 app.use(cors());
 app.use(express.json());
@@ -22,18 +24,32 @@ app.use('/api/alerts', alertRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    mongo: USE_MEMORY ? 'memory' : 'remote',
+  });
 });
 
-// Connect to MongoDB then start
-mongoose.connect(MONGO_URI)
-  .then(() => {
-    console.log(`✅ MongoDB connected: ${MONGO_URI}`);
-    app.listen(PORT, () => {
-      console.log(`🚀 SmartSolar server running on port ${PORT}`);
-    });
-  })
-  .catch((err) => {
-    console.error('❌ MongoDB connection error:', err);
-    process.exit(1);
+async function start() {
+  let mongoUri = MONGO_URI;
+
+  if (USE_MEMORY) {
+    console.log('📦 Starting MongoDB Memory Server...');
+    const memServer = await MongoMemoryServer.create();
+    mongoUri = memServer.getUri();
+    console.log(`   Memory server ready: ${mongoUri.slice(0, 40)}...`);
+  }
+
+  await mongoose.connect(mongoUri!);
+  console.log(`✅ MongoDB connected: ${USE_MEMORY ? 'memory' : MONGO_URI}`);
+
+  app.listen(PORT, () => {
+    console.log(`🚀 SmartSolar server running on http://localhost:${PORT}`);
   });
+}
+
+start().catch((err) => {
+  console.error('❌ Server start error:', err);
+  process.exit(1);
+});

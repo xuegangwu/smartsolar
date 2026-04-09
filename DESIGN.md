@@ -1,6 +1,10 @@
 # SmartSolar — 光储电站运维平台
 
 > 面向 Risen 内部运维团队的智能运维管理平台
+>
+> **开发模式**: 3 小时迭代，快速原型 → 演示确认 → 迭代
+> **迭代记录**: `docs/ITERATIONS.md`
+> **开发规范**: `docs/STANDARDS.md`
 
 ---
 
