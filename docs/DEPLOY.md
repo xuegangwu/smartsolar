@@ -37,7 +37,7 @@ gh repo create smartsolar --public --source=. --push
 
 | Secret 名称 | 值 | 说明 |
 |------------|-----|------|
-| `DEPLOY_HOST` | `47.90.138.136` | 服务器 IP |
+| `DEPLOY_HOST` | `47.100.20.52` | 服务器 IP |
 | `DEPLOY_USER` | `root` | SSH 用户名（根据实际填写） |
 | `DEPLOY_SSH_KEY` | `-----BEGIN RSA PRIVATE KEY-----\n...` | 私钥内容（cat ~/.ssh/solaripple.pem） |
 | `DEPLOY_PATH` | `/var/www/smartsolar.solaripple.com` | 部署目录 |
