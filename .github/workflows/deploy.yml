@@ -1,0 +1,78 @@
+name: Build & Deploy SmartSolar
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── Build Client ──────────────────────────────────────────────────────────
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'client/package-lock.json'
+
+      - name: Install client deps
+        run: cd client && npm ci
+
+      - name: Build client
+        run: cd client && npm run build
+        env:
+          CI: false
+
+      # ── Build Server ─────────────────────────────────────────────────────────
+      - name: Setup Node.js (server)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'server/package-lock.json'
+
+      - name: Install server deps
+        run: cd server && npm ci
+
+      - name: Build server
+        run: cd server && npm run build
+        env:
+          CI: false
+
+      # ── Deploy via SSH ──────────────────────────────────────────────────────
+      - name: Deploy to SmartSolar Server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT || '22' }}
+          script: |
+            set -e
+            export DEPLOY_DIR=${{ secrets.DEPLOY_PATH }}/smartsolar
+            mkdir -p $DEPLOY_DIR
+
+            # Stop existing pm2 process
+            pm2 stop smartsolar-server || true
+
+            # Copy build artifacts
+            cp -r ${{ github.workspace }}/client/dist/* $DEPLOY_DIR/client/
+            cp -r ${{ github.workspace }}/server/dist/* $DEPLOY_DIR/server/
+            cp ${{ github.workspace }}/server/package.json $DEPLOY_DIR/server/
+            cp ${{ github.workspace }}/server/.env.example $DEPLOY_DIR/server/.env
+
+            # Install server deps (production)
+            cd $DEPLOY_DIR/server
+            npm install --production
+
+            # Start with pm2
+            cd $DEPLOY_DIR/server
+            pm2 start dist/index.js --name smartsolar-server
+
+            echo "✅ SmartSolar deployed at $(date)"
