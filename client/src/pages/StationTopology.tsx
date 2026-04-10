@@ -5,89 +5,132 @@ import { stationApi } from '../services/api';
 
 const { Text, Title } = Typography;
 
-function StatusBadge({ label, status }: { label: string; status: 'online' | 'warning' | 'offline' }) {
+function StatusDot({ status }: { status: 'online' | 'warning' | 'offline' }) {
   const colors = { online: '#16a34a', warning: '#d97706', offline: '#b8c0cc' };
   const c = colors[status] || colors.offline;
+  return <span style={{ width: 8, height: 8, borderRadius: '50%', background: c, display: 'inline-block', boxShadow: status === 'online' ? `0 0 6px ${c}` : 'none' }} />;
+}
+
+// Node card: a round icon + label + value + status
+function NodeCard({ icon, label, value, unit, color, badge }: {
+  icon: string; label: string; value: number | string; unit: string; color: string; badge?: string;
+}) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-      <span style={{ width: 8, height: 8, borderRadius: '50%', background: c, display: 'inline-block', boxShadow: status === 'online' ? `0 0 6px ${c}` : 'none' }} />
-      <span style={{ fontSize: 12, color: '#4a5568', fontFamily: 'Inter, sans-serif' }}>{label}</span>
-      <span style={{ fontSize: 11, color: c, fontFamily: 'JetBrains Mono, monospace', fontWeight: 600 }}>
-        {status === 'online' ? '在线' : status === 'warning' ? '告警' : '离线'}
-      </span>
+    <div style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+      padding: '12px 8px', borderRadius: 14,
+      background: '#fff',
+      border: `1.5px solid ${color}30`,
+      boxShadow: `0 2px 8px ${color}15`,
+      minWidth: 96,
+    }}>
+      <div style={{
+        width: 52, height: 52, borderRadius: '50%',
+        background: `${color}12`,
+        border: `2px solid ${color}50`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 24,
+      }}>
+        {icon}
+      </div>
+      <span style={{ fontSize: 11, color: '#8896a6', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</span>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 2 }}>
+        <span style={{ fontSize: 18, fontWeight: 800, color, fontFamily: 'JetBrains Mono, monospace', lineHeight: 1 }}>{value}</span>
+        <span style={{ fontSize: 10, color: '#b8c0cc', fontFamily: 'JetBrains Mono, monospace' }}>{unit}</span>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        <StatusDot status="online" />
+        <span style={{ fontSize: 10, color: '#8896a6' }}>{badge || '在线'}</span>
+      </div>
     </div>
   );
 }
 
-// Animated arrow using CSS
-function FlowArrow({ direction, label, color, biDirectional = false }: {
-  direction: 'right' | 'left' | 'down' | 'up' | 'right-down' | 'left-down' | 'right-up' | 'left-up';
-  label?: string; color?: string; biDirectional?: boolean;
+// Animated arrow with moving dot and power label
+function FlowLine({ label, power, color, direction = 'right', dash = false }: {
+  label?: string; power?: string; color?: string; direction?: 'h' | 'v'; dash?: boolean;
 }) {
-  const bg = color || '#d97706';
-  const rotations: Record<string, number> = {
-    right: 0, left: 180, down: 90, up: -90,
-    'right-down': 45, 'left-down': 135, 'right-up': -45, 'left-up': -135,
-  };
-  const rot = rotations[direction] || 0;
-
-  const h = direction === 'down' || direction === 'up' ? 28 : 20;
-  const w = direction === 'down' || direction === 'up' ? 14 : 28;
-
+  const c = color || '#d97706';
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, position: 'relative' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
       {label && (
         <div style={{
-          fontSize: 9, fontFamily: 'JetBrains Mono, monospace', fontWeight: 700,
-          color: bg, background: `${bg}18`, border: `1px solid ${bg}40`,
-          borderRadius: 3, padding: '1px 5px', whiteSpace: 'nowrap',
-          position: 'absolute', top: biDirectional ? '50%' : 0,
-          left: '50%', transform: 'translateX(-50%)',
-          zIndex: 2,
+          fontSize: 10, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace',
+          color: c, background: `${c}15`, border: `1px solid ${c}35`,
+          borderRadius: 4, padding: '2px 7px', whiteSpace: 'nowrap',
         }}>
-          {biDirectional ? `↔ ${label}` : `→ ${label}`}
+          {label} {power && <span style={{ opacity: 0.7 }}>{power}</span>}
         </div>
       )}
-      <svg
-        width={w} height={h}
-        viewBox={biDirectional ? `0 0 ${w} ${h}` : `0 0 ${w} ${h}`}
-        style={{ overflow: 'visible' }}
-      >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 0, position: 'relative' }}>
         {/* Line */}
-        <line
-          x1={direction === 'left' ? w : 0} y1={direction === 'up' ? h : direction === 'down' ? 0 : h / 2}
-          x2={direction === 'left' ? 0 : w} y2={direction === 'up' ? 0 : direction === 'down' ? h : h / 2}
-          stroke={bg} strokeWidth={2} opacity={0.7}
-        />
+        <div style={{
+          width: direction === 'h' ? 36 : 2,
+          height: direction === 'v' ? 28 : 2,
+          background: dash ? 'transparent' : c,
+          borderTop: dash ? `2px dashed ${c}` : `2px solid ${c}`,
+          opacity: 0.5,
+          position: 'relative',
+        }} />
         {/* Arrow head */}
-        <polygon
-          points={biDirectional
-            ? `${w},${h/2} ${w-6},${h/2-4} ${w-6},${h/2+4} 0,${h/2-4} 0,${h/2+4} ${w-6},${h/2-4}`
-            : direction === 'right' ? `0,0 ${w-6},${h/2} 0,${h}` :
-              direction === 'left' ? `${w},0 6,${h/2} ${w},${h}` :
-              direction === 'down' ? `0,0 ${w/2},${h-6} ${w},0` :
-              `0,${h} ${w/2},6 ${w},${h}`}
-          fill={bg} opacity={0.8}
-        />
-        {/* Animated dot moving along the line */}
-        <circle r={2.5} fill={bg}>
-          {biDirectional ? (
-            <animateTransform attributeName="transform" type="translate"
-              values={`0,${h/2};${w - 5},${h/2}`} dur="1.5s" repeatCount="indefinite" />
-          ) : (
-            <animateTransform attributeName="transform" type="translate"
-              values={
-                direction === 'right' || direction === 'right-down' || direction === 'right-up'
-                  ? `0,${h/2};${w - 5},${h/2}`
-                  : direction === 'left' || direction === 'left-down' || direction === 'left-up'
-                  ? `${w},${h/2};5,${h/2}`
-                  : direction === 'down'
-                  ? `${w/2},0;${w/2},${h - 5}`
-                  : `${w/2},${h};${w/2},5`
-              } dur="1.5s" repeatCount="indefinite" />
-          )}
-        </circle>
-      </svg>
+        <div style={{
+          width: 0, height: 0,
+          borderTop: '5px solid transparent',
+          borderBottom: '5px solid transparent',
+          borderLeft: `8px solid ${c}`,
+          opacity: 0.7,
+        }} />
+        {/* Animated dot */}
+        <div style={{
+          position: 'absolute', top: '50%', left: 0,
+          transform: 'translateY(-50%)',
+          width: 6, height: 6, borderRadius: '50%', background: c,
+          animation: 'flowDot 1.8s ease-in-out infinite',
+        }} />
+      </div>
+    </div>
+  );
+}
+
+// Battery with SOC ring
+function BatteryCard({ value, color }: { value: number; color?: string }) {
+  const c = color || '#e6342a';
+  const r = 26;
+  const circ = 2 * Math.PI * r;
+  const offset = circ * (1 - value / 100);
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+      padding: '12px 8px', borderRadius: 14,
+      background: '#fff',
+      border: `1.5px solid ${c}30`,
+      boxShadow: `0 2px 8px ${c}15`,
+      minWidth: 96,
+    }}>
+      {/* SOC Ring */}
+      <div style={{ position: 'relative', width: 56, height: 56 }}>
+        <svg width="56" height="56" style={{ transform: 'rotate(-90deg)' }}>
+          <circle cx="28" cy="28" r={r} fill="none" stroke={`${c}20`} strokeWidth="5" />
+          <circle
+            cx="28" cy="28" r={r} fill="none" stroke={c} strokeWidth="5"
+            strokeDasharray={circ} strokeDashoffset={offset}
+            strokeLinecap="round"
+            style={{ transition: 'stroke-dashoffset 1s ease' }}
+          />
+        </svg>
+        <div style={{
+          position: 'absolute', inset: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 11, fontWeight: 800, color: c, fontFamily: 'JetBrains Mono, monospace',
+        }}>
+          {value}%
+        </div>
+      </div>
+      <span style={{ fontSize: 11, color: '#8896a6', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>储能</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        <StatusDot status="online" />
+        <span style={{ fontSize: 10, color: '#8896a6' }}>在线</span>
+      </div>
     </div>
   );
 }
@@ -135,18 +178,19 @@ export default function StationTopology() {
     );
   }
 
-  const nodes = [
-    { icon: '☀️', label: '光伏', value: data.solar, unit: 'kW', color: '#d97706' },
-    { icon: '⚡', label: 'PCS', value: data.pcs, unit: 'kW', color: '#2563eb' },
-    { icon: '🔋', label: '储能', value: data.battery, unit: '%', color: '#e6342a' },
-    { icon: '🏭', label: '电网', value: data.grid, unit: 'kW', color: '#7c3aed' },
-    { icon: '🚗', label: '充电桩', value: data.ev, unit: 'kW', color: '#ea580c' },
-  ];
-
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, fontFamily: 'Inter, sans-serif' }}>
+    <div style={{ fontFamily: 'Inter, sans-serif' }}>
+      <style>{`
+        @keyframes flowDot {
+          0% { left: 0; opacity: 0; }
+          20% { opacity: 1; }
+          80% { opacity: 1; }
+          100% { left: calc(100% - 6px); opacity: 0; }
+        }
+      `}</style>
+
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
         <div>
           <Title level={4} style={{ margin: 0, color: '#1a1a2e', fontWeight: 700, fontSize: 18 }}>
             ⚡ {station.name}
@@ -155,189 +199,150 @@ export default function StationTopology() {
             {typeof station.location === 'string' ? station.location : station.location?.address} · 装机 {station.capacity || station.installedCapacity || 0}MW
           </Text>
         </div>
-        <Tag style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#e6342a', borderRadius: 20, fontSize: 12, padding: '2px 12px' }}>
-          ● 实时拓扑
-        </Tag>
+        <Space direction="vertical" align="end" size={4}>
+          <Tag style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#e6342a', borderRadius: 20, fontSize: 12, padding: '2px 12px' }}>
+            ● 实时拓扑
+          </Tag>
+          <Space size={16} wrap>
+            <Space size={5}>
+              <div style={{ width: 20, height: 2, background: '#d97706', borderRadius: 1, position: 'relative' }}>
+                <div style={{ position: 'absolute', right: -3, top: -2, width: 0, height: 0, borderLeft: '6px solid #d97706', borderTop: '3px solid transparent', borderBottom: '3px solid transparent' }} />
+              </div>
+              <span style={{ fontSize: 11, color: '#4a5568' }}>电力流</span>
+            </Space>
+            <Space size={5}>
+              <div style={{ width: 20, height: 2, borderTop: '2px dashed #2563eb' }} />
+              <span style={{ fontSize: 11, color: '#4a5568' }}>信息流</span>
+            </Space>
+            <Space size={5}>
+              <div style={{ width: 20, height: 2, background: '#16a34a', borderRadius: 1, position: 'relative' }}>
+                <div style={{ position: 'absolute', left: -3, top: -2, width: 0, height: 0, borderRight: '6px solid #16a34a', borderTop: '3px solid transparent', borderBottom: '3px solid transparent' }} />
+                <div style={{ position: 'absolute', right: -3, top: -2, width: 0, height: 0, borderLeft: '6px solid #16a34a', borderTop: '3px solid transparent', borderBottom: '3px solid transparent' }} />
+              </div>
+              <span style={{ fontSize: 11, color: '#4a5568' }}>双向</span>
+            </Space>
+          </Space>
+        </Space>
       </div>
 
-      {/* KPI Row */}
-      <Row gutter={[10, 10]}>
-        {nodes.map(n => (
-          <Col xs={12} sm={8} md={4} key={n.label}>
-            <Card
-              size="small"
-              style={{
-                background: '#fff',
-                border: `1px solid ${n.color}25`,
-                borderRadius: 10,
-                textAlign: 'center',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-              }}
-              styles={{ body: { padding: '12px 8px' } }}
-            >
-              <div style={{ fontSize: 10, color: '#8896a6', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
-                {n.label}
-              </div>
-              <div style={{ fontSize: 22, fontWeight: 700, color: n.color, fontFamily: 'JetBrains Mono, monospace', lineHeight: 1 }}>
-                {n.value}
-                <span style={{ fontSize: 12, color: '#b8c0cc', marginLeft: 2 }}>{n.unit}</span>
-              </div>
-            </Card>
-          </Col>
-        ))}
-      </Row>
-
-      {/* Topology */}
+      {/* Main topology card */}
       <Card
-        style={{ background: '#fff', border: '1px solid #e8eaed', borderRadius: 14, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}
-        styles={{ body: { padding: '28px 24px' } }}
+        style={{ background: '#fff', border: '1px solid #e8eaed', borderRadius: 16, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
+        styles={{ body: { padding: '32px 24px' } }}
       >
-        {/* Legend */}
-        <div style={{ display: 'flex', gap: 20, marginBottom: 20, justifyContent: 'center', flexWrap: 'wrap' }}>
-          <Space size={6}>
-            <div style={{ width: 28, height: 3, background: '#d97706', borderRadius: 2, position: 'relative' }}>
-              <div style={{ position: 'absolute', right: -4, top: -3, width: 0, height: 0, borderLeft: '7px solid #d97706', borderTop: '4px solid transparent', borderBottom: '4px solid transparent' }} />
-            </div>
-            <span style={{ fontSize: 11, color: '#4a5568', fontWeight: 600 }}>电力流</span>
-          </Space>
-          <Space size={6}>
-            <div style={{ width: 28, height: 3, background: '#2563eb', borderRadius: 2, borderTop: '3px dashed #2563eb', background: 'transparent' }} />
-            <span style={{ fontSize: 11, color: '#4a5568', fontWeight: 600 }}>信息流</span>
-          </Space>
-          <Space size={6}>
-            <div style={{ width: 28, height: 3, background: '#16a34a', borderRadius: 2, position: 'relative' }}>
-              <div style={{ position: 'absolute', left: -4, top: -3, width: 0, height: 0, borderRight: '7px solid #16a34a', borderTop: '4px solid transparent', borderBottom: '4px solid transparent' }} />
-              <div style={{ position: 'absolute', right: -4, top: -3, width: 0, height: 0, borderLeft: '7px solid #16a34a', borderTop: '4px solid transparent', borderBottom: '4px solid transparent' }} />
-            </div>
-            <span style={{ fontSize: 11, color: '#4a5568', fontWeight: 600 }}>双向充放电</span>
-          </Space>
+        {/* Row 1: Solar centered */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
+          <NodeCard icon="☀️" label="光伏" value={data.solar} unit="kW" color="#d97706" badge="发电中" />
         </div>
 
-        {/* Main topology: 5 nodes in a clean H-layout */}
-        {/* Grid: row1=solar center, row2=PCS|battery|grid|EV spread */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr',
-          gridTemplateRows: 'auto auto',
-          gap: '0 0',
-          alignItems: 'center',
-          maxWidth: 860,
-          margin: '0 auto',
-        }}>
-          {/* ── ROW 1: Solar (centered across cols 2-4) ── */}
-          <div /> {/* col 1 empty */}
-          {/* Solar node — spans visually through gap space */}
-          <div style={{ gridColumn: '2 / 4', gridRow: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, paddingBottom: 16 }}>
-            <div style={{
-              width: 64, height: 64, borderRadius: '50%',
-              background: '#fff', border: '2px solid #d97706',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 30, boxShadow: '0 4px 12px rgba(217,119,6,0.15)',
-            }}>☀️</div>
-            <span style={{ fontSize: 13, color: '#4a5568', fontWeight: 600 }}>光伏</span>
-            <span style={{ fontSize: 13, color: '#d97706', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700 }}>{data.solar} kW</span>
-            <StatusBadge label="" status="online" />
-          </div>
-          <div /> {/* col 4 empty */}
-          <div /> {/* col 5 empty */}
+        {/* Flow: Solar → PCS */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
+          <FlowLine label="DC" power={`${data.solar}V`} color="#d97706" direction="v" />
+        </div>
 
-          {/* ── FLOW ARROWS: Solar → PCS (down-left) ── */}
-          <div style={{ gridColumn: '2', gridRow: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-end', paddingRight: 8, paddingBottom: 4 }}>
-            <FlowArrow direction="right-down" label="DC" color="#d97706" />
+        {/* Row 2: PCS ←→ Battery | PCS → Grid | PCS → EV */}
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', gap: 0 }}>
+          {/* Battery ← PCS */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0 }}>
+            <BatteryCard value={data.battery} />
+            <div style={{ height: 8 }} />
+            <FlowLine label="充电" power={`${data.pcs}kW`} color="#16a34a" direction="h" />
+            <div style={{ height: 4 }} />
+            <FlowLine color="#16a34a" direction="h" />
           </div>
-          <div /> {/* col 3 empty (solar spans 2-3) */}
-          <div /> {/* col 4 empty */}
-          <div /> {/* col 5 empty */}
 
-          {/* ── ROW 2: PCS | Battery | Grid | EV ── */}
           {/* PCS */}
-          <div style={{ gridColumn: '1', gridRow: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, paddingTop: 8 }}>
-            <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#fff', border: '2px solid #2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, boxShadow: '0 4px 12px rgba(37,99,235,0.12)' }}>⚡</div>
-            <span style={{ fontSize: 13, color: '#4a5568', fontWeight: 600 }}>PCS</span>
-            <span style={{ fontSize: 13, color: '#2563eb', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700 }}>{data.pcs} kW</span>
-            <StatusBadge label="" status="online" />
-            <div style={{ fontSize: 10, color: '#93c5fd', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 4, padding: '1px 6px', marginTop: 2 }}>EMS采集</div>
-          </div>
-
-          {/* Flow: PCS ↔ Battery (bidirectional) */}
-          <div style={{ gridColumn: '1 / 3', gridRow: 2, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 0 }}>
-            <FlowArrow direction="right" label="充电" color="#16a34a" />
-            <div style={{ width: 8 }} />
-            <FlowArrow direction="left" color="#16a34a" />
-          </div>
-
-          {/* Battery */}
-          <div style={{ gridColumn: '3', gridRow: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, paddingTop: 8 }}>
-            <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#fff', border: '2px solid #e6342a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, boxShadow: '0 4px 12px rgba(230,52,42,0.12)' }}>🔋</div>
-            <span style={{ fontSize: 13, color: '#4a5568', fontWeight: 600 }}>储能</span>
-            <span style={{ fontSize: 13, color: '#e6342a', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700 }}>{data.battery} %</span>
-            <StatusBadge label="" status="online" />
-          </div>
-
-          {/* Flow: PCS → Grid */}
-          <div style={{ gridColumn: '3 / 5', gridRow: 2, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-            <FlowArrow direction="right" label="AC 400V" color="#d97706" />
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0 }}>
+            <NodeCard icon="⚡" label="PCS变流器" value={data.pcs} unit="kW" color="#2563eb" badge="EMS采集" />
+            <div style={{ marginTop: 8, fontSize: 10, color: '#93c5fd', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 4, padding: '2px 8px' }}>
+              能量管理
+            </div>
           </div>
 
           {/* Grid */}
-          <div style={{ gridColumn: '4', gridRow: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, paddingTop: 8 }}>
-            <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#fff', border: '2px solid #7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, boxShadow: '0 4px 12px rgba(124,58,237,0.12)' }}>🏭</div>
-            <span style={{ fontSize: 13, color: '#4a5568', fontWeight: 600 }}>电网</span>
-            <span style={{ fontSize: 13, color: '#7c3aed', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700 }}>{data.grid} kW</span>
-            <StatusBadge label="" status="online" />
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0 }}>
+            <NodeCard icon="🏭" label="电网" value={data.grid} unit="kW" color="#7c3aed" />
+            <div style={{ height: 8 }} />
+            <FlowLine label="AC" power={`${data.grid}V`} color="#d97706" direction="h" />
           </div>
 
-          {/* Flow: PCS → EV */}
-          <div style={{ gridColumn: '4 / 6', gridRow: 2, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-            <FlowArrow direction="right" label="AC 380V" color="#d97706" />
-          </div>
+          {/* Divider */}
+          <div style={{ width: 1, height: 60, background: '#e8eaed', margin: '0 12px' }} />
 
           {/* EV */}
-          <div style={{ gridColumn: '5', gridRow: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, paddingTop: 8 }}>
-            <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#fff', border: '2px solid #ea580c', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, boxShadow: '0 4px 12px rgba(234,88,12,0.12)' }}>🚗</div>
-            <span style={{ fontSize: 13, color: '#4a5568', fontWeight: 600 }}>充电桩</span>
-            <span style={{ fontSize: 13, color: '#ea580c', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700 }}>{data.ev} kW</span>
-            <StatusBadge label="" status="online" />
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0 }}>
+            <NodeCard icon="🚗" label="充电桩" value={data.ev} unit="kW" color="#ea580c" />
+            <div style={{ height: 8 }} />
+            <FlowLine label="AC" power={`${data.ev}V`} color="#d97706" direction="h" />
           </div>
         </div>
 
-        {/* Info flow strip (dashed blue arrows at bottom) */}
+        {/* Info flow bar */}
         <div style={{
-          marginTop: 24, padding: '10px 20px',
+          marginTop: 28, padding: '12px 20px',
           background: '#f8fafc', border: '1px solid #e8eaed',
-          borderRadius: 10, textAlign: 'center',
+          borderRadius: 12,
         }}>
-          <div style={{ fontSize: 10, color: '#93c5fd', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8, fontWeight: 700 }}>
-            📡 信息流（数据采集）
+          <div style={{ fontSize: 10, color: '#93c5fd', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10, fontWeight: 800 }}>
+            📡 信息采集链路
           </div>
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap' }}>
-            {['☀️ 光伏', '⚡ PCS', '🔋 储能', '🏭 电网', '🚗 充电桩'].map((n, i) => (
-              <div key={n} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#4a5568' }}>
-                <span>{n}</span>
-                {i < 4 && <span style={{ color: '#93c5fd', fontSize: 14 }}>⟶</span>}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0, flexWrap: 'wrap' }}>
+            {[
+              { icon: '☀️', label: '光伏', color: '#d97706' },
+              { icon: '⚡', label: 'PCS', color: '#2563eb' },
+              { icon: '🔋', label: '储能', color: '#e6342a' },
+              { icon: '🏭', label: '电网', color: '#7c3aed' },
+              { icon: '🚗', label: '充电桩', color: '#ea580c' },
+            ].map((n, i) => (
+              <div key={n.label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                <div style={{ width: 32, height: 32, borderRadius: 8, background: `${n.color}15`, border: `1.5px solid ${n.color}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>
+                  {n.icon}
+                </div>
+                <span style={{ fontSize: 9, color: '#8896a6', fontWeight: 600 }}>{n.label}</span>
               </div>
             ))}
-            <div style={{ width: 1, height: 16, background: '#e8eaed', margin: '0 4px' }} />
-            <span style={{ fontSize: 12, color: '#2563eb', fontWeight: 700 }}>⟶ EMS系统</span>
-            <span style={{ fontSize: 12, color: '#93c5fd' }}>⟶</span>
-            <span style={{ fontSize: 12, color: '#7c3aed', fontWeight: 700 }}>云端平台</span>
+            <div style={{ display: 'flex', alignItems: 'center', margin: '0 8px' }}>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} style={{ width: 20, height: 2, background: '#93c5fd', opacity: 0.5 + i * 0.1, marginLeft: i === 0 ? 0 : 2 }} />
+              ))}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: '#eff6ff', border: '1.5px solid #2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>
+                📺
+              </div>
+              <span style={{ fontSize: 9, color: '#2563eb', fontWeight: 700 }}>EMS</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', margin: '0 4px', color: '#93c5fd' }}>⟶</div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: '#f3e8ff', border: '1.5px solid #7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>
+                ☁️
+              </div>
+              <span style={{ fontSize: 9, color: '#7c3aed', fontWeight: 700 }}>云端</span>
+            </div>
           </div>
         </div>
       </Card>
 
-      {/* Status bar */}
+      {/* Power summary bar */}
       <Card
         size="small"
-        style={{ background: '#fff', border: '1px solid #e8eaed', borderRadius: 10, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}
-        styles={{ body: { padding: '10px 16px' } }}
+        style={{ marginTop: 12, background: '#fff', border: '1px solid #e8eaed', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}
+        styles={{ body: { padding: '10px 20px', display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'center' } }}
       >
-        <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
-          <StatusBadge label="光伏" status="online" />
-          <StatusBadge label="PCS" status="online" />
-          <StatusBadge label="储能" status="online" />
-          <StatusBadge label="电网" status="online" />
-          <StatusBadge label="充电桩" status="online" />
-        </div>
+        <Text style={{ fontSize: 11, color: '#8896a6', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>运行状态</Text>
+        {[
+          { icon: '☀️', label: '光伏', v: `${data.solar} kW`, c: '#d97706' },
+          { icon: '⚡', label: 'PCS', v: `${data.pcs} kW`, c: '#2563eb' },
+          { icon: '🔋', label: '储能', v: `${data.battery}%`, c: '#e6342a' },
+          { icon: '🏭', label: '电网', v: `${data.grid} kW`, c: '#7c3aed' },
+          { icon: '🚗', label: '充电桩', v: `${data.ev} kW`, c: '#ea580c' },
+        ].map(n => (
+          <Space key={n.label} size={6}>
+            <StatusDot status="online" />
+            <span style={{ fontSize: 12, color: '#4a5568', fontWeight: 600 }}>{n.icon} {n.label}</span>
+            <span style={{ fontSize: 12, color: n.c, fontFamily: 'JetBrains Mono, monospace', fontWeight: 700 }}>{n.v}</span>
+          </Space>
+        ))}
       </Card>
     </div>
   );
