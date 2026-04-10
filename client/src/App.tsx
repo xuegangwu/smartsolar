@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ConfigProvider, App as AntApp } from 'antd';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { StationProvider } from './contexts/StationContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Stations from './pages/Stations';
@@ -39,6 +40,7 @@ export default function App() {
       <AntApp>
         <AuthProvider>
           <StationProvider>
+            <NotificationProvider>
             <BrowserRouter>
               <Routes>
                 <Route path="/login" element={<Login />} />

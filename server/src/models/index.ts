@@ -64,6 +64,11 @@ const workOrderSchema = new mongoose.Schema({
     default: 'created',
   },
   assigneeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Technician' },
+  // 备件消耗（工单关闭时自动扣减库存）
+  spareParts: [{
+    sparePartId: { type: mongoose.Schema.Types.ObjectId, ref: 'SparePart' },
+    quantity: { type: Number, default: 1 },
+  }],
   createdAt: Date,
   updatedAt: Date,
   closedAt: Date,
@@ -160,3 +165,17 @@ const technicianSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 export const Technician = mongoose.model('Technician', technicianSchema);
+
+// ─── Notification ──────────────────────────────────────────────────────────────
+const NotificationSchema = new mongoose.Schema({
+  userId: { type: String, default: 'admin' },
+  type: { type: String, enum: ['alert', 'workorder', 'system', 'inspection'], required: true },
+  level: { type: String, enum: ['info', 'warning', 'critical'], default: 'info' },
+  title: { type: String, required: true },
+  message: String,
+  relatedId: mongoose.Schema.Types.ObjectId,
+  relatedType: String,
+  read: { type: Boolean, default: false },
+  createdAt: { type: Date, default: Date.now },
+});
+export const Notification = mongoose.model('Notification', NotificationSchema);

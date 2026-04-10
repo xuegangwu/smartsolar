@@ -129,3 +129,10 @@ export const alertApi = {
   acknowledgeBatch: (ids: string[], technicianId?: string) =>
     api.post('/alerts/acknowledge-batch', { ids, technicianId }).then(r => r.data),
 };
+
+export const sparePartApi = {
+  getAll: (params?: any) => api.get<any, any>('/spare-parts', { params }).then(r => r.data),
+  create: (data: any) => api.post('/spare-parts', data).then(r => r.data),
+  update: (id: string, data: any) => api.put(`/spare-parts/${id}`, data).then(r => r.data),
+  delete: (id: string) => api.delete(`/spare-parts/${id}`).then(r => r.data),
+};

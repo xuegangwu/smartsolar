@@ -11,6 +11,7 @@ import { inspectionRoutes } from './routes/inspectionRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import emsLiveRoutes from './routes/emsLiveRoutes.js';
 import { sparePartRoutes } from './routes/sparePartRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
 
 dotenv.config();
 
@@ -30,6 +31,7 @@ app.use('/api/work-orders', workOrderRoutes);
 app.use('/api/alerts', alertRoutes);
 app.use('/api/ems-sync', alertSyncRoutes);  // EMS → SmartSolar 告警同步
 app.use('/api/inspection', inspectionRoutes);
+app.use('/api/notifications', notificationRoutes);
 app.use('/api/spare-parts', sparePartRoutes);  // 备件仓库
 
 // Health check

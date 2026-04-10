@@ -8,7 +8,7 @@ import {
   PlusOutlined, EditOutlined, CheckCircleOutlined, ClockCircleOutlined,
   UserOutlined, ToolOutlined, FileTextOutlined, ExclamationCircleOutlined,
 } from '@ant-design/icons';
-import { workOrderApi, stationApi } from '../services/api';
+import { workOrderApi, stationApi, sparePartApi } from '../services/api';
 
 const { Text, Title } = Typography;
 const { TextArea } = Input;
@@ -81,6 +81,7 @@ export default function WorkOrders() {
   const [detail, setDetail] = useState<any>(null);
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [filterPriority, setFilterPriority] = useState<string>('');
+  const [spareParts, setSpareParts] = useState<any[]>([]);
   const [form] = Form.useForm();
 
   useEffect(() => { loadOrders(); loadStations(); }, []);
@@ -105,6 +106,8 @@ export default function WorkOrders() {
     setEditing(null);
     form.resetFields();
     form.setFieldsValue({ type: 'fault', priority: 'normal', status: 'created' });
+    const res = await sparePartApi.getAll();
+    if (res.success) setSpareParts(res.data);
     setIsModalOpen(true);
   }
 
@@ -115,6 +118,8 @@ export default function WorkOrders() {
       stationId: typeof record.stationId === 'object' ? record.stationId?._id : record.stationId,
       equipmentId: typeof record.equipmentId === 'object' ? record.equipmentId?._id : record.equipmentId,
     });
+    const res = await sparePartApi.getAll();
+    if (res.success) setSpareParts(res.data);
     setIsModalOpen(true);
   }
 
@@ -302,7 +307,26 @@ export default function WorkOrders() {
             )}
           </Row>
           <Form.Item name="description" label="详细描述">
-            <TextArea rows={4} placeholder="问题详细描述、故障现象、处理方案建议等" />
+            <TextArea rows={3} placeholder="问题详细描述、故障现象、处理方案建议等" />
+          </Form.Item>
+
+          {/* Spare Parts Selector */}
+          <Form.Item label="备件消耗">
+            <Select
+              mode="multiple"
+              placeholder="选择所需备件（工单关闭时自动扣减库存）"
+              onChange={(values) => form.setFieldValue('spareParts', values.map((v: any) => ({ sparePartId: v, quantity: 1 })))}
+              options={spareParts.map((sp: any) => ({
+                value: sp._id,
+                label: `${sp.name}（库存: ${sp.quantity} ${sp.unit || '个'}）`,
+              }))}
+              value={form.getFieldValue('spareParts')?.map((s: any) => s.sparePartId) || []}
+            />
+            {form.getFieldValue('spareParts')?.length > 0 && (
+              <div style={{ marginTop: 6, fontSize: 11, color: '#8896a6' }}>
+                已选 {form.getFieldValue('spareParts').length} 项备件，工单完成后自动扣库存
+              </div>
+            )}
           </Form.Item>
         </Form>
       </Modal>

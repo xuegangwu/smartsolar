@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { Alert } from '../models/index.js';
+import { Alert, Notification } from '../models/index.js';
 
 /**
  * EMS → SmartSolar 告警同步接口
@@ -40,6 +40,20 @@ export const alertSyncController = {
         acknowledged: false,
       });
       await alert.save();
+
+      // 发送站内告警通知
+      try {
+        const levelLabel = level === 'critical' ? '🔴 严重' : level === 'warning' ? '⚠️ 警告' : 'ℹ️ 信息';
+        await new Notification({
+          type: 'alert',
+          level: level === 'critical' ? 'critical' : level === 'warning' ? 'warning' : 'info',
+          title: `${levelLabel} 告警：${message}`,
+          message: `电站：${stationId} · 告警码：${code || '—'}`,
+          relatedId: alert._id as any,
+          relatedType: 'alert',
+        }).save();
+      } catch {}
+
       return res.json({ success: true, data: alert, synced: true });
     } catch (err: any) {
       console.error('[alertSync] syncAlert error:', err.message);

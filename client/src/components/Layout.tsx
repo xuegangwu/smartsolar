@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Layout as AntLayout, Menu, Avatar, Dropdown, Badge, Select, Tag } from 'antd';
+import { Layout as AntLayout, Menu, Avatar, Dropdown, Badge, Select, Tag, List, Typography, Empty, Popconfirm } from 'antd';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import {
   DashboardOutlined, HomeOutlined, ToolOutlined, FileTextOutlined,
@@ -9,6 +9,7 @@ import {
 } from '@ant-design/icons';
 import { useStation } from '../contexts/StationContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useNotification } from '../contexts/NotificationContext';
 
 const { Sider, Header, Content } = AntLayout;
 
@@ -35,6 +36,7 @@ export default function Layout() {
   const [sysStatus, setSysStatus] = useState({ mongo: 'checking', alerts: 0 });
   const { stations, currentStation, setCurrentStation } = useStation();
   const { user, logout } = useAuth();
+  const { notifications, unreadCount, markAllRead, deleteNotification } = useNotification();
 
   useEffect(() => {
     const check = () => setMobile(window.innerWidth < 768);
@@ -177,7 +179,65 @@ export default function Layout() {
             position: 'sticky', top: 0, zIndex: 100, height: 56,
             boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              {/* Notification Bell */}
+              <Dropdown
+                trigger={['click']}
+                placement="bottomRight"
+                dropdownRender={() => (
+                  <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e8eaed', boxShadow: '0 8px 32px rgba(0,0,0,0.12)', width: 360, maxHeight: 480, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ padding: '12px 16px', borderBottom: '1px solid #e8eaed', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: '#1a1a2e' }}>📋 站内通知</span>
+                      {unreadCount > 0 && (
+                        <Popconfirm title="全部标记为已读？" onConfirm={markAllRead} placement="bottomRight">
+                          <a style={{ fontSize: 11, color: '#e6342a' }}>全部已读</a>
+                        </Popconfirm>
+                      )}
+                    </div>
+                    <div style={{ overflow: 'auto', flex: 1 }}>
+                      {notifications.length === 0 ? (
+                        <Empty description="暂无通知" image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ margin: '32px 0' }} />
+                      ) : (
+                        <List
+                          size="small"
+                          dataSource={notifications.slice(0, 20)}
+                          style={{ maxHeight: 380, overflow: 'auto' }}
+                          renderItem={(item: any) => {
+                            const bg = item.read ? '#fff' : item.level === 'critical' ? '#fef2f2' : item.level === 'warning' ? '#fffbeb' : '#f0fdf4';
+                            const dot = item.level === 'critical' ? '🔴' : item.level === 'warning' ? '⚠️' : 'ℹ️';
+                            return (
+                              <List.Item
+                                style={{ padding: '10px 14px', background: bg, cursor: 'pointer', borderBottom: '1px solid #f5f6f8' }}
+                                onClick={() => {
+                                  if (!item.read) markRead([item._id]);
+                                  if (item.relatedType === 'workorder') navigate('/work-orders');
+                                  if (item.relatedType === 'alert') navigate('/alerts');
+                                }}
+                              >
+                                <List.Item.Meta
+                                  avatar={<span style={{ fontSize: 16 }}>{dot}</span>}
+                                  title={<span style={{ fontSize: 12, fontWeight: item.read ? 400 : 700, color: '#1a1a2e' }}>{item.title}</span>}
+                                  description={
+                                    <span style={{ fontSize: 11, color: '#8896a6' }}>
+                                      {new Date(item.createdAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                  }
+                                />
+                                {!item.read && <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#e6342a', flexShrink: 0 }} />}
+                              </List.Item>
+                            );
+                          }}
+                        />
+                      )}
+                    </div>
+                  </div>
+                )}
+              >
+                <Badge count={unreadCount} size="small" offset={[-2, 2]} style={{ background: '#e6342a' }}>
+                  <BellOutlined style={{ fontSize: 18, color: '#8896a6', cursor: 'pointer' }} />
+                </Badge>
+              </Dropdown>
+
               <span style={{ color: '#8896a6', fontSize: 13, fontFamily: 'Inter, sans-serif' }}>
                 {new Date().toLocaleString('zh-CN', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
               </span>

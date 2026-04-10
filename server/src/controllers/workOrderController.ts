@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { WorkOrder } from '../models/index.js';
+import { WorkOrder, SparePart, SparePartConsume, Notification } from '../models/index.js';
 
 // 生成工单号
 function generateOrderNo(): string {
@@ -44,15 +44,44 @@ export const workOrderController = {
     const populated = await WorkOrder.findById(workOrder._id)
       .populate('stationId', 'name')
       .populate('assigneeId', 'name');
+
+    // 发送站内通知
+    try {
+      await new Notification({
+        type: 'workorder',
+        level: data.priority === 'urgent' ? 'critical' : data.priority === 'important' ? 'warning' : 'info',
+        title: `📋 新工单：${data.title}`,
+        message: `电站：${(populated?.stationId as any)?.name || '—'} · 类型：${data.type} · 优先级：${data.priority}`,
+        relatedId: workOrder._id as any,
+        relatedType: 'workorder',
+      }).save();
+    } catch {}
+
     res.json({ success: true, data: populated });
   },
 
   update: async (req: Request, res: Response) => {
+    const prev = await WorkOrder.findById(req.params.id);
     const workOrder = await WorkOrder.findByIdAndUpdate(req.params.id, req.body, { new: true })
       .populate('stationId', 'name')
       .populate('equipmentId', 'name')
       .populate('assigneeId', 'name phone');
     if (!workOrder) return res.status(404).json({ success: false, message: 'Work order not found' });
+
+    // 通知：派发给技术人员
+    if (req.body.assigneeId && prev && prev.assigneeId?.toString() !== req.body.assigneeId) {
+      try {
+        await new Notification({
+          type: 'workorder',
+          level: 'warning',
+          title: `📋 工单已派发给你：${workOrder.title}`,
+          message: `工单已派发，请及时处理`,
+          relatedId: workOrder._id as any,
+          relatedType: 'workorder',
+        }).save();
+      } catch {}
+    }
+
     res.json({ success: true, data: workOrder });
   },
 
@@ -78,9 +107,45 @@ export const workOrderController = {
       });
     }
 
+    const prevStatus = workOrder.status;
     workOrder.status = status;
-    if (status === 'closed') workOrder.closedAt = new Date();
+    if (status === 'closed') {
+      workOrder.closedAt = new Date();
+      // 自动扣减备件库存
+      if (workOrder.spareParts && workOrder.spareParts.length > 0) {
+        for (const sp of workOrder.spareParts) {
+          try {
+            const part = await SparePart.findById(sp.sparePartId);
+            if (part && part.quantity >= sp.quantity) {
+              part.quantity -= sp.quantity;
+              await part.save();
+              await new SparePartConsume({
+                sparePartId: sp.sparePartId,
+                workOrderId: workOrder._id,
+                quantity: sp.quantity,
+              }).save();
+            }
+          } catch {}
+        }
+      }
+    }
     await workOrder.save();
+
+    // 发送通知（状态变更时）
+    const STATUS_TEXT: Record<string, string> = {
+      assigned: '已派发', accepted: '已接单', processing: '处理中',
+      accepted_check: '待验收', closed: '已完成',
+    };
+    try {
+      await new Notification({
+        type: 'workorder',
+        level: status === 'closed' ? 'info' : 'warning',
+        title: `📋 工单${STATUS_TEXT[status] || status}：${workOrder.title}`,
+        message: `状态变更：${STATUS_TEXT[prevStatus]} → ${STATUS_TEXT[status] || status}`,
+        relatedId: workOrder._id as any,
+        relatedType: 'workorder',
+      }).save();
+    } catch {}
 
     const populated = await WorkOrder.findById(workOrder._id)
       .populate('stationId', 'name')
