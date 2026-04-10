@@ -58,10 +58,15 @@
   --shadow-glow:  0 0 0 1px var(--border-glow), 0 4px 24px rgba(45,212,191,0.12);
 }
 
-html { background: var(--bg-base); }
+/* Force dark background — must override everything */
+html, body, #root {
+  min-height: 100vh;
+  background: #070b14 !important;
+  color: #94a3b8;
+}
 body {
   font-family: var(--font-ui);
-  background: var(--bg-base);
+  background: #070b14 !important;
   color: var(--text-secondary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -90,7 +95,8 @@ p, span, div { letter-spacing: 0 !important; }
 .ant-layout { background: var(--bg-base) !important; }
 .ant-layout-content { background: transparent !important; }
 .ant-layout-sider { background: var(--bg-surface) !important; }
-.ant-layout-header { background: rgba(12,18,32,0.8) !important; backdrop-filter: blur(20px) !important; }
+.ant-layout-header { background: rgba(12,18,32,0.8) !important; -webkit-backdrop-filter: blur(20px) !important;
+    backdrop-filter: blur(20px) !important; }
 
 /* ── Cards — Modern floating ─────────────────────────────────────────── */
 .ant-card {
@@ -324,7 +330,8 @@ p, span, div { letter-spacing: 0 !important; }
   border: 1px solid var(--border) !important;
   border-radius: var(--radius-xl) !important;
   box-shadow: var(--shadow-elevated) !important;
-  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+    backdrop-filter: blur(20px) !important;
 }
 .ant-modal-header {
   background: transparent !important;
