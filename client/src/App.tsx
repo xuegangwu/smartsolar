@@ -8,6 +8,7 @@ import Equipment from './pages/Equipment';
 import WorkOrders from './pages/WorkOrders';
 import Alerts from './pages/Alerts';
 import Inspection from './pages/Inspection';
+import SpareParts from './pages/SpareParts';
 import Login from './pages/Login';
 
 const theme = {
@@ -32,6 +33,7 @@ export default function App() {
               <Route path="work-orders" element={<WorkOrders />} />
               <Route path="alerts" element={<Alerts />} />
               <Route path="inspection" element={<Inspection />} />
+              <Route path="spare-parts" element={<SpareParts />} />
             </Route>
           </Routes>
         </BrowserRouter>
