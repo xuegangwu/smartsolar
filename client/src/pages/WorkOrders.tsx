@@ -117,6 +117,8 @@ export default function WorkOrders() {
       ...record,
       stationId: typeof record.stationId === 'object' ? record.stationId?._id : record.stationId,
       equipmentId: typeof record.equipmentId === 'object' ? record.equipmentId?._id : record.equipmentId,
+      // spareParts is [{sparePartId, quantity}], convert to array of IDs for Select
+      spareParts: (record.spareParts || []).map((s: any) => s.sparePartId),
     });
     const res = await sparePartApi.getAll();
     if (res.success) setSpareParts(res.data);
@@ -125,11 +127,16 @@ export default function WorkOrders() {
 
   async function handleSubmit() {
     const values = await form.validateFields();
+    // Transform spareParts from array of IDs to [{sparePartId, quantity}] format
+    const payload = {
+      ...values,
+      spareParts: (values.spareParts || []).map((id: string) => ({ sparePartId: id, quantity: 1 })),
+    };
     if (editing) {
-      const res = await workOrderApi.update(editing._id, values);
+      const res = await workOrderApi.update(editing._id, payload);
       if (res.success) { message.success('已更新'); loadOrders(); }
     } else {
-      const res = await workOrderApi.create(values);
+      const res = await workOrderApi.create(payload);
       if (res.success) { message.success('工单已创建'); loadOrders(); }
     }
     setIsModalOpen(false);
@@ -311,23 +318,25 @@ export default function WorkOrders() {
           </Form.Item>
 
           {/* Spare Parts Selector */}
-          <Form.Item label="备件消耗">
+          <Form.Item
+            label="备件消耗"
+            name="spareParts"
+            valuePropName="value"
+          >
             <Select
               mode="multiple"
               placeholder="选择所需备件（工单关闭时自动扣减库存）"
-              onChange={(values) => form.setFieldValue('spareParts', values.map((v: any) => ({ sparePartId: v, quantity: 1 })))}
               options={spareParts.map((sp: any) => ({
                 value: sp._id,
                 label: `${sp.name}（库存: ${sp.quantity} ${sp.unit || '个'}）`,
               }))}
-              value={form.getFieldValue('spareParts')?.map((s: any) => s.sparePartId) || []}
             />
-            {form.getFieldValue('spareParts')?.length > 0 && (
-              <div style={{ marginTop: 6, fontSize: 11, color: '#8896a6' }}>
-                已选 {form.getFieldValue('spareParts').length} 项备件，工单完成后自动扣库存
-              </div>
-            )}
           </Form.Item>
+          {form.getFieldValue('spareParts')?.length > 0 && (
+            <div style={{ marginTop: -8, marginBottom: 12, fontSize: 11, color: '#8896a6' }}>
+              已选 {form.getFieldValue('spareParts').length} 项备件，工单完成后自动扣库存
+            </div>
+          )}
         </Form>
       </Modal>
 

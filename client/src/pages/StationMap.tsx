@@ -318,7 +318,7 @@ export default function StationMap() {
         setStations(r.data);
         const geo = r.data.filter((s: Station) => s.location?.lat && s.location?.lng && s.location.lat !== 0);
         setTotalCapacity(geo.reduce((sum: number, s: Station) => sum + (s.capacity || s.installedCapacity || s.peakPower || 0), 0));
-        setOnlineCount(geo.filter((s: Station) => s.status === 'online').length);
+        setOnlineCount(r.data.filter((s: Station) => s.status === 'online').length);
       }
       setLoading(false);
     });

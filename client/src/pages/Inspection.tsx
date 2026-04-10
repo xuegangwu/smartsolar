@@ -80,7 +80,7 @@ function PlanModal({ open, editing, stations, onClose, onOk }: {
         form.setFieldsValue({ enabled: true, period: 'weekly' });
       }
     }
-  }, [open, editing]);
+  }, [open, editing, stations]);
 
   async function handleSubmit() {
     const values = await form.validateFields();
