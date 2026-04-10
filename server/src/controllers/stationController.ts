@@ -30,16 +30,20 @@ export const stationController = {
         battery: 'battery',
         pcs: 'pcs',
         meter: 'meter',
+        ev: 'ev_charger',
         ev_charger: 'ev_charger',
         grid: 'grid',
+        transformer: 'other',
       };
       const labelMap: Record<string, string> = {
         pv: '光伏',
         battery: '储能',
         pcs: '变流器',
         meter: '电表',
+        ev: '充电桩',
         ev_charger: '充电桩',
         grid: '电网',
+        transformer: '变压器',
       };
 
       // Create one category per unique type
