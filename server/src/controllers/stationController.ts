@@ -106,6 +106,13 @@ export const stationController = {
 
 // ─── EquipmentCategory ──────────────────────────────────────────────────────────
 export const categoryController = {
+  getAll: async (req: Request, res: Response) => {
+    const filter: any = {};
+    if (req.query.stationId) filter.stationId = req.query.stationId;
+    const categories = await EquipmentCategory.find(filter).sort({ name: 1 });
+    res.json({ success: true, data: categories });
+  },
+
   getByStation: async (req: Request, res: Response) => {
     const categories = await EquipmentCategory.find({ stationId: req.params.stationId });
     res.json({ success: true, data: categories });

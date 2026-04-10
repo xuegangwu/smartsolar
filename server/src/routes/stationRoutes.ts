@@ -12,6 +12,7 @@ router.delete('/stations/:id', stationController.delete);
 
 // EquipmentCategory
 router.get('/stations/:stationId/categories', categoryController.getByStation);
+router.get('/categories', categoryController.getAll);
 router.post('/categories', categoryController.create);
 router.put('/categories/:id', categoryController.update);
 router.delete('/categories/:id', categoryController.delete);
