@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Layout as AntLayout, Menu, Avatar, Dropdown, Badge, Select, Tag, List, Typography, Empty, Popconfirm } from 'antd';
+import { Layout as AntLayout, Menu, Avatar, Dropdown, Badge, List, Typography, Empty, Popconfirm } from 'antd';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import {
   DashboardOutlined, HomeOutlined, ToolOutlined, FileTextOutlined,
@@ -7,7 +7,6 @@ import {
   InboxOutlined, RiseOutlined, ApiOutlined, DownloadOutlined, PlusSquareOutlined,
   EnvironmentOutlined,
 } from '@ant-design/icons';
-import { useStation } from '../contexts/StationContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
 
@@ -34,7 +33,6 @@ export default function Layout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobile, setMobile] = useState(false);
   const [sysStatus, setSysStatus] = useState({ mongo: 'checking', alerts: 0 });
-  const { stations, currentStation, setCurrentStation } = useStation();
   const { user, logout } = useAuth();
   const { notifications, unreadCount, markAllRead, deleteNotification } = useNotification();
 
@@ -108,38 +106,6 @@ export default function Layout() {
               </div>
             )}
           </div>
-
-          {/* Global Station Selector */}
-          {!collapsed && (
-            <div style={{ padding: '10px 16px 8px', flexShrink: 0 }}>
-              <div style={{ fontSize: 10, color: '#8896a6', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 5 }}>
-                当前电站
-              </div>
-              <Select
-                size="small"
-                style={{ width: '100%' }}
-                value={currentStation?._id || undefined}
-                onChange={(_, option: any) => {
-                  const s = stations.find((st: any) => st._id === option?.value);
-                  setCurrentStation(s || null);
-                }}
-                options={stations.map((s: any) => ({
-                  value: s._id,
-                  label: (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span>{s.type === 'solar_storage' ? '⚡' : s.type === 'solar' ? '☀️' : '🔋'}</span>
-                      <span style={{ fontWeight: 600, color: '#1a1a2e', fontSize: 12 }}>{s.name}</span>
-                    </div>
-                  ),
-                }))}
-              />
-              {currentStation && (
-                <div style={{ marginTop: 4, fontSize: 10, color: '#8896a6' }}>
-                  📍 {currentStation.location?.address || '地址未知'}
-                </div>
-              )}
-            </div>
-          )}
 
           {/* Nav — scrollable */}
           <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, paddingBottom: 8 }}>
