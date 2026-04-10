@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Card, Table, Tag, Button, Space, Modal, Form, Input, Select, InputNumber, message, Row, Col } from 'antd';
+import { useNavigate } from 'react-router-dom';
 import type { ColumnsType } from 'antd/es/table';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, NodeIndexOutlined } from '@ant-design/icons';
 import { stationApi, type Station } from '../services/api';
 
 const STATUS_MAP: Record<string, { color: string; text: string }> = {
@@ -22,6 +23,7 @@ export default function Stations() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editing, setEditing] = useState<Station | null>(null);
   const [form] = Form.useForm();
+  const navigate = useNavigate();
 
   useEffect(() => { loadStations(); }, []);
 
@@ -78,8 +80,12 @@ export default function Stations() {
       return <Tag color={m.color}>{m.text}</Tag>;
     }},
     { title: '并网日期', dataIndex: 'gridConnectionDate', key: 'gridConnectionDate' },
-    { title: '操作', key: 'action', width: 120, render: (_, r) => (
+    { title: '操作', key: 'action', width: 160, render: (_, r) => (
       <Space>
+        <Button size="small" icon={<NodeIndexOutlined />} onClick={() => navigate(`/stations/${r._id}/topology`)}
+          style={{ borderColor: '#00e5c0', color: '#00e5c0' }}>
+          拓扑
+        </Button>
         <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(r)} />
         <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(r._id)} />
       </Space>

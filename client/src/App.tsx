@@ -12,6 +12,7 @@ import SpareParts from './pages/SpareParts';
 import KPI from './pages/KPI';
 import EmsSimulator from './pages/EmsSimulator';
 import Reports from './pages/Reports';
+import StationTopology from './pages/StationTopology';
 import Login from './pages/Login';
 
 const theme = {
@@ -40,6 +41,7 @@ export default function App() {
               <Route path="kpi" element={<KPI />} />
               <Route path="ems-simulator" element={<EmsSimulator />} />
               <Route path="reports" element={<Reports />} />
+              <Route path="stations/:id/topology" element={<StationTopology />} />
             </Route>
           </Routes>
         </BrowserRouter>
