@@ -1,224 +1,196 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import {
-  Card, Table, Tag, Button, Space, Select, Statistic, Row, Col, message,
-  Modal, Form, Input, Divider, Typography, Tooltip, Badge,
+  Card, Table, Tag, Button, Space, Select, Row, Col, message,
+  Modal, Form, Input, Typography, Badge, Popconfirm,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
   CheckOutlined, ThunderboltOutlined, AlertOutlined,
   WarningOutlined, FireOutlined, ExclamationCircleOutlined,
 } from '@ant-design/icons';
-import { alertApi, stationApi, workOrderApi } from '../services/api';
+import { alertApi } from '../services/api';
 
-const { Text, Title } = Typography;
-const { TextArea } = Input;
+const { Text } = Typography;
 
 const LEVEL_COLOR: Record<string, string> = {
-  critical: 'red',
-  major: 'orange',
-  minor: 'gold',
+  critical: '#ef4444',
+  major: '#f59e0b',
+  minor: '#64748b',
 };
 const LEVEL_TEXT: Record<string, string> = {
   critical: '严重', major: '重要', minor: '一般',
 };
-const LEVEL_ICON: Record<string, React.ReactNode> = {
-  critical: <FireOutlined />,
-  major: <WarningOutlined />,
-  minor: <ExclamationCircleOutlined />,
-};
 
-// ─── Mini Pie Chart (CSS only) ─────────────────────────────────────────────────
-function MiniPie({ critical, major, minor }: { critical: number; major: number; minor: number }) {
+// ─── Mini Donut ──────────────────────────────────────────────────────────────
+function MiniDonut({ critical, major, minor }: { critical: number; major: number; minor: number }) {
   const total = critical + major + minor || 1;
-  const cPct = (critical / total * 100).toFixed(1);
-  const mPct = (major / total * 100).toFixed(1);
-  const iPct = (minor / total * 100).toFixed(1);
+  const r = 32, circ = 2 * Math.PI * r;
+  const cPct = critical / total;
+  const mPct = major / total;
+  const iPct = minor / total;
+  const cDash = (cPct * circ).toFixed(1);
+  const mDash = (mPct * circ).toFixed(1);
+  const iDash = (iPct * circ).toFixed(1);
+
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-      <svg viewBox="0 0 32 32" width="64" height="64" style={{ transform: 'rotate(-90deg)' }}>
-        <circle r="16" cx="16" cy="16" fill="transparent" stroke="#ff4d4f" strokeWidth="8"
-          strokeDasharray={`${(critical / total * 100.4).toFixed(1)} 100.4`} strokeDashoffset="0" />
-        <circle r="16" cx="16" cy="16" fill="transparent" stroke="#fa8c16" strokeWidth="8"
-          strokeDasharray={`${(major / total * 100.4).toFixed(1)} 100.4`}
-          strokeDashoffset={`${(-(critical / total * 100.4)).toFixed(1)}`} />
-        <circle r="16" cx="16" cy="16" fill="transparent" stroke="#faad14" strokeWidth="8"
-          strokeDasharray={`${(minor / total * 100.4).toFixed(1)} 100.4`}
-          strokeDashoffset={`${(-((critical + major) / total * 100.4)).toFixed(1)}`} />
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <svg viewBox="0 0 80 80" width="80" height="80" style={{ transform: 'rotate(-90deg)' }}>
+        <circle cx="40" cy="40" r={r} fill="transparent" stroke="#1a2540" strokeWidth="10" />
+        <circle cx="40" cy="40" r={r} fill="transparent" stroke="#ef4444" strokeWidth="10"
+          strokeDasharray={`${cDash} ${circ}`} strokeDashoffset="0" />
+        <circle cx="40" cy="40" r={r} fill="transparent" stroke="#f59e0b" strokeWidth="10"
+          strokeDasharray={`${mDash} ${circ}`} strokeDashoffset={`${(-cPct * circ).toFixed(1)}`} />
+        <circle cx="40" cy="40" r={r} fill="transparent" stroke="#64748b" strokeWidth="10"
+          strokeDasharray={`${iDash} ${circ}`} strokeDashoffset={`${(-(cPct + mPct) * circ).toFixed(1)}`} />
+        <circle cx="40" cy="40" r="24" fill="#151d2e" />
       </svg>
-      <div style={{ fontSize: 12 }}>
-        <div style={{ color: '#ff4d4f' }}>● 严重 {critical} ({cPct}%)</div>
-        <div style={{ color: '#fa8c16' }}>● 重要 {major} ({mPct}%)</div>
-        <div style={{ color: '#faad14' }}>● 一般 {minor} ({iPct}%)</div>
+      <div style={{ fontSize: 11, fontFamily: 'JetBrains Mono, monospace', lineHeight: 2 }}>
+        <div style={{ color: '#ef4444' }}>● 严重 {critical}</div>
+        <div style={{ color: '#f59e0b' }}>● 重要 {major}</div>
+        <div style={{ color: '#64748b' }}>● 一般 {minor}</div>
       </div>
     </div>
   );
 }
 
-// ─── Alert Detail Modal ───────────────────────────────────────────────────────
-function AlertDetailModal({
-  alert, stations, onClose, onAcknowledge, onConvertToWorkOrder,
-}: {
-  alert: any; stations: any[]; onClose: () => void;
-  onAcknowledge: (id: string) => void;
-  onConvertToWorkOrder: (alert: any) => void;
-}) {
-  const [form] = Form.useForm();
+// ─── Stat Cards ──────────────────────────────────────────────────────────────
+function StatCards({ stats, onClick }: { stats: any; onClick?: () => void }) {
   return (
-    <Modal
-      title={
-        <Space>
-          <AlertOutlined style={{ color: LEVEL_COLOR[alert?.level] }} />
-          <span>告警详情</span>
-          <Tag color={LEVEL_COLOR[alert?.level]}>{LEVEL_TEXT[alert?.level]}</Tag>
-          {alert?.acknowledged ? <Tag color="green">已确认</Tag> : <Tag color="red">未确认</Tag>}
-        </Space>
-      }
-      open={!!alert} onCancel={onClose} width={640}
-      footer={
-        <Space>
-          {!alert?.acknowledged && (
-            <Button type="primary" icon={<CheckOutlined />} onClick={() => { onAcknowledge(alert._id); onClose(); }}>
-              确认告警
-            </Button>
-          )}
-          <Button icon={<ThunderboltOutlined />} onClick={() => onConvertToWorkOrder(alert)}>
-            一键转工单
-          </Button>
-          <Button onClick={onClose}>关闭</Button>
-        </Space>
-      }
-    >
-      {alert && (
-        <div>
-          <Row gutter={[16, 8]} style={{ marginBottom: 16 }}>
-            <Col span={12}>
-              <Text type="secondary">告警时间</Text><br />
-              <Text>{new Date(alert.createdAt).toLocaleString('zh-CN')}</Text>
-            </Col>
-            <Col span={12}>
-              <Text type="secondary">告警代码</Text><br />
-              <Text code>{alert.code || '—'}</Text>
-            </Col>
-            <Col span={12}>
-              <Text type="secondary">电站</Text><br />
-              <Text>{typeof alert.stationId === 'object' ? alert.stationId?.name : (alert.stationId || '—')}</Text>
-            </Col>
-            <Col span={12}>
-              <Text type="secondary">设备</Text><br />
-              <Text>{typeof alert.equipmentId === 'object' ? alert.equipmentId?.name : (alert.equipmentId || '—')}</Text>
-            </Col>
-          </Row>
-          <Divider style={{ margin: '12px 0' }} />
-          <div>
-            <Text type="secondary" style={{ display: 'block', marginBottom: 4 }}>告警内容</Text>
-            <div style={{ background: '#fafafa', padding: 12, borderRadius: 8, borderLeft: `4px solid ${LEVEL_COLOR[alert.level]}` }}>
-              <Text strong style={{ fontSize: 15 }}>{alert.message}</Text>
-            </div>
+    <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
+      <Col xs={12} sm={5}>
+        <Card size="small" style={{ background: '#151d2e', border: '1px solid #1e2d45', borderRadius: 12, textAlign: 'center', cursor: onClick ? 'pointer' : 'default' }} bodyStyle={{ padding: '12px 8px' }} onClick={onClick}>
+          <div style={{ color: '#64748b', fontSize: 11, fontFamily: 'JetBrains Mono, monospace', textTransform: 'uppercase', marginBottom: 6 }}>
+            告警总数
           </div>
-          {alert.acknowledged && alert.acknowledgedAt && (
-            <>
-              <Divider style={{ margin: '12px 0' }} />
-              <Text type="secondary">
-                已确认于 {new Date(alert.acknowledgedAt).toLocaleString('zh-CN')}
-              </Text>
-            </>
-          )}
-        </div>
-      )}
-    </Modal>
+          <div style={{ fontSize: 28, fontWeight: 700, color: '#00D4AA', fontFamily: 'JetBrains Mono, monospace' }}>
+            {stats.total}
+          </div>
+        </Card>
+      </Col>
+      <Col xs={12} sm={5}>
+        <Card size="small" style={{ background: '#151d2e', border: '1px solid #ef444430', borderRadius: 12, textAlign: 'center' }} bodyStyle={{ padding: '12px 8px' }}>
+          <div style={{ color: '#64748b', fontSize: 11, fontFamily: 'JetBrains Mono, monospace', textTransform: 'uppercase', marginBottom: 6 }}>
+            🔴 严重
+          </div>
+          <div style={{ fontSize: 28, fontWeight: 700, color: '#ef4444', fontFamily: 'JetBrains Mono, monospace' }}>
+            {stats.critical}
+          </div>
+        </Card>
+      </Col>
+      <Col xs={12} sm={5}>
+        <Card size="small" style={{ background: '#151d2e', border: '1px solid #f59e0b30', borderRadius: 12, textAlign: 'center' }} bodyStyle={{ padding: '12px 8px' }}>
+          <div style={{ color: '#64748b', fontSize: 11, fontFamily: 'JetBrains Mono, monospace', textTransform: 'uppercase', marginBottom: 6 }}>
+            🟠 重要
+          </div>
+          <div style={{ fontSize: 28, fontWeight: 700, color: '#f59e0b', fontFamily: 'JetBrains Mono, monospace' }}>
+            {stats.major}
+          </div>
+        </Card>
+      </Col>
+      <Col xs={12} sm={5}>
+        <Card size="small" style={{ background: '#151d2e', border: '1px solid #64748b30', borderRadius: 12, textAlign: 'center' }} bodyStyle={{ padding: '12px 8px' }}>
+          <div style={{ color: '#64748b', fontSize: 11, fontFamily: 'JetBrains Mono, monospace', textTransform: 'uppercase', marginBottom: 6 }}>
+            🟡 一般
+          </div>
+          <div style={{ fontSize: 28, fontWeight: 700, color: '#64748b', fontFamily: 'JetBrains Mono, monospace' }}>
+            {stats.minor}
+          </div>
+        </Card>
+      </Col>
+      <Col xs={12} sm={4}>
+        <Card size="small" style={{ background: '#151d2e', border: '1px solid #1e2d45', borderRadius: 12, textAlign: 'center' }} bodyStyle={{ padding: '12px 8px' }}>
+          <div style={{ color: '#64748b', fontSize: 11, fontFamily: 'JetBrains Mono, monospace', textTransform: 'uppercase', marginBottom: 6 }}>
+            未确认
+          </div>
+          <div style={{ fontSize: 28, fontWeight: 700, color: stats.unacknowledged > 0 ? '#ef4444' : '#00D4AA', fontFamily: 'JetBrains Mono, monospace' }}>
+            {stats.unacknowledged}
+          </div>
+          {stats.total > 0 && <MiniDonut critical={stats.critical} major={stats.major} minor={stats.minor} />}
+        </Card>
+      </Col>
+    </Row>
   );
 }
 
-// ─── Convert to WorkOrder Modal ───────────────────────────────────────────────
-function ConvertToWorkOrderModal({
-  alert, stations, open, onClose, onSuccess,
-}: {
-  alert: any; stations: any[]; open: boolean; onClose: () => void; onSuccess: () => void;
-}) {
+// ─── Convert to WorkOrder Modal ─────────────────────────────────────────────
+function ConvertModal({ alert, open, onClose, onOk }: { alert: any; open: boolean; onClose: () => void; onOk: () => void }) {
   const [form] = Form.useForm();
   useEffect(() => {
     if (open && alert) {
       const priority = alert.level === 'critical' ? 'urgent' : alert.level === 'major' ? 'important' : 'normal';
       form.setFieldsValue({
-        stationId: typeof alert.stationId === 'object' ? alert.stationId?._id : alert.stationId,
         title: `[告警] ${alert.message}`.slice(0, 100),
         type: 'fault',
         priority,
-        description: `告警代码: ${alert.code || '无'}\n告警内容: ${alert.message}\n电站: ${typeof alert.stationId === 'object' ? alert.stationId?.name : alert.stationId}\n设备: ${typeof alert.equipmentId === 'object' ? alert.equipmentId?.name : alert.equipmentId}\n发生时间: ${new Date(alert.createdAt).toLocaleString('zh-CN')}\n\n建议处理方案:\n1. 现场检查确认告警情况\n2. 分析告警原因\n3. 制定处置方案并执行\n4. 完成后关闭工单`,
+        description: `告警代码: ${alert.code || '无'}\n告警内容: ${alert.message}\n发生时间: ${new Date(alert.createdAt).toLocaleString('zh-CN')}`,
       });
     }
   }, [open, alert]);
 
   async function handleSubmit() {
     const values = await form.validateFields();
-    const res = await workOrderApi.create(values);
-    if (res.success) {
-      message.success('工单已创建！');
-      onSuccess();
-      onClose();
-    }
+    const res = await fetch('/api/work-orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(values),
+    });
+    const data = await res.json();
+    if (data.success) { message.success('工单已创建！'); onOk(); onClose(); }
+    else message.error('创建失败');
   }
 
   return (
-    <Modal title="告警 → 创建工单" open={open} onOk={handleSubmit} onCancel={onClose} width={680} okText="创建工单">
+    <Modal title="⚡ 告警 → 创建工单" open={open} onOk={handleSubmit} onCancel={onClose} width={600} okText="创建工单">
       <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
+        <Form.Item name="title" label="工单标题" rules={[{ required: true }]}>
+          <Input style={{ background: '#1a2540', borderColor: '#1e2d45', color: '#e2e8f0' }} />
+        </Form.Item>
         <Row gutter={12}>
-          <Col span={16}>
-            <Form.Item name="stationId" label="所属电站" rules={[{ required: true }]}>
-              <Select options={stations.map(s => ({ value: s._id, label: s.name }))} placeholder="选择电站" />
+          <Col span={12}>
+            <Form.Item name="type" label="工单类型" initialValue="fault">
+              <Select style={{ width: '100%' }}
+                options={[{ value: 'fault', label: '故障维修' }, { value: 'maintenance', label: '预防性维护' }]}
+              />
             </Form.Item>
           </Col>
-          <Col span={8}>
-            <Form.Item name="priority" label="优先级" rules={[{ required: true }]}>
-              <Select options={[
-                { value: 'urgent', label: '🔴 紧急' },
-                { value: 'important', label: '🟠 重要' },
-                { value: 'normal', label: '🔵 一般' },
-              ]} />
+          <Col span={12}>
+            <Form.Item name="priority" label="优先级">
+              <Select style={{ width: '100%' }}
+                options={[{ value: 'urgent', label: '🔴 紧急' }, { value: 'important', label: '🟠 重要' }, { value: 'normal', label: '🔵 一般' }]}
+              />
             </Form.Item>
           </Col>
         </Row>
-        <Form.Item name="title" label="工单标题" rules={[{ required: true }]}>
-          <Input placeholder="工单标题" />
-        </Form.Item>
-        <Form.Item name="type" label="工单类型" initialValue="fault">
-          <Select options={[
-            { value: 'fault', label: '🔧 故障维修' },
-            { value: 'maintenance', label: '🛠 预防性维护' },
-            { value: 'inspection', label: '📋 巡检' },
-          ]} />
-        </Form.Item>
         <Form.Item name="description" label="详细描述">
-          <TextArea rows={6} placeholder="描述" />
+          <Input.TextArea rows={5} style={{ background: '#1a2540', borderColor: '#1e2d45', color: '#e2e8f0' }} />
         </Form.Item>
       </Form>
     </Modal>
   );
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+// ─── Main ─────────────────────────────────────────────────────────────────
 export default function Alerts() {
   const [alerts, setAlerts] = useState<any[]>([]);
   const [stats, setStats] = useState({ total: 0, critical: 0, major: 0, minor: 0, unacknowledged: 0 });
-  const [stations, setStations] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [filterLevel, setFilterLevel] = useState<string>('');
-  const [filterStation, setFilterStation] = useState<string>('');
   const [filterAck, setFilterAck] = useState<string>('');
-  const [detailAlert, setDetailAlert] = useState<any>(null);
   const [convertAlert, setConvertAlert] = useState<any>(null);
-  const [convertOpen, setConvertOpen] = useState(false);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  useEffect(() => { loadStations(); loadStats(); loadAlerts(); }, []);
-  useEffect(() => { loadAlerts(); }, [filterLevel, filterStation, filterAck]);
+  useEffect(() => { loadAll(); }, []);
+  useEffect(() => { loadAlerts(); }, [filterLevel, filterAck]);
 
-  // Auto-poll every 30s for new alerts
+  // Auto-refresh every 30s
   useEffect(() => {
-    pollRef.current = setInterval(() => { loadStats(); loadAlerts(); }, 30000);
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  }, [filterLevel, filterStation, filterAck]);
+    const t = setInterval(loadAll, 30000);
+    return () => clearInterval(t);
+  }, []);
+
+  async function loadAll() {
+    await Promise.all([loadStats(), loadAlerts()]);
+  }
 
   async function loadStats() {
     const res = await alertApi.getStats();
@@ -229,91 +201,74 @@ export default function Alerts() {
     setLoading(true);
     const params: any = {};
     if (filterLevel) params.level = filterLevel;
-    if (filterStation) params.stationId = filterStation;
-    if (filterAck) params.acknowledged = filterAck === 'acked';
+    if (filterAck === 'acked') params.acknowledged = true;
+    else if (filterAck === 'unacked') params.acknowledged = false;
     const res = await alertApi.getAll(params);
     if (res.success) setAlerts(res.data);
     setLoading(false);
   }
 
-  async function handleAcknowledge(id: string) {
+  async function handleAck(id: string) {
     await alertApi.acknowledge(id);
     message.success('已确认');
-    loadAlerts();
-    loadStats();
+    loadAll();
   }
 
   async function handleBatchAck() {
-    if (selectedRowKeys.length === 0) return;
+    if (!selectedRowKeys.length) return;
     await alertApi.acknowledgeBatch(selectedRowKeys as string[]);
-    message.success(`已确认 ${selectedRowKeys.length} 条告警`);
+    message.success(`已确认 ${selectedRowKeys.length} 条`);
     setSelectedRowKeys([]);
-    loadAlerts();
-    loadStats();
-  }
-
-  function handleConvertToWorkOrder(alert: any) {
-    setDetailAlert(null);
-    setConvertAlert(alert);
-    setConvertOpen(true);
-  }
-
-  async function handleAckAndConvert(alert: any) {
-    if (!alert.acknowledged) await alertApi.acknowledge(alert._id);
-    setDetailAlert(null);
-    setConvertAlert(alert);
-    setConvertOpen(true);
+    loadAll();
   }
 
   const columns: ColumnsType<any> = [
     {
       title: '级别', dataIndex: 'level', width: 90,
       render: l => (
-        <Space>
-          {LEVEL_ICON[l]}
-          <Tag color={LEVEL_COLOR[l]}>{LEVEL_TEXT[l]}</Tag>
-        </Space>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ width: 8, height: 8, borderRadius: '50%', background: LEVEL_COLOR[l], boxShadow: `0 0 6px ${LEVEL_COLOR[l]}` }} />
+          <Tag style={{ borderColor: LEVEL_COLOR[l], color: LEVEL_COLOR[l], background: `${LEVEL_COLOR[l]}15` }}>
+            {LEVEL_TEXT[l]}
+          </Tag>
+        </div>
       ),
-      filters: [
-        { text: '🔴 严重', value: 'critical' },
-        { text: '🟠 重要', value: 'major' },
-        { text: '🟡 一般', value: 'minor' },
-      ],
-      onFilter: (value, record) => record.level === value,
     },
     {
-      title: '告警时间', dataIndex: 'createdAt', width: 160,
-      render: v => new Date(v).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }),
+      title: '时间', dataIndex: 'createdAt', width: 150,
+      render: v => (
+        <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: '#94a3b8' }}>
+          {new Date(v).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+        </span>
+      ),
     },
-    { title: '电站', dataIndex: ['stationId', 'name'], render: v => v || '-', width: 140 },
+    { title: '电站', dataIndex: ['stationId', 'name'], width: 140, render: v => <span style={{ color: '#94a3b8' }}>{v || '—'}</span> },
     {
-      title: '告警内容', dataIndex: 'message', ellipsis: true,
+      title: '告警内容', dataIndex: 'message',
       render: (v, r) => (
-        <a onClick={() => setDetailAlert(r)} style={{ color: r.level === 'critical' ? '#ff4d4f' : undefined }}>
+        <span style={{ color: r.level === 'critical' && !r.acknowledged ? '#ef4444' : '#e2e8f0' }}>
           {v}
-        </a>
+        </span>
       ),
     },
     {
       title: '状态', dataIndex: 'acknowledged', width: 90,
-      render: a => <Badge status={a ? 'success' : 'error'} text={a ? '已确认' : '未确认'} />,
-      filters: [
-        { text: '已确认', value: 'acked' },
-        { text: '未确认', value: 'unacked' },
-      ],
-      onFilter: (value, record) => value === 'acked' ? record.acknowledged : !record.acknowledged,
+      render: a => a
+        ? <Tag style={{ background: '#00D4AA15', color: '#00D4AA', borderColor: '#00D4AA' }}>已确认</Tag>
+        : <Tag style={{ background: '#ef444415', color: '#ef4444', borderColor: '#ef4444' }}>未确认</Tag>,
     },
     {
-      title: '操作', key: 'action', width: 200,
+      title: '操作', key: 'action', width: 160,
       render: (_, r) => (
         <Space size="small">
-          <Button size="small" onClick={() => setDetailAlert(r)}>详情</Button>
           {!r.acknowledged && (
-            <Button size="small" type="link" icon={<CheckOutlined />} onClick={() => handleAcknowledge(r._id)}>确认</Button>
+            <Button size="small" icon={<CheckOutlined />} onClick={() => handleAck(r._id)} style={{ background: '#00D4AA15', borderColor: '#00D4AA', color: '#00D4AA' }}>
+              确认
+            </Button>
           )}
-          <Tooltip title="一键转工单">
-            <Button size="small" type="link" icon={<ThunderboltOutlined />} onClick={() => handleAckAndConvert(r)} />
-          </Tooltip>
+          <Button size="small" icon={<ThunderboltOutlined />} onClick={() => setConvertAlert(r)} style={{ background: '#f59e0b15', borderColor: '#f59e0b', color: '#f59e0b' }}>
+            转工单
+          </Button>
         </Space>
       ),
     },
@@ -321,116 +276,105 @@ export default function Alerts() {
 
   return (
     <div>
-      {/* Stats Row */}
-      <Row gutter={16} style={{ marginBottom: 24 }}>
-        <Col span={5}>
-          <Card size="small" style={{ background: 'linear-gradient(135deg, #e6f7ff, #bae7ff)' }}>
-            <Statistic
-              title={<Space><AlertOutlined /> 告警总数</Space>}
-              value={stats.total}
-              valueStyle={{ fontSize: 28 }}
-            />
-          </Card>
-        </Col>
-        <Col span={5}>
-          <Card size="small" style={{ background: 'linear-gradient(135deg, #fff2f0, #ffccc7)' }}>
-            <Statistic
-              title={<Space><FireOutlined style={{ color: '#ff4d4f' }} /> 严重</Space>}
-              value={stats.critical}
-              valueStyle={{ fontSize: 28, color: '#ff4d4f' }}
-            />
-          </Card>
-        </Col>
-        <Col span={5}>
-          <Card size="small" style={{ background: 'linear-gradient(135deg, #fff7e6, #ffd591)' }}>
-            <Statistic
-              title={<Space><WarningOutlined style={{ color: '#fa8c16' }} /> 重要</Space>}
-              value={stats.major}
-              valueStyle={{ fontSize: 28, color: '#fa8c16' }}
-            />
-          </Card>
-        </Col>
-        <Col span={5}>
-          <Card size="small" style={{ background: 'linear-gradient(135deg, #fffbe6, #ffe58f)' }}>
-            <Statistic
-              title={<Space><ExclamationCircleOutlined style={{ color: '#faad14' }} /> 一般</Space>}
-              value={stats.minor}
-              valueStyle={{ fontSize: 28, color: '#faad14' }}
-            />
-          </Card>
-        </Col>
-        <Col span={4}>
-          <Card size="small">
-            <Statistic
-              title="未确认"
-              value={stats.unacknowledged}
-              valueStyle={{ fontSize: 28, color: stats.unacknowledged > 0 ? '#ff4d4f' : '#52c41a' }}
-            />
-            <div style={{ marginTop: 4 }}>
-              <MiniPie critical={stats.critical} major={stats.major} minor={stats.minor} />
-            </div>
-          </Card>
-        </Col>
-      </Row>
+      <StatCards stats={stats} />
 
-      {/* Main Table */}
       <Card
         title={
-          <Space>
-            <AlertOutlined />
-            <span>告警记录</span>
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              每30秒自动刷新 · 共 {stats.total} 条
-            </Text>
-          </Space>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <AlertOutlined style={{ color: '#00D4AA' }} />
+            <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13, color: '#e2e8f0', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              告警记录
+            </span>
+            <span style={{ fontSize: 12, color: '#64748b', fontFamily: 'JetBrains Mono, monospace' }}>
+              · 每30秒自动刷新
+            </span>
+          </div>
         }
         extra={
-          <Space>
-            <Select value={filterLevel} onChange={setFilterLevel} placeholder="级别" allowClear style={{ width: 100 }}
+          <Space wrap>
+            <Select value={filterLevel} onChange={v => { setFilterLevel(v); }} placeholder="级别" allowClear style={{ width: 100 }}
               options={[{ value: 'critical', label: '严重' }, { value: 'major', label: '重要' }, { value: 'minor', label: '一般' }]} />
-            <Select value={filterStation} onChange={setFilterStation} placeholder="电站" allowClear style={{ width: 150 }}
-              options={stations.map(s => ({ value: s._id, label: s.name }))} />
             <Select value={filterAck} onChange={setFilterAck} placeholder="状态" allowClear style={{ width: 100 }}
               options={[{ value: 'acked', label: '已确认' }, { value: 'unacked', label: '未确认' }]} />
-            <Button type="primary" icon={<CheckOutlined />} onClick={handleBatchAck}
-              disabled={selectedRowKeys.length === 0}>
+            <Button
+              type="primary"
+              icon={<CheckOutlined />}
+              onClick={handleBatchAck}
+              disabled={!selectedRowKeys.length}
+              style={{ background: '#00D4AA', border: 'none' }}
+            >
               批量确认 {selectedRowKeys.length > 0 ? `(${selectedRowKeys.length})` : ''}
             </Button>
           </Space>
         }
+        style={{ background: '#151d2e', border: '1px solid #1e2d45', borderRadius: 12 }}
       >
         <Table
           columns={columns}
           dataSource={alerts}
           rowKey="_id"
           loading={loading}
-          pagination={{ pageSize: 20, showSizeChanger: true }}
+          pagination={{ pageSize: 20 }}
           rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
-          rowClassName={r => r.level === 'critical' && !r.acknowledged ? 'critical-unack-row' : ''}
+          rowClassName={r => r.level === 'critical' && !r.acknowledged ? 'critical-unack' : ''}
+          style={{ background: 'transparent' }}
         />
       </Card>
 
-      {/* Detail Modal */}
-      {detailAlert && (
-        <AlertDetailModal
-          alert={detailAlert} stations={stations}
-          onClose={() => setDetailAlert(null)}
-          onAcknowledge={handleAcknowledge}
-          onConvertToWorkOrder={handleConvertToWorkOrder}
-        />
-      )}
-
-      {/* Convert to WorkOrder Modal */}
-      <ConvertToWorkOrderModal
-        alert={convertAlert} stations={stations}
-        open={convertOpen}
-        onClose={() => setConvertOpen(false)}
-        onSuccess={() => { loadAlerts(); loadStats(); }}
-      />
+      <ConvertModal alert={convertAlert} open={!!convertAlert} onClose={() => setConvertAlert(null)} onOk={loadAll} />
 
       <style>{`
-        .critical-unack-row { background: #fff2f0; }
-        .critical-unack-row:hover td { background: #ffebe8 !important; }
+        .critical-unack td {
+          background: rgba(239,68,68,0.05) !important;
+          border-left: 3px solid #ef4444 !important;
+        }
+        .ant-table {
+          background: transparent !important;
+        }
+        .ant-table-thead > tr > th {
+          background: #111827 !important;
+          color: #00D4AA !important;
+          border-bottom: 1px solid #1e2d45 !important;
+          font-family: JetBrains Mono, monospace !important;
+          font-size: 11px !important;
+          text-transform: uppercase;
+        }
+        .ant-table-tbody > tr > td {
+          background: transparent !important;
+          border-bottom: 1px solid #1e2d45 !important;
+          color: #94a3b8 !important;
+        }
+        .ant-table-tbody > tr:hover > td {
+          background: #1a2540 !important;
+        }
+        .ant-pagination {
+          color: #94a3b8 !important;
+        }
+        .ant-tag {
+          font-family: JetBrains Mono, monospace !important;
+          font-size: 11px !important;
+        }
+        .ant-select-dropdown {
+          background: #151d2e !important;
+          border: 1px solid #1e2d45 !important;
+        }
+        .ant-select-item {
+          color: #94a3b8 !important;
+        }
+        .ant-select-item-option-selected {
+          background: rgba(0,212,170,0.1) !important;
+          color: #00D4AA !important;
+        }
+        .ant-input, .ant-select-selector {
+          background: #1a2540 !important;
+          border: 1px solid #1e2d45 !important;
+          color: #e2e8f0 !important;
+        }
+        @media (max-width: 767px) {
+          .ant-table-thead { display: none; }
+          .ant-table-tbody > tr { display: block; background: #151d2e !important; border: 1px solid #1e2d45 !important; border-radius: 12px; margin-bottom: 12px; padding: 12px; }
+          .ant-table-tbody > tr > td { display: block; padding: 4px 0; border: none !important; }
+        }
       `}</style>
     </div>
   );
