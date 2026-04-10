@@ -143,7 +143,7 @@ function ConvertModal({ alert, open, onClose, onOk }: { alert: any; open: boolea
     <Modal title="⚡ 告警 → 创建工单" open={open} onOk={handleSubmit} onCancel={onClose} width={600} okText="创建工单">
       <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
         <Form.Item name="title" label="工单标题" rules={[{ required: true }]}>
-          <Input style={{ background: '#f5f6f8', borderColor: '#e8eaed', color: '#e2e8f0' }} />
+          <Input style={{ background: '#f5f6f8', borderColor: '#e8eaed', color: '#1a1a2e' }} />
         </Form.Item>
         <Row gutter={12}>
           <Col span={12}>
@@ -162,7 +162,7 @@ function ConvertModal({ alert, open, onClose, onOk }: { alert: any; open: boolea
           </Col>
         </Row>
         <Form.Item name="description" label="详细描述">
-          <Input.TextArea rows={5} style={{ background: '#f5f6f8', borderColor: '#e8eaed', color: '#e2e8f0' }} />
+          <Input.TextArea rows={5} style={{ background: '#f5f6f8', borderColor: '#e8eaed', color: '#1a1a2e' }} />
         </Form.Item>
       </Form>
     </Modal>
@@ -246,7 +246,7 @@ export default function Alerts() {
     {
       title: '告警内容', dataIndex: 'message',
       render: (v, r) => (
-        <span style={{ color: r.level === 'critical' && !r.acknowledged ? '#dc2626' : '#e2e8f0' }}>
+        <span style={{ color: r.level === 'critical' && !r.acknowledged ? '#dc2626' : '#1a1a2e' }}>
           {v}
         </span>
       ),
@@ -254,19 +254,19 @@ export default function Alerts() {
     {
       title: '状态', dataIndex: 'acknowledged', width: 90,
       render: a => a
-        ? <Tag style={{ background: '#e6342a15', color: '#e6342a', borderColor: '#e6342a' }}>已确认</Tag>
-        : <Tag style={{ background: '#dc262615', color: '#dc2626', borderColor: '#dc2626' }}>未确认</Tag>,
+        ? <Tag style={{ background: '#fef2f2', color: '#e6342a', borderColor: '#e6342a' }}>已确认</Tag>
+        : <Tag style={{ background: '#fef2f2', color: '#dc2626', borderColor: '#dc2626' }}>未确认</Tag>,
     },
     {
       title: '操作', key: 'action', width: 160,
       render: (_, r) => (
         <Space size="small">
           {!r.acknowledged && (
-            <Button size="small" icon={<CheckOutlined />} onClick={() => handleAck(r._id)} style={{ background: '#e6342a15', borderColor: '#e6342a', color: '#e6342a' }}>
+            <Button size="small" icon={<CheckOutlined />} onClick={() => handleAck(r._id)} style={{ background: '#fef2f2', borderColor: '#e6342a', color: '#e6342a' }}>
               确认
             </Button>
           )}
-          <Button size="small" icon={<ThunderboltOutlined />} onClick={() => setConvertAlert(r)} style={{ background: '#d9770615', borderColor: '#d97706', color: '#d97706' }}>
+          <Button size="small" icon={<ThunderboltOutlined />} onClick={() => setConvertAlert(r)} style={{ background: '#fffbeb', borderColor: '#d97706', color: '#d97706' }}>
             转工单
           </Button>
         </Space>
@@ -282,7 +282,7 @@ export default function Alerts() {
         title={
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <AlertOutlined style={{ color: '#e6342a' }} />
-            <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13, color: '#e2e8f0', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13, color: '#1a1a2e', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
               告警记录
             </span>
             <span style={{ fontSize: 12, color: '#8896a6', fontFamily: 'JetBrains Mono, monospace' }}>
@@ -368,7 +368,7 @@ export default function Alerts() {
         .ant-input, .ant-select-selector {
           background: #f5f6f8 !important;
           border: 1px solid #e8eaed !important;
-          color: #e2e8f0 !important;
+          color: #1a1a2e !important;
         }
         @media (max-width: 767px) {
           .ant-table-thead { display: none; }
