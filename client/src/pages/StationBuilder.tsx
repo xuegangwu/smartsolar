@@ -235,12 +235,12 @@ export default function StationBuilder() {
     const totalPV = (equips.find(e => e.type === 'pv')?.power || 0) * (equips.find(e => e.type === 'pv')?.count || 0);
     const payload = {
       name: stationData.name,
-      location: stationData.location,
+      location: { address: stationData.location, lat: 0, lng: 0 },
       capacity: totalPV / 1000,
       installedCapacity: totalPV,
       peakPower: totalPV,
       type: 'solar_storage',
-      status: 'planning',
+      status: 'offline',
       owner: stationData.owner,
       contact: 'admin@risen.com',
       gridConnectionDate: new Date().toISOString().slice(0, 10),
