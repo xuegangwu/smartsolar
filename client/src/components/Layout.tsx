@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Layout as AntLayout, Menu, Avatar, Dropdown, Badge, List, Typography, Empty, Popconfirm } from 'antd';
+import { Layout as AntLayout, Menu, Avatar, Dropdown, Badge, List, Typography, Empty, Popconfirm, Drawer } from 'antd';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import {
   DashboardOutlined, HomeOutlined, ToolOutlined, FileTextOutlined,
   BellOutlined, CalendarOutlined, UserOutlined, LogoutOutlined,
   InboxOutlined, RiseOutlined, ApiOutlined, DownloadOutlined, PlusSquareOutlined,
-  EnvironmentOutlined, TeamOutlined,
+  EnvironmentOutlined, TeamOutlined, MoreOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
@@ -27,6 +27,86 @@ const NAV_ITEMS = [
   { key: '/stations/new/builder', icon: <PlusSquareOutlined />, label: '建站' },
   { key: '/ems-simulator', icon: <ApiOutlined />, label: 'EMS模拟' },
 ];
+
+// ─── Mobile Bottom Tab Bar ─────────────────────────────────────────────────────
+function MobileBottomBar() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [moreOpen, setMoreOpen] = useState(false);
+
+  // Core items: 首页/电站/地图/设备/工单/告警/备件
+  const MAIN_ITEMS = NAV_ITEMS.slice(0, 7);
+  // Secondary: 巡检/KPI/人员管理/导出/建站/EMS
+  const MORE_ITEMS = NAV_ITEMS.slice(7);
+
+  return (
+    <>
+      <div style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0,
+        background: '#ffffff',
+        borderTop: '1px solid #e8eaed',
+        display: 'flex', zIndex: 200,
+        paddingBottom: 'env(safe-area-inset-bottom)',
+        boxShadow: '0 -2px 8px rgba(0,0,0,0.06)',
+      }}>
+        {MAIN_ITEMS.map(item => {
+          const active = location.pathname.startsWith(item.key);
+          return (
+            <div key={item.key} onClick={() => navigate(item.key)} style={{
+              flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
+              padding: '8px 0', cursor: 'pointer',
+              color: active ? '#e6342a' : '#8896a6',
+              transition: 'color 0.15s',
+            }}>
+              <span style={{ fontSize: 20, lineHeight: 1 }}>{item.icon}</span>
+              <span style={{ fontSize: 10, fontFamily: 'Inter, sans-serif', fontWeight: active ? 600 : 400, marginTop: 3 }}>
+                {item.label}
+              </span>
+            </div>
+          );
+        })}
+        {/* More button */}
+        <div onClick={() => setMoreOpen(true)} style={{
+          flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
+          padding: '8px 0', cursor: 'pointer', color: moreOpen ? '#e6342a' : '#8896a6',
+        }}>
+          <MoreOutlined style={{ fontSize: 20, lineHeight: 1 }} />
+          <span style={{ fontSize: 10, fontFamily: 'Inter, sans-serif', fontWeight: 400, marginTop: 3 }}>更多</span>
+        </div>
+      </div>
+
+      {/* More drawer */}
+      <Drawer
+        title="更多功能"
+        placement="bottom"
+        open={moreOpen}
+        onClose={() => setMoreOpen(false)}
+        maskClosable
+        height="auto"
+        styles={{ body: { padding: '16px 16px calc(env(safe-area-inset-bottom) + 16px)', display: 'flex', flexWrap: 'wrap', gap: 10 } }}
+      >
+        {MORE_ITEMS.map(item => {
+          const active = location.pathname.startsWith(item.key);
+          return (
+            <div key={item.key} onClick={() => { navigate(item.key); setMoreOpen(false); }} style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center',
+              padding: '12px 16px', background: active ? '#fef5f5' : '#f6f8fa',
+              borderRadius: 12, cursor: 'pointer',
+              border: active ? '1.5px solid #e6342a' : '1.5px solid transparent',
+              minWidth: 80, flex: '1 1 calc(33.3% - 10px)',
+            }}>
+              <span style={{ fontSize: 22, color: active ? '#e6342a' : '#555' }}>{item.icon}</span>
+              <span style={{ fontSize: 11, color: active ? '#e6342a' : '#333', marginTop: 4, fontFamily: 'Inter, sans-serif', fontWeight: active ? 600 : 400 }}>
+                {item.label}
+              </span>
+            </div>
+          );
+        })}
+      </Drawer>
+    </>
+  );
+}
+
 
 export default function Layout() {
   const navigate = useNavigate();
@@ -262,29 +342,7 @@ export default function Layout() {
       </Content>
 
       {/* Bottom tab bar */}
-      <div style={{
-        position: 'fixed', bottom: 0, left: 0, right: 0,
-        background: '#ffffff',
-        borderTop: '1px solid #e8eaed',
-        display: 'flex', zIndex: 200,
-        paddingBottom: 'env(safe-area-inset-bottom)',
-        boxShadow: '0 -2px 8px rgba(0,0,0,0.04)',
-      }}>
-        {NAV_ITEMS.slice(0, 5).map(item => {
-          const active = location.pathname.startsWith(item.key);
-          return (
-            <div key={item.key} onClick={() => navigate(item.key)} style={{
-              flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
-              padding: '8px 0', cursor: 'pointer',
-              color: active ? '#e6342a' : '#8896a6',
-              fontSize: 10, gap: 2, transition: 'color 0.15s',
-            }}>
-              <span style={{ fontSize: 20, lineHeight: 1 }}>{item.icon}</span>
-              <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 10, fontWeight: active ? 600 : 400 }}>{item.label}</span>
-            </div>
-          );
-        })}
-      </div>
+      <MobileBottomBar />
     </AntLayout>
   );
 }

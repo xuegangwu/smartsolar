@@ -8,6 +8,7 @@ import {
   PlusOutlined, CheckCircleOutlined, ClockCircleOutlined,
   CalendarOutlined, FileTextOutlined, TeamOutlined, ToolOutlined, PlusCircleOutlined, DeleteOutlined,
 } from '@ant-design/icons';
+import { templateApi } from '../services/api';
 import dayjs from 'dayjs';
 
 const { Text, Title } = Typography;
