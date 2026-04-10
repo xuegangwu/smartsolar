@@ -88,7 +88,7 @@ export default function Stations() {
 
   return (
     <Card title="电站管理" extra={<Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>添加电站</Button>}>
-      <Table columns={columns} dataSource={stations} rowKey="_id" loading={loading} pagination={{ pageSize: 20 }} />
+      <Table className="mobile-card-list" columns={columns} dataSource={stations} rowKey="_id" loading={loading} pagination={{ pageSize: 20 }} />
 
       <Modal title={editing ? '编辑电站' : '添加电站'} open={isModalOpen} onOk={handleSubmit} onCancel={() => setIsModalOpen(false)} width={640}>
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>

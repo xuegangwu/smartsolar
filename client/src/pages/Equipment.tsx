@@ -310,11 +310,11 @@ export default function Equipment() {
   return (
     <div>
       {/* Stats Row */}
-      <Row gutter={16} style={{ marginBottom: 24 }}>
-        <Col span={6}><Statistic title="设备总数" value={stats.total} prefix={<AppstoreOutlined />} /></Col>
-        <Col span={6}><Statistic title="在线" value={stats.online} valueStyle={{ color: '#52c41a' }} /></Col>
-        <Col span={6}><Statistic title="离线" value={stats.offline} valueStyle={{ color: '#ff4d4f' }} /></Col>
-        <Col span={6}><Statistic title="维护中" value={stats.maintenance} valueStyle={{ color: '#fa8c16' }} /></Col>
+      <Row gutter={[12,12]} style={{ marginBottom: 16 }} className="stat-grid">
+        <Col xs={12} sm={6}><Statistic title="设备总数" value={stats.total} prefix={<AppstoreOutlined />} /></Col>
+        <Col xs={12} sm={6}><Statistic title="在线" value={stats.online} valueStyle={{ color: '#52c41a' }} /></Col>
+        <Col xs={12} sm={6}><Statistic title="离线" value={stats.offline} valueStyle={{ color: '#ff4d4f' }} /></Col>
+        <Col xs={12} sm={6}><Statistic title="维护中" value={stats.maintenance} valueStyle={{ color: '#fa8c16' }} /></Col>
       </Row>
 
       <Row gutter={16}>
@@ -358,7 +358,7 @@ export default function Equipment() {
               </Space>
             }
           >
-            <Table columns={columns} dataSource={equipments} rowKey="_id" loading={loading} pagination={{ pageSize: 20 }} />
+            <Table className="mobile-card-list" columns={columns} dataSource={equipments} rowKey="_id" loading={loading} pagination={{ pageSize: 20 }} />
           </Card>
         </Col>
       </Row>

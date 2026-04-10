@@ -251,7 +251,7 @@ export default function WorkOrders() {
           </Space>
         }
       >
-        <Table columns={columns} dataSource={orders} rowKey="_id" loading={loading}
+        <Table className="mobile-card-list" columns={columns} dataSource={orders} rowKey="_id" loading={loading}
           pagination={{ pageSize: 20 }} scroll={{ x: 1100 }}
           rowClassName={r => r.priority === 'urgent' ? 'urgent-row' : ''}
         />
