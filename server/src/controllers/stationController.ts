@@ -18,8 +18,69 @@ export const stationController = {
   },
 
   create: async (req: Request, res: Response) => {
-    const station = new Station(req.body);
+    const body = req.body as any;
+    const station = new Station(body);
     await station.save();
+
+    // Auto-create EquipmentCategory + Equipment records from the equipment[] array
+    if (body.equipment && Array.isArray(body.equipment)) {
+      // Group by type -> one category per type
+      const typeMap: Record<string, string> = {
+        pv: 'solar',
+        battery: 'battery',
+        pcs: 'pcs',
+        meter: 'meter',
+        ev_charger: 'ev_charger',
+        grid: 'grid',
+      };
+      const labelMap: Record<string, string> = {
+        pv: '光伏',
+        battery: '储能',
+        pcs: '变流器',
+        meter: '电表',
+        ev_charger: '充电桩',
+        grid: '电网',
+      };
+
+      // Create one category per unique type
+      const typeSet = new Set<string>();
+      for (const eq of body.equipment) {
+        if (eq.count > 0) typeSet.add(eq.type);
+      }
+
+      const catMap: Record<string, any> = {};
+      for (const t of typeSet) {
+        const catType = typeMap[t] || t;
+        const label = labelMap[t] || t;
+        const cat = await EquipmentCategory.create({
+          stationId: station._id,
+          name: `${label}分类`,
+          type: catType,
+        });
+        catMap[t] = cat;
+      }
+
+      // Create Equipment records per item, respecting count
+      for (const eq of body.equipment) {
+        if (eq.count <= 0) continue;
+        const cat = catMap[eq.type];
+        if (!cat) continue;
+        const catType = typeMap[eq.type] || eq.type;
+
+        for (let i = 1; i <= eq.count; i++) {
+          const nameSuffix = eq.count === 1 ? '' : `-${i}`;
+          await Equipment.create({
+            stationId: station._id,
+            categoryId: cat._id,
+            name: `${eq.name}${nameSuffix}`,
+            type: catType,
+            ratedPower: eq.power,
+            status: 'online',
+          });
+        }
+      }
+    }
+
     res.json({ success: true, data: station });
   },
 
