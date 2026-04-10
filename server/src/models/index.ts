@@ -84,6 +84,7 @@ export const MaintenanceRecord = mongoose.model('MaintenanceRecord', maintenance
 
 // ─── Alert（从EMS同步）──────────────────────────────────────────────────────────
 const alertSchema = new mongoose.Schema({
+  sourceAlertId: String,  // EMS原始告警ID（用于去重）
   stationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Station' },
   equipmentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Equipment' },
   level: { type: String, enum: ['critical', 'major', 'minor'], required: true },

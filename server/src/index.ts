@@ -6,6 +6,7 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
 import { stationRoutes } from './routes/stationRoutes.js';
 import { workOrderRoutes } from './routes/workOrderRoutes.js';
 import { alertRoutes } from './routes/alertRoutes.js';
+import { alertSyncRoutes } from './routes/alertSyncRoutes.js';
 
 dotenv.config();
 
@@ -21,6 +22,7 @@ app.use(express.json());
 app.use('/api', stationRoutes);
 app.use('/api/work-orders', workOrderRoutes);
 app.use('/api/alerts', alertRoutes);
+app.use('/api/ems-sync', alertSyncRoutes);  // EMS → SmartSolar 告警同步
 
 // Health check
 app.get('/api/health', (req, res) => {
