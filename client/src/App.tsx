@@ -11,6 +11,7 @@ import Inspection from './pages/Inspection';
 import SpareParts from './pages/SpareParts';
 import KPI from './pages/KPI';
 import EmsSimulator from './pages/EmsSimulator';
+import Reports from './pages/Reports';
 import Login from './pages/Login';
 
 const theme = {
@@ -38,6 +39,7 @@ export default function App() {
               <Route path="spare-parts" element={<SpareParts />} />
               <Route path="kpi" element={<KPI />} />
               <Route path="ems-simulator" element={<EmsSimulator />} />
+              <Route path="reports" element={<Reports />} />
             </Route>
           </Routes>
         </BrowserRouter>
