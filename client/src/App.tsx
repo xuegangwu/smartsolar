@@ -66,6 +66,7 @@ export default function App() {
                 </Route>
               </Routes>
             </BrowserRouter>
+            </NotificationProvider>
           </StationProvider>
         </AuthProvider>
       </AntApp>

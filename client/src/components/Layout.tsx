@@ -78,7 +78,8 @@ export default function Layout() {
           style={{
             background: '#ffffff',
             borderRight: '1px solid #e8eaed',
-            position: 'sticky', top: 0, height: '100vh', overflow: 'auto',
+            position: 'sticky', top: 0, height: '100vh', overflow: 'hidden',
+            display: 'flex', flexDirection: 'column',
             boxShadow: '2px 0 8px rgba(0,0,0,0.04)',
             zIndex: 100,
           }}
@@ -110,7 +111,7 @@ export default function Layout() {
 
           {/* Global Station Selector */}
           {!collapsed && (
-            <div style={{ padding: '10px 16px 8px' }}>
+            <div style={{ padding: '10px 16px 8px', flexShrink: 0 }}>
               <div style={{ fontSize: 10, color: '#8896a6', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 5 }}>
                 当前电站
               </div>
@@ -140,21 +141,22 @@ export default function Layout() {
             </div>
           )}
 
-          {/* Nav */}
-          <Menu
-            mode="inline"
-            selectedKeys={[location.pathname]}
-            items={NAV_ITEMS}
-            onClick={({ key }) => navigate(key)}
-            style={{ background: 'transparent', border: 'none', marginTop: 8, padding: '0 8px' }}
-          />
+          {/* Nav — scrollable */}
+          <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, paddingBottom: 8 }}>
+            <Menu
+              mode="inline"
+              selectedKeys={[location.pathname]}
+              items={NAV_ITEMS}
+              onClick={({ key }) => navigate(key)}
+              style={{ background: 'transparent', border: 'none', padding: '0 8px' }}
+            />
+          </div>
 
           {/* Status */}
           {!collapsed && (
             <div style={{
-              position: 'absolute', bottom: 0, left: 0, right: 0,
               padding: '12px 16px', borderTop: '1px solid #e8eaed',
-              display: 'flex', flexDirection: 'column', gap: 6,
+              display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0,
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <div style={{ width: 7, height: 7, borderRadius: '50%', background: mongoColor, flexShrink: 0 }} />
