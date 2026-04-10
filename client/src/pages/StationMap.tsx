@@ -1,6 +1,6 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
-import { Card, Typography, Tag, Button, Badge, Empty, Space } from 'antd';
-import { EnvironmentOutlined, AppstoreOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { useEffect, useState, useCallback } from 'react';
+import { Card, Typography, Tag, Button, Badge, Empty } from 'antd';
+import { EnvironmentOutlined, AppstoreOutlined } from '@ant-design/icons';
 import { stationApi } from '../services/api';
 
 const { Title, Text } = Typography;
@@ -21,15 +21,54 @@ function formatCap(cap: number) {
   return cap >= 1000 ? `${(cap / 1000).toFixed(1)} MW` : `${cap} kW`;
 }
 
-// Equirectangular projection: lat/lng → canvas x/y
-function project(lat: number, lng: number, w: number, h: number) {
+// Equirectangular: lat/lng → SVG viewBox coords (viewBox: 0 0 1000 500)
+const VIEW_W = 1000, VIEW_H = 500;
+function project(lat: number, lng: number) {
   return {
-    x: ((lng + 180) / 360) * w,
-    y: ((90 - lat) / 180) * h,
+    x: ((lng + 180) / 360) * VIEW_W,
+    y: ((90 - lat) / 180) * VIEW_H,
   };
 }
 
-function WorldMapCanvas({
+// Simplified but recognizable continent paths (equirectangular, W=1000 H=500)
+const CONTINENTS = [
+  // North America
+  { d: 'M 25,15 L 60,12 L 90,18 L 130,22 L 165,30 L 185,42 L 195,55 L 200,68 L 190,80 L 175,88 L 158,95 L 140,100 L 120,98 L 100,92 L 82,88 L 65,92 L 50,88 L 38,78 L 28,65 L 20,50 Z', label: '北美' },
+  // Greenland
+  { d: 'M 310,8 L 340,10 L 355,20 L 350,32 L 338,38 L 322,36 L 312,28 Z', label: '格陵兰' },
+  // South America
+  { d: 'M 180,130 L 210,125 L 235,130 L 250,145 L 258,165 L 262,190 L 258,220 L 248,250 L 235,275 L 218,290 L 200,295 L 185,288 L 172,272 L 165,250 L 160,225 L 162,195 L 168,168 L 175,148 Z', label: '南美' },
+  // Europe
+  { d: 'M 440,28 L 465,22 L 490,24 L 515,30 L 535,38 L 545,48 L 542,60 L 530,68 L 515,72 L 500,75 L 482,78 L 465,80 L 448,78 L 435,72 L 428,62 L 432,48 Z', label: '欧洲' },
+  // UK
+  { d: 'M 438,42 L 444,38 L 448,44 L 445,52 L 440,55 Z', label: '英国' },
+  // Africa
+  { d: 'M 448,95 L 480,88 L 515,85 L 545,88 L 568,95 L 580,110 L 588,130 L 590,155 L 585,180 L 578,205 L 565,230 L 548,255 L 530,272 L 510,282 L 490,285 L 470,280 L 452,268 L 440,248 L 432,225 L 428,200 L 430,175 L 435,150 L 438,125 Z', label: '非洲' },
+  // Asia (main)
+  { d: 'M 560,22 L 600,15 L 650,12 L 710,15 L 765,22 L 810,32 L 848,45 L 875,60 L 888,78 L 892,98 L 885,118 L 870,135 L 850,148 L 828,158 L 805,165 L 782,170 L 758,175 L 735,180 L 710,185 L 685,188 L 660,185 L 635,180 L 612,175 L 590,168 L 570,158 L 555,145 L 545,130 L 545,112 L 550,95 L 558,75 L 562,55 Z', label: '亚洲' },
+  // Middle East / Arabian Peninsula
+  { d: 'M 555,98 L 575,92 L 592,95 L 600,108 L 598,122 L 585,130 L 570,132 L 558,125 L 552,112 Z', label: '中东' },
+  // India subcontinent
+  { d: 'M 638,110 L 660,105 L 680,112 L 690,128 L 688,148 L 675,162 L 660,168 L 645,165 L 635,152 L 632,135 Z', label: '印度' },
+  // Southeast Asia
+  { d: 'M 748,115 L 768,108 L 788,115 L 798,128 L 792,142 L 778,148 L 762,145 L 750,135 Z', label: '东南亚' },
+  // Japan / Korea
+  { d: 'M 842,78 L 858,72 L 868,80 L 866,90 L 858,98 L 848,100 L 840,95 Z', label: '日韩' },
+  // Taiwan
+  { d: 'M 828,112 L 833,108 L 837,114 L 833,120 Z', label: '台湾' },
+  // Australia
+  { d: 'M 790,245 L 825,238 L 858,240 L 880,250 L 888,265 L 885,280 L 872,290 L 850,295 L 828,292 L 808,282 L 795,268 L 788,255 Z', label: '澳洲' },
+  // New Zealand
+  { d: 'M 915,305 L 925,300 L 930,308 L 926,318 L 918,318 Z', label: '新西兰' },
+  // Bering Strait / Russia north coast hint
+  { d: 'M 620,10 L 680,8 L 740,10', label: '' },
+];
+
+// Lat/lng grid lines
+const LAT_LINES = [-60,-30,0,30,60];
+const LNG_LINES = [-150,-120,-90,-60,-30,0,30,60,90,120,150];
+
+function WorldMapSVG({
   stations,
   selected,
   onSelect,
@@ -42,310 +81,221 @@ function WorldMapCanvas({
   hovered: string | null;
   onHover: (id: string | null) => void;
 }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [dims, setDims] = useState({ w: 900, h: 450 });
-
-  // Draw world map on canvas
-  const draw = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    const { w, h } = dims;
-
-    ctx.clearRect(0, 0, w, h);
-
-    // Background gradient (ocean)
-    const grad = ctx.createLinearGradient(0, 0, 0, h);
-    grad.addColorStop(0, '#1a3a5c');
-    grad.addColorStop(1, '#0d2137');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, w, h);
-
-    // Grid lines
-    ctx.strokeStyle = 'rgba(100,150,200,0.15)';
-    ctx.lineWidth = 0.5;
-    // Latitude lines
-    for (let lat = -60; lat <= 80; lat += 20) {
-      const { y } = project(lat, 0, w, h);
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(w, y);
-      ctx.stroke();
-    }
-    // Longitude lines
-    for (let lng = -180; lng <= 180; lng += 30) {
-      const { x } = project(0, lng, w, h);
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, h);
-      ctx.stroke();
-    }
-
-    // Equator and prime meridian (emphasized)
-    ctx.strokeStyle = 'rgba(100,150,200,0.35)';
-    ctx.lineWidth = 1;
-    const eq = project(0, 0, w, h);
-    const pm = project(0, 0, w, h);
-    ctx.beginPath(); ctx.moveTo(0, eq.y); ctx.lineTo(w, eq.y); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(pm.x, 0); ctx.lineTo(pm.x, h); ctx.stroke();
-
-    // Simplified continent outlines (major landmasses as ellipses/rects for visual reference)
-    // North America
-    ctx.fillStyle = 'rgba(60,90,60,0.6)';
-    ctx.strokeStyle = 'rgba(80,120,80,0.4)';
-    ctx.lineWidth = 1;
-    const drawEllipse = (cx: number, cy: number, rx: number, ry: number) => {
-      ctx.beginPath();
-      ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
-      ctx.fill(); ctx.stroke();
-    };
-    // Use lat/lng → canvas for continent approximations
-    const na = { cx: project(45, -100, w, h), rx: 120, ry: 60 };
-    drawEllipse(na.cx.x, na.cx.y, na.rx, na.ry);
-
-    // South America
-    const sa = { cx: project(-5, -60, w, h), rx: 50, ry: 90 };
-    drawEllipse(sa.cx.x, sa.cx.y, sa.rx, sa.ry);
-
-    // Europe
-    const eu = { cx: project(50, 15, w, h), rx: 60, ry: 35 };
-    drawEllipse(eu.cx.x, eu.cx.y, eu.rx, eu.ry);
-
-    // Africa
-    const af = { cx: project(5, 20, w, h), rx: 65, ry: 90 };
-    drawEllipse(af.cx.x, af.cx.y, af.rx, af.ry);
-
-    // Asia (large)
-    const as_ = { cx: project(35, 90, w, h), rx: 200, ry: 70 };
-    drawEllipse(as_.cx.x, as_.cx.y, as_.rx, as_.ry);
-
-    // Southeast Asia / Indonesia
-    const sea = { cx: project(0, 110, w, h), rx: 70, ry: 40 };
-    drawEllipse(sea.cx.x, sea.cx.y, sea.rx, sea.ry);
-
-    // Australia
-    const au = { cx: project(-25, 135, w, h), rx: 50, ry: 35 };
-    drawEllipse(au.cx.x, au.cx.y, au.rx, au.ry);
-
-    // Greenland
-    const gl = { cx: project(72, -42, w, h), rx: 28, ry: 35 };
-    drawEllipse(gl.cx.x, gl.cx.y, gl.rx, gl.ry);
-
-    // Japan/Korea
-    const jk = { cx: project(38, 135, w, h), rx: 25, ry: 30 };
-    drawEllipse(jk.cx.x, jk.cx.y, jk.rx, jk.ry);
-
-    // UK
-    const uk = { cx: project(54, -2, w, h), rx: 12, ry: 18 };
-    drawEllipse(uk.cx.x, uk.cx.y, uk.rx, uk.ry);
-
-    // Taiwan
-    const tw = project(23.5, 121, w, h);
-    ctx.fillStyle = 'rgba(60,90,60,0.6)';
-    ctx.beginPath();
-    ctx.ellipse(tw.x, tw.y, 5, 10, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Latitude labels
-    ctx.fillStyle = 'rgba(100,150,200,0.4)';
-    ctx.font = '10px Inter, sans-serif';
-    for (let lat = -60; lat <= 80; lat += 30) {
-      const { y } = project(lat, -175, w, h);
-      ctx.fillText(`${lat > 0 ? lat + '°N' : Math.abs(lat) + '°S'}`, 4, y + 3);
-    }
-    for (let lng = -150; lng <= 150; lng += 30) {
-      const { x, y } = project(0, lng, w, h);
-      ctx.fillText(`${lng > 0 ? lng + '°E' : Math.abs(lng) + '°W'}`, x - 12, h - 4);
-    }
-
-    // Station markers
-    const geoStations = stations.filter(s => s.location?.lat && s.location?.lng && s.location.lat !== 0);
-    geoStations.forEach(s => {
-      const { x, y } = project(s.location.lat, s.location.lng, w, h);
-      const color = TYPE_COLOR[s.type] || '#8896a6';
-      const sc = STATUS_COLOR[s.status] || '#b8c0cc';
-      const cap = s.capacity || s.installedCapacity || s.peakPower || 0;
-      const r = cap >= 1000 ? 8 : cap >= 500 ? 6 : 5;
-      const isSelected = selected?._id === s._id;
-      const isHovered = hovered === s._id;
-      const isOnline = s.status === 'online';
-
-      // Glow for selected/hovered
-      if (isSelected || isHovered) {
-        const glowR = isSelected ? r * 3.5 : r * 2.5;
-        const grd = ctx.createRadialGradient(x, y, r, x, y, glowR);
-        grd.addColorStop(0, `${color}60`);
-        grd.addColorStop(1, 'transparent');
-        ctx.fillStyle = grd;
-        ctx.beginPath();
-        ctx.arc(x, y, glowR, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      // Pulse ring for online
-      if (isOnline && !isSelected) {
-        ctx.strokeStyle = `${color}50`;
-        ctx.lineWidth = 1.5;
-        ctx.setLineDash([]);
-        // Just draw a static faint ring (animated pulse via CSS on a separate element)
-        ctx.beginPath();
-        ctx.arc(x, y, r * 2.2, 0, Math.PI * 2);
-        ctx.stroke();
-      }
-
-      // Marker circle
-      ctx.fillStyle = '#fff';
-      ctx.strokeStyle = color;
-      ctx.lineWidth = isSelected || isHovered ? 3 : 2;
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-
-      // Inner dot
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.arc(x, y, r * 0.55, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Draw connector line to edge if near border
-      if (x < r * 2 || x > w - r * 2 || y < r * 2 || y > h - r * 2) {
-        const mx = Math.max(r, Math.min(w - r, x));
-        const my = Math.max(r, Math.min(h - r, y));
-        ctx.strokeStyle = `${color}40`;
-        ctx.lineWidth = 0.8;
-        ctx.setLineDash([3, 3]);
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.lineTo(mx, my);
-        ctx.stroke();
-        ctx.setLineDash([]);
-      }
-    });
-  }, [stations, selected, hovered, dims]);
-
-  // Redraw on changes
-  useEffect(() => { draw(); }, [draw]);
-
-  // Resize observer
-  useEffect(() => {
-    const obs = new ResizeObserver(entries => {
-      const entry = entries[0];
-      if (entry) {
-        const { width } = entry.contentRect;
-        const h = Math.round(width / 2);
-        setDims({ w: Math.round(width), h });
-      }
-    });
-    if (containerRef.current) obs.observe(containerRef.current);
-    return () => obs.disconnect();
-  }, []);
-
-  // Handle click
-  const handleClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = dims.w / rect.width;
-    const scaleY = dims.h / rect.height;
-    const mx = (e.clientX - rect.left) * scaleX;
-    const my = (e.clientY - rect.top) * scaleY;
-
-    const geoStations = stations.filter(s => s.location?.lat && s.location?.lng && s.location.lat !== 0);
-    for (const s of geoStations) {
-      const { x, y } = project(s.location.lat, s.location.lng, dims.w, dims.h);
-      const cap = s.capacity || s.installedCapacity || s.peakPower || 0;
-      const r = cap >= 1000 ? 8 : cap >= 500 ? 6 : 5;
-      const dist = Math.sqrt((mx - x) ** 2 + (my - y) ** 2);
-      if (dist <= r * 2) {
-        onSelect(s);
-        return;
-      }
-    }
-    onSelect(null);
-  }, [stations, dims, onSelect]);
+  const geoStations = stations.filter(s => s.location?.lat && s.location?.lng && s.location.lat !== 0);
 
   return (
-    <div ref={containerRef} style={{ position: 'relative', width: '100%', borderRadius: 12, overflow: 'hidden' }}>
-      <canvas
-        ref={canvasRef}
-        width={dims.w}
-        height={dims.h}
-        onClick={handleClick}
-        onMouseMove={e => {
-          const canvas = canvasRef.current;
-          if (!canvas) return;
-          const rect = canvas.getBoundingClientRect();
-          const scaleX = dims.w / rect.width;
-          const scaleY = dims.h / rect.height;
-          const mx = (e.clientX - rect.left) * scaleX;
-          const my = (e.clientY - rect.top) * scaleY;
-          const geoStations = stations.filter(s => s.location?.lat && s.location?.lng && s.location.lat !== 0);
+    <div style={{ position: 'relative', width: '100%' }}>
+      <svg
+        viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
+        style={{
+          width: '100%', display: 'block',
+          borderRadius: 12, background: '#0f1923',
+        }}
+        onClick={(e) => {
+          const rect = e.currentTarget.getBoundingClientRect();
+          const svgW = VIEW_W, svgH = VIEW_H;
+          const mx = (e.clientX - rect.left) / rect.width * svgW;
+          const my = (e.clientY - rect.top) / rect.height * svgH;
           for (const s of geoStations) {
-            const { x, y } = project(s.location.lat, s.location.lng, dims.w, dims.h);
+            const { x, y } = project(s.location.lat, s.location.lng);
             const cap = s.capacity || s.installedCapacity || s.peakPower || 0;
-            const r = cap >= 1000 ? 8 : cap >= 500 ? 6 : 5;
+            const r = cap >= 1000 ? 14 : cap >= 500 ? 11 : 8;
             const dist = Math.sqrt((mx - x) ** 2 + (my - y) ** 2);
-            if (dist <= r * 2) { onHover(s._id); return; }
+            if (dist <= r * 2.5) { onSelect(s); return; }
+          }
+          onSelect(null);
+        }}
+        onMouseMove={(e) => {
+          const rect = e.currentTarget.getBoundingClientRect();
+          const svgW = VIEW_W, svgH = VIEW_H;
+          const mx = (e.clientX - rect.left) / rect.width * svgW;
+          const my = (e.clientY - rect.top) / rect.height * svgH;
+          for (const s of geoStations) {
+            const { x, y } = project(s.location.lat, s.location.lng);
+            const cap = s.capacity || s.installedCapacity || s.peakPower || 0;
+            const r = cap >= 1000 ? 14 : cap >= 500 ? 11 : 8;
+            const dist = Math.sqrt((mx - x) ** 2 + (my - y) ** 2);
+            if (dist <= r * 2.5) { onHover(s._id); return; }
           }
           onHover(null);
         }}
         onMouseLeave={() => onHover(null)}
-        style={{
-          width: '100%', height: 'auto', display: 'block', cursor: 'crosshair',
-          borderRadius: '12px',
-        }}
-      />
+      >
+        <defs>
+          {/* Glow filter */}
+          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <filter id="glow-strong" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="6" result="blur" />
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          {/* Ocean gradient */}
+          <linearGradient id="ocean" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#0d2233"/>
+            <stop offset="100%" stopColor="#162a42"/>
+          </linearGradient>
+        </defs>
 
-      {/* Hover tooltip */}
+        {/* Ocean background */}
+        <rect width={VIEW_W} height={VIEW_H} fill="url(#ocean)" />
+
+        {/* Grid lines */}
+        {LAT_LINES.map(lat => {
+          const { y } = project(lat, 0);
+          return (
+            <g key={`lat-${lat}`}>
+              <line x1={0} y1={y} x2={VIEW_W} y2={y}
+                stroke={lat === 0 ? '#2a4a6a' : '#1e3550'} strokeWidth={lat === 0 ? 1.2 : 0.5} />
+              {lat !== 0 && (
+                <text x={VIEW_W - 5} y={y - 3}
+                  fill="#2a4a6a" fontSize="9" textAnchor="end"
+                  fontFamily="JetBrains Mono, monospace">
+                  {lat > 0 ? `${lat}°N` : `${Math.abs(lat)}°S`}
+                </text>
+              )}
+            </g>
+          );
+        })}
+        {LNG_LINES.map(lng => {
+          const { x } = project(0, lng);
+          return (
+            <line key={`lng-${lng}`} x1={x} y1={0} x2={x} y2={VIEW_H}
+              stroke="#1e3550" strokeWidth={0.5} />
+          );
+        })}
+
+        {/* Equator line */}
+        <line x1={0} y1={project(0, 0).y} x2={VIEW_W} y2={project(0, 0).y}
+          stroke="#2a5a8a" strokeWidth={1} strokeDasharray="6 4" opacity={0.6} />
+
+        {/* Tropic of Cancer / Capricorn */}
+        <line x1={0} y1={project(23.5, 0).y} x2={VIEW_W} y2={project(23.5, 0).y}
+          stroke="#1e4060" strokeWidth={0.5} strokeDasharray="3 5" />
+        <line x1={0} y1={project(-23.5, 0).y} x2={VIEW_W} y2={project(-23.5, 0).y}
+          stroke="#1e4060" strokeWidth={0.5} strokeDasharray="3 5" />
+
+        {/* Continent fills */}
+        {CONTINENTS.map((c, i) => (
+          <path key={i} d={c.d}
+            fill="#1e3a52" stroke="#2a5278" strokeWidth={1}
+            opacity={0.85}
+          />
+        ))}
+
+        {/* Station markers */}
+        {geoStations.map(s => {
+          const { x, y } = project(s.location.lat, s.location.lng);
+          const color = TYPE_COLOR[s.type] || '#8896a6';
+          const sc = STATUS_COLOR[s.status] || '#b8c0cc';
+          const cap = s.capacity || s.installedCapacity || s.peakPower || 0;
+          const r = cap >= 1000 ? 8 : cap >= 500 ? 6 : 5;
+          const isSelected = selected?._id === s._id;
+          const isHovered = hovered === s._id;
+          const isOnline = s.status === 'online';
+          const glowR = isSelected ? r * 4 : isHovered ? r * 3 : r * 2.5;
+
+          return (
+            <g key={s._id} style={{ cursor: 'pointer' }}>
+              {/* Glow halo */}
+              {(isSelected || isHovered || isOnline) && (
+                <circle cx={x} cy={y} r={glowR}
+                  fill={color} opacity={isSelected ? 0.25 : isHovered ? 0.18 : 0.1}
+                  filter={isSelected ? 'url(#glow-strong)' : 'url(#glow)'}
+                />
+              )}
+
+              {/* Pulse ring (online only) */}
+              {isOnline && !isSelected && !isHovered && (
+                <circle cx={x} cy={y} r={r * 2.2}
+                  fill="none" stroke={color} strokeWidth={1.2} opacity={0.4}
+                  strokeDasharray="3 3"
+                >
+                  <animate attributeName="r" values={`${r*1.5};${r*3.5}`} dur="2s" repeatCount="indefinite"/>
+                  <animate attributeName="opacity" values="0.5;0" dur="2s" repeatCount="indefinite"/>
+                </circle>
+              )}
+
+              {/* Main circle */}
+              <circle cx={x} cy={y} r={isSelected || isHovered ? r * 1.3 : r}
+                fill={isSelected || isHovered ? color : '#ffffff'}
+                stroke={color} strokeWidth={isSelected ? 2.5 : 2}
+              />
+
+              {/* Inner dot */}
+              <circle cx={x} cy={y} r={r * 0.45} fill={isSelected || isHovered ? '#ffffff' : color} />
+
+              {/* Label on hover */}
+              {(isHovered || isSelected) && (
+                <text x={x} y={y - r - 5}
+                  textAnchor="middle" fill={color}
+                  fontSize={9} fontWeight="700"
+                  fontFamily="Inter, sans-serif"
+                >
+                  {s.name.length > 12 ? s.name.slice(0, 12) + '…' : s.name}
+                </text>
+              )}
+            </g>
+          );
+        })}
+      </svg>
+
+      {/* Hover tooltip (HTML overlay) */}
       {hovered && (() => {
         const s = stations.find(st => st._id === hovered);
         if (!s) return null;
-        const { x, y } = project(s.location.lat, s.location.lng, dims.w, dims.h);
+        const { x, y } = project(s.location.lat, s.location.lng);
         const color = TYPE_COLOR[s.type] || '#8896a6';
         const cap = s.capacity || s.installedCapacity || s.peakPower || 0;
         return (
           <div style={{
             position: 'absolute',
-            left: `${(x / dims.w) * 100}%`,
-            top: `${(y / dims.h) * 100}%`,
-            transform: 'translate(-50%, -110%)',
+            left: `${(x / VIEW_W) * 100}%`,
+            top: `${(y / VIEW_H) * 100}%`,
+            transform: 'translate(-50%, -120%)',
             background: '#fff', border: `1.5px solid ${color}50`,
-            borderRadius: 10, padding: '8px 12px', boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
-            zIndex: 10, pointerEvents: 'none', minWidth: 160,
+            borderRadius: 12, padding: '10px 14px',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+            zIndex: 20, pointerEvents: 'none', minWidth: 180,
           }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#1a1a2e', marginBottom: 3 }}>{s.name}</div>
-            <div style={{ fontSize: 11, color: '#8896a6', marginBottom: 4 }}>{s.location?.address || '地址未知'}</div>
-            <div style={{ display: 'flex', gap: 4 }}>
-              <Tag style={{ fontSize: 10, padding: '0 5px', background: `${color}15`, color, borderColor: `${color}40` }}>{TYPE_TEXT[s.type]}</Tag>
-              <Tag style={{ fontSize: 10, padding: '0 5px', background: `${STATUS_COLOR[s.status]}15`, color: STATUS_COLOR[s.status], borderColor: `${STATUS_COLOR[s.status]}40` }}>{STATUS_TEXT[s.status]}</Tag>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#1a1a2e', marginBottom: 4 }}>{s.name}</div>
+            <div style={{ fontSize: 11, color: '#8896a6', marginBottom: 6 }}>📍 {s.location?.address || '地址未知'}</div>
+            <div style={{ display: 'flex', gap: 5, marginBottom: 5 }}>
+              <Tag style={{ fontSize: 10, padding: '0 6px', background: `${color}18`, color, border: `1px solid ${color}40`, borderRadius: 10 }}>{TYPE_TEXT[s.type]}</Tag>
+              <Tag style={{ fontSize: 10, padding: '0 6px', background: `${STATUS_COLOR[s.status]}18`, color: STATUS_COLOR[s.status], border: `1px solid ${STATUS_COLOR[s.status]}40`, borderRadius: 10 }}>{STATUS_TEXT[s.status]}</Tag>
             </div>
-            <div style={{ fontSize: 12, color: '#e6342a', fontWeight: 700, fontFamily: 'monospace', marginTop: 4 }}>{formatCap(cap)}</div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: '#e6342a', fontFamily: 'JetBrains Mono, monospace' }}>{formatCap(cap)}</div>
           </div>
         );
       })()}
 
-      {/* Map legend */}
+      {/* Legend */}
       <div style={{
-        position: 'absolute', bottom: 10, right: 10,
-        background: 'rgba(13,33,55,0.88)', border: '1px solid rgba(100,150,200,0.2)',
-        borderRadius: 10, padding: '8px 12px', backdropFilter: 'blur(8px)',
+        position: 'absolute', bottom: 12, right: 14,
+        background: 'rgba(13,33,51,0.88)', border: '1px solid #1e3550',
+        borderRadius: 10, padding: '10px 14px',
+        backdropFilter: 'blur(8px)',
       }}>
-        <div style={{ fontSize: 10, color: 'rgba(100,150,200,0.7)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.08em' }}>图例</div>
-        {[{ type: 'solar', icon: '☀️' }, { type: 'solar_storage', icon: '⚡' }, { type: 'storage', icon: '🔋' }].map(t => (
-          <div key={t.type} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-            <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#fff', border: `2px solid ${TYPE_COLOR[t.type]}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8 }}>{t.icon}</div>
-            <span style={{ fontSize: 11, color: 'rgba(200,220,240,0.9)' }}>{TYPE_TEXT[t.type]}</span>
+        <div style={{ fontSize: 10, color: '#4a7a9a', marginBottom: 7, textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700 }}>图例</div>
+        {[
+          { type: 'solar', icon: '☀️', label: '光伏' },
+          { type: 'solar_storage', icon: '⚡', label: '光储一体' },
+          { type: 'storage', icon: '🔋', label: '储能' },
+        ].map(t => (
+          <div key={t.type} style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 5 }}>
+            <div style={{
+              width: 13, height: 13, borderRadius: '50%', background: '#fff',
+              border: `2px solid ${TYPE_COLOR[t.type]}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8,
+            }}>{t.icon}</div>
+            <span style={{ fontSize: 11, color: '#c0d8e8' }}>{t.label}</span>
           </div>
         ))}
-        <div style={{ marginTop: 6, borderTop: '1px solid rgba(100,150,200,0.2)', paddingTop: 6 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-            <div style={{ width: 12, height: 12, borderRadius: '50%', border: '1.5px dashed rgba(22,163,74,0.6)' }} />
-            <span style={{ fontSize: 11, color: 'rgba(200,220,240,0.9)' }}>在线</span>
+        <div style={{ marginTop: 6, paddingTop: 6, borderTop: '1px solid #1e3550' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            <div style={{ width: 13, height: 13, borderRadius: '50%', border: '1.5px dashed #16a34a', opacity: 0.6 }} />
+            <span style={{ fontSize: 11, color: '#c0d8e8' }}>在线</span>
           </div>
-          <div style={{ fontSize: 10, color: 'rgba(100,150,200,0.6)', marginTop: 2 }}>底图: 深色海洋 + 大陆轮廓</div>
         </div>
       </div>
     </div>
@@ -392,7 +342,12 @@ export default function StationMap() {
           </Tag>
         </Title>
         <div style={{ display: 'flex', gap: 14, marginTop: 6, flexWrap: 'wrap' }}>
-          {[{ label: '全部电站', v: stations.length, c: '#1a1a2e' }, { label: '已标注', v: geoCount, c: '#16a34a' }, { label: '在线', v: onlineCount, c: '#16a34a' }, { label: '总装机', v: formatCap(totalCapacity), c: '#e6342a' }].map(x => (
+          {[
+            { label: '全部电站', v: stations.length, c: '#1a1a2e' },
+            { label: '已标注', v: geoCount, c: '#16a34a' },
+            { label: '在线', v: onlineCount, c: '#16a34a' },
+            { label: '总装机', v: formatCap(totalCapacity), c: '#e6342a' },
+          ].map(x => (
             <div key={x.label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
               <span style={{ fontSize: 12, color: '#8896a6' }}>{x.label}</span>
               <span style={{ fontSize: 14, fontWeight: 800, color: x.c, fontFamily: 'JetBrains Mono, monospace' }}>{x.v}</span>
@@ -432,23 +387,21 @@ export default function StationMap() {
         </div>
       </Card>
 
-      {/* Main: world map + detail panel */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 12, alignItems: 'start' }}>
+      {/* Main: map + detail panel */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 310px', gap: 12, alignItems: 'start' }}>
         {/* World Map */}
         <Card
           title={<span style={{ fontSize: 13 }}>🌍 全球电站分布</span>}
           style={{ border: '1px solid #e8eaed', borderRadius: 14 }}
-          styles={{ body: { padding: 0 } }}
+          styles={{ body: { padding: '16px' } }}
         >
-          <div style={{ padding: 14 }}>
-            <WorldMapCanvas
-              stations={filtered}
-              selected={selected}
-              onSelect={setSelected}
-              hovered={hovered}
-              onHover={setHovered}
-            />
-          </div>
+          <WorldMapSVG
+            stations={filtered}
+            selected={selected}
+            onSelect={setSelected}
+            hovered={hovered}
+            onHover={setHovered}
+          />
         </Card>
 
         {/* Detail panel */}
@@ -469,6 +422,11 @@ export default function StationMap() {
                 </div>
                 <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e', lineHeight: 1.3 }}>{selected.name}</div>
                 {selected.location?.address && <div style={{ fontSize: 11, color: '#8896a6', marginTop: 4 }}>📍 {selected.location.address}</div>}
+                {selected.location?.lat && selected.location?.lng && (
+                  <div style={{ fontSize: 11, color: '#b8c0cc', marginTop: 3, fontFamily: 'monospace' }}>
+                    📐 {selected.location.lat.toFixed(4)}, {selected.location.lng.toFixed(4)}
+                  </div>
+                )}
               </div>
               <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {[
@@ -482,11 +440,6 @@ export default function StationMap() {
                     <div style={{ fontSize: 13, fontWeight: 700, color: item.c, fontFamily: 'JetBrains Mono, monospace', marginTop: 2, wordBreak: 'break-all' }}>{item.v}</div>
                   </div>
                 ))}
-                {selected.location?.lat && selected.location?.lng && (
-                  <div style={{ background: '#f0f4f8', borderRadius: 8, padding: '6px 10px', fontSize: 11, color: '#8896a6', fontFamily: 'monospace' }}>
-                    📐 {selected.location.lat.toFixed(4)}, {selected.location.lng.toFixed(4)}
-                  </div>
-                )}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   <Button block size="small" icon={<EnvironmentOutlined />} href={`/stations/${selected._id}/topology`}
                     style={{ textAlign: 'left', borderRadius: 8, height: 34, background: '#fef2f2', color: '#e6342a', borderColor: '#fecaca' }}>查看拓扑图</Button>
@@ -498,7 +451,7 @@ export default function StationMap() {
           ) : (
             <div style={{ padding: 40, textAlign: 'center' }}>
               <div style={{ fontSize: 36, marginBottom: 12 }}>🌍</div>
-              <Text style={{ fontSize: 13, color: '#8896a6' }}>点击地图上的圆点<br />查看电站详情</Text>
+              <Text style={{ fontSize: 13, color: '#8896a6' }}>点击地图上的电站圆点<br />查看详细信息</Text>
             </div>
           )}
         </Card>
