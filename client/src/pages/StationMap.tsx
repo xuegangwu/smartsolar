@@ -144,9 +144,9 @@ export default function StationMap() {
         const cap = s.capacity || s.installedCapacity || s.peakPower || 0;
         const size = cap >= 1000 ? 52 : cap >= 500 ? 46 : 40;
 
-        // Build icon HTML with pulse ring for online stations
+        // SVG pulse ring for online stations (works inside Leaflet HTML)
         const pulseRing = sc === '#16a34a'
-          ? `<div style="position:absolute;width:${size + 16}px;height:${size + 16}px;top:${-8}px;left:${-8}px;border-radius:50%;border:2px solid ${color};opacity:0;animation:pulseStation 2s ease-out infinite;pointer-events:none"></div>`
+          ? `<svg style="position:absolute;top:${-10}px;left:${-10}px;width:${size+20}px;height:${size+20}px;pointer-events:none;z-index:1" xmlns="http://www.w3.org/2000/svg"><circle cx="${(size+20)/2}" cy="${(size+20)/2}" r="${size/2+4}" fill="none" stroke="${color}" stroke-width="2" opacity="0"><animate attributeName="r" from="${size/2}" to="${size/2+16}" dur="2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0.8" to="0" dur="2s" repeatCount="indefinite"/></circle></svg>`
           : '';
         const innerIcon = `<div style="width:${size}px;height:${size}px;border-radius:50%;background:#fff;border:4px solid ${color};box-shadow:0 4px 16px ${color}60,0 0 0 ${sc === '#16a34a' ? '4px' : '0'} ${sc}40;display:flex;align-items:center;justify-content:center;font-size:${size * 0.45}px;cursor:pointer;position:relative;z-index:2;transition:transform 0.15s"
           onmouseover="this.style.transform='scale(1.15)'"
