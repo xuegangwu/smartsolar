@@ -40,6 +40,8 @@
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
 }
 
+html { background: var(--bg-base); }
+
 body {
   font-family: var(--font-ui);
   background: var(--bg-base);
@@ -59,6 +61,7 @@ body {
 
 /* ── Layout ──────────────────────────────────────────────────────────── */
 .ant-layout { background: var(--bg-base) !important; }
+.ant-layout-content { background: var(--bg-base) !important; }
 .ant-layout-sider { background: var(--bg-surface) !important; }
 .ant-layout-header { background: var(--bg-surface) !important; }
 
@@ -75,7 +78,9 @@ body {
   color: var(--text-bright) !important;
 }
 .ant-card-head-title { color: var(--text-bright) !important; font-weight: 600 !important; }
-.ant-card-body { color: var(--text-main) !important; }
+.ant-card-html { background: var(--bg-base); }
+
+body { color: var(--text-main) !important; }
 
 /* ── Typography ──────────────────────────────────────────────────────── */
 .ant-typography, .ant-typography * { color: var(--text-main) !important; }
@@ -292,14 +297,18 @@ h1, h2, h3, h4, h5 { color: var(--text-bright) !important; font-weight: 600 !imp
   padding: 12px 24px !important;
   border-radius: 0 0 14px 14px !important;
 }
-.ant-modal-body { padding: 20px 24px !important; color: var(--text-main) !important; }
+.ant-modal-html { background: var(--bg-base); }
+
+body { padding: 20px 24px !important; color: var(--text-main) !important; }
 
 /* ── Drawer ────────────────────────────────────────────────────────── */
 .ant-drawer-content { background: var(--bg-card) !important; }
 .ant-drawer-header { background: var(--bg-surface) !important; border-bottom: 1px solid var(--border) !important; }
 .ant-drawer-title { color: var(--text-bright) !important; font-weight: 600 !important; }
 .ant-drawer-close { color: var(--text-dim) !important; }
-.ant-drawer-body { padding: 20px !important; color: var(--text-main) !important; }
+.ant-drawer-html { background: var(--bg-base); }
+
+body { padding: 20px !important; color: var(--text-main) !important; }
 
 /* ── Steps ─────────────────────────────────────────────────────────── */
 .ant-steps-item-title { font-family: var(--font-mono) !important; font-size: 12px !important; color: var(--text-muted) !important; }
@@ -402,7 +411,9 @@ code, .ant-code {
   .ant-card { border-radius: 12px !important; }
 
   /* Mobile: table → card list */
-  .mobile-card-list .ant-table-tbody { background: transparent !important; }
+  .mobile-card-list .ant-table-thtml { background: var(--bg-base); }
+
+body { background: transparent !important; }
   .mobile-card-list .ant-table-tbody > tr {
     display: block;
     background: var(--bg-card) !important;

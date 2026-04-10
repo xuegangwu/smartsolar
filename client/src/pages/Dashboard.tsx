@@ -1,41 +1,111 @@
 import { useState, useEffect } from 'react';
-import { Card, Row, Col, Statistic, Tag, List, Typography, Space, Badge } from 'antd';
-import { AlertOutlined, ToolOutlined, FileTextOutlined, RightOutlined } from '@ant-design/icons';
+import { Card, Row, Col, Statistic, Tag, Typography, Space } from 'antd';
+import { AlertOutlined, ToolOutlined, FileTextOutlined, RightOutlined, ThunderboltOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { alertApi, workOrderApi, stationApi } from '../services/api';
 
 const { Text } = Typography;
 
 const LEVEL_COLOR: Record<string, string> = {
-  critical: 'red', major: 'orange', minor: 'gold',
+  critical: '#ff5252', major: '#ffab40', minor: '#5a6a7a',
 };
 const PRIORITY_COLOR: Record<string, string> = {
-  urgent: 'red', important: 'orange', normal: 'blue',
+  urgent: '#ff5252', important: '#ffab40', normal: '#5a6a7a',
 };
 const PRIORITY_TEXT: Record<string, string> = {
   urgent: '紧急', important: '重要', normal: '一般',
 };
+const LEVEL_TEXT: Record<string, string> = {
+  critical: '严重', major: '重要', minor: '一般',
+};
 
-function StatCard({ title, value, icon, color, onClick }: {
-  title: string; value: number; icon: React.ReactNode; color?: string; onClick?: () => void;
+// ─── Stat Card ────────────────────────────────────────────────────────────
+function StatCard({ title, value, icon, accentColor, onClick }: {
+  title: string; value: number; icon: React.ReactNode; accentColor?: string; onClick?: () => void;
 }) {
   return (
     <Card
       size="small"
       onClick={onClick}
-      style={{ cursor: onClick ? 'pointer' : 'default', borderRadius: 12, textAlign: 'center' }}
-      bodyStyle={{ padding: '12px 8px' }}
+      style={{
+        cursor: onClick ? 'pointer' : 'default',
+        background: '#141c2e',
+        border: `1px solid ${accentColor ? accentColor + '30' : '#2a3a52'}`,
+        borderRadius: 10,
+        textAlign: 'center',
+        transition: 'border-color 0.2s, transform 0.2s',
+      }}
+      styles={{ body: { padding: '14px 10px' } }}
+      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = accentColor || '#00e5c0'; (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = accentColor ? accentColor + '30' : '#2a3a52'; (e.currentTarget as HTMLElement).style.transform = 'none'; }}
     >
-      <Statistic
-        title={<span style={{ fontSize: 12 }}>{title}</span>}
-        value={value}
-        valueStyle={{ fontSize: 24, color: color || '#333', fontWeight: 700 }}
-      />
-      <div style={{ fontSize: 20 }}>{icon}</div>
+      <div style={{ color: '#5a6a7a', fontSize: 10, fontFamily: 'JetBrains Mono, monospace', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
+        {title}
+      </div>
+      <div style={{ fontSize: 30, fontWeight: 700, color: accentColor || '#00e5c0', fontFamily: 'JetBrains Mono, monospace', lineHeight: 1 }}>
+        {value}
+      </div>
+      <div style={{ fontSize: 18, marginTop: 6, color: accentColor ? accentColor + '99' : '#5a6a7a' }}>{icon}</div>
     </Card>
   );
 }
 
+// ─── Alert Item ────────────────────────────────────────────────────────────
+function AlertItem({ item, onClick }: { item: any; onClick?: () => void }) {
+  const isUrgent = item.level === 'critical' && !item.acknowledged;
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        padding: '10px 16px', borderBottom: '1px solid #1e2d42',
+        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10,
+        background: isUrgent ? 'rgba(255,82,82,0.06)' : 'transparent',
+        transition: 'background 0.2s',
+      }}
+      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#1a2438'; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = isUrgent ? 'rgba(255,82,82,0.06)' : 'transparent'; }}
+    >
+      <div style={{ width: 8, height: 8, borderRadius: '50%', background: LEVEL_COLOR[item.level], boxShadow: `0 0 6px ${LEVEL_COLOR[item.level]}`, flexShrink: 0 }} />
+      <Tag style={{ background: LEVEL_COLOR[item.level] + '15', border: `1px solid ${LEVEL_COLOR[item.level]}50`, color: LEVEL_COLOR[item.level], fontSize: 10, padding: '0 6px', flexShrink: 0 }}>
+        {LEVEL_TEXT[item.level]}
+      </Tag>
+      <Text style={{ flex: 1, fontSize: 13, color: isUrgent ? LEVEL_COLOR[item.level] : '#c8d4e0', fontFamily: 'Inter, sans-serif' }} ellipsis>
+        {item.message}
+      </Text>
+      <Text style={{ fontSize: 11, color: '#5a6a7a', fontFamily: 'JetBrains Mono, monospace', flexShrink: 0 }}>
+        {new Date(item.createdAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+      </Text>
+    </div>
+  );
+}
+
+// ─── Order Item ────────────────────────────────────────────────────────────
+function OrderItem({ item, onClick }: { item: any; onClick?: () => void }) {
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        padding: '10px 16px', borderBottom: '1px solid #1e2d42',
+        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10,
+        transition: 'background 0.2s',
+      }}
+      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#1a2438'; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+    >
+      <Tag style={{ background: PRIORITY_COLOR[item.priority] + '15', border: `1px solid ${PRIORITY_COLOR[item.priority]}50`, color: PRIORITY_COLOR[item.priority], fontSize: 10, padding: '0 6px', flexShrink: 0 }}>
+        {PRIORITY_TEXT[item.priority]}
+      </Tag>
+      <Text style={{ flex: 1, fontSize: 13, color: '#c8d4e0', fontFamily: 'Inter, sans-serif' }} ellipsis>
+        {item.title}
+      </Text>
+      <Text style={{ fontSize: 11, color: '#5a6a7a', fontFamily: 'JetBrains Mono, monospace', flexShrink: 0 }}>
+        {item.orderNo}
+      </Text>
+    </div>
+  );
+}
+
+// ─── Main ────────────────────────────────────────────────────────────────
 export default function Dashboard() {
   const [alertStats, setAlertStats] = useState({ total: 0, critical: 0, major: 0, minor: 0, unacknowledged: 0 });
   const [recentAlerts, setRecentAlerts] = useState<any[]>([]);
@@ -43,7 +113,11 @@ export default function Dashboard() {
   const [stationCount, setStationCount] = useState(0);
   const navigate = useNavigate();
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => {
+    loadData();
+    const t = setInterval(loadData, 60000); // refresh every minute
+    return () => clearInterval(t);
+  }, []);
 
   async function loadData() {
     const [alertRes, orderRes, stationRes] = await Promise.all([
@@ -59,99 +133,67 @@ export default function Dashboard() {
   }
 
   return (
-    <div>
-      {/* Stat Cards — 2x2 grid on mobile, 4-col on desktop */}
-      <Row gutter={[12, 12]} style={{ marginBottom: 16 }} className="stat-grid">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Stat Cards */}
+      <Row gutter={[12, 12]}>
         <Col xs={12} sm={6}>
-          <StatCard title="电站总数" value={stationCount} icon={<ToolOutlined />} onClick={() => navigate('/stations')} />
+          <StatCard title="电站总数" value={stationCount} icon={<ToolOutlined />} accentColor="#00e5c0" onClick={() => navigate('/stations')} />
         </Col>
         <Col xs={12} sm={6}>
-          <StatCard
-            title="未确认告警" value={alertStats.unacknowledged}
-            icon={<Badge count={alertStats.unacknowledged} size="small" offset={[8, -4]}><AlertOutlined /></Badge>}
-            color={alertStats.unacknowledged > 0 ? '#ff4d4f' : '#52c41a'}
-            onClick={() => navigate('/alerts')}
-          />
+          <StatCard title="未确认告警" value={alertStats.unacknowledged} icon={<AlertOutlined />} accentColor={alertStats.unacknowledged > 0 ? '#ff5252' : '#00e676'} onClick={() => navigate('/alerts')} />
         </Col>
         <Col xs={12} sm={6}>
-          <StatCard
-            title="严重告警" value={alertStats.critical}
-            icon={<AlertOutlined style={{ color: '#ff4d4f' }} />}
-            color="#ff4d4f"
-            onClick={() => navigate('/alerts?level=critical')}
-          />
+          <StatCard title="严重告警" value={alertStats.critical} icon={<ThunderboltOutlined />} accentColor="#ff5252" onClick={() => navigate('/alerts?level=critical')} />
         </Col>
         <Col xs={12} sm={6}>
-          <StatCard
-            title="待处理工单" value={recentOrders.length}
-            icon={<FileTextOutlined />}
-            onClick={() => navigate('/work-orders')}
-          />
+          <StatCard title="待处理工单" value={recentOrders.length} icon={<FileTextOutlined />} accentColor="#ffab40" onClick={() => navigate('/work-orders')} />
         </Col>
       </Row>
 
-      {/* Recent Alerts */}
-      <Card
-        title={<Space><AlertOutlined />最近告警</Space>}
-        size="small"
-        extra={<a onClick={() => navigate('/alerts')}>查看全部 <RightOutlined /></a>}
-        style={{ borderRadius: 12, marginBottom: 12 }}
-        bodyStyle={{ padding: 0 }}
-      >
-        {recentAlerts.length === 0 ? (
-          <div style={{ padding: 24, textAlign: 'center', color: '#999' }}>暂无告警</div>
-        ) : (
-          recentAlerts.map((item: any, i: number) => (
-            <div
-              key={item._id || i}
-              onClick={() => navigate('/alerts')}
-              style={{
-                padding: '10px 16px', borderBottom: i < recentAlerts.length - 1 ? '1px solid #f0f0f0' : 'none',
-                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
-                background: item.level === 'critical' && !item.acknowledged ? '#fff2f0' : 'transparent',
-              }}
-            >
-              <Tag color={LEVEL_COLOR[item.level]} style={{ flexShrink: 0 }}>{LEVEL_TEXT[item.level]}</Tag>
-              <Text style={{ flex: 1, fontSize: 13 }} ellipsis>{item.message}</Text>
-              <Text type="secondary" style={{ fontSize: 11, flexShrink: 0 }}>
-                {new Date(item.createdAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
-              </Text>
-            </div>
-          ))
-        )}
-      </Card>
+      {/* Content */}
+      <Row gutter={[12, 12]}>
+        {/* Recent Alerts */}
+        <Col xs={24} lg={12}>
+          <Card
+            title={
+              <Space>
+                <AlertOutlined style={{ color: '#00e5c0' }} />
+                <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13, fontWeight: 600, color: '#c8d4e0', textTransform: 'uppercase', letterSpacing: '0.06em' }}>最近告警</span>
+              </Space>
+            }
+            extra={<a onClick={() => navigate('/alerts')} style={{ color: '#00e5c0', fontSize: 12, fontFamily: 'JetBrains Mono, monospace', cursor: 'pointer' }}>查看全部 <RightOutlined /></a>}
+            style={{ background: '#141c2e', border: '1px solid #2a3a52', borderRadius: 10 }}
+            styles={{ body: { padding: 0 } }}
+          >
+            {recentAlerts.length === 0 ? (
+              <div style={{ padding: 32, textAlign: 'center', color: '#5a6a7a', fontFamily: 'JetBrains Mono, monospace', fontSize: 13 }}>暂无告警 ✅</div>
+            ) : (
+              recentAlerts.map((item, i) => <AlertItem key={item._id || i} item={item} onClick={() => navigate('/alerts')} />)
+            )}
+          </Card>
+        </Col>
 
-      {/* Recent Work Orders */}
-      <Card
-        title={<Space><FileTextOutlined />待处理工单</Space>}
-        size="small"
-        extra={<a onClick={() => navigate('/work-orders')}>查看全部 <RightOutlined /></a>}
-        style={{ borderRadius: 12 }}
-        bodyStyle={{ padding: 0 }}
-      >
-        {recentOrders.length === 0 ? (
-          <div style={{ padding: 24, textAlign: 'center', color: '#999' }}>暂无待处理工单</div>
-        ) : (
-          recentOrders.map((item: any, i: number) => (
-            <div
-              key={item._id || i}
-              onClick={() => navigate('/work-orders')}
-              style={{
-                padding: '10px 16px', borderBottom: i < recentOrders.length - 1 ? '1px solid #f0f0f0' : 'none',
-                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
-              }}
-            >
-              <Tag color={PRIORITY_COLOR[item.priority]} style={{ flexShrink: 0 }}>{PRIORITY_TEXT[item.priority]}</Tag>
-              <Text style={{ flex: 1, fontSize: 13 }} ellipsis>{item.title}</Text>
-              <Text code style={{ fontSize: 11, flexShrink: 0 }}>{item.orderNo}</Text>
-            </div>
-          ))
-        )}
-      </Card>
+        {/* Recent Work Orders */}
+        <Col xs={24} lg={12}>
+          <Card
+            title={
+              <Space>
+                <FileTextOutlined style={{ color: '#00e5c0' }} />
+                <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13, fontWeight: 600, color: '#c8d4e0', textTransform: 'uppercase', letterSpacing: '0.06em' }}>待处理工单</span>
+              </Space>
+            }
+            extra={<a onClick={() => navigate('/work-orders')} style={{ color: '#00e5c0', fontSize: 12, fontFamily: 'JetBrains Mono, monospace', cursor: 'pointer' }}>查看全部 <RightOutlined /></a>}
+            style={{ background: '#141c2e', border: '1px solid #2a3a52', borderRadius: 10 }}
+            styles={{ body: { padding: 0 } }}
+          >
+            {recentOrders.length === 0 ? (
+              <div style={{ padding: 32, textAlign: 'center', color: '#5a6a7a', fontFamily: 'JetBrains Mono, monospace', fontSize: 13 }}>暂无待处理工单 ✅</div>
+            ) : (
+              recentOrders.map((item, i) => <OrderItem key={item._id || i} item={item} onClick={() => navigate('/work-orders')} />)
+            )}
+          </Card>
+        </Col>
+      </Row>
     </div>
   );
 }
-
-const LEVEL_TEXT: Record<string, string> = {
-  critical: '严重', major: '重要', minor: '一般',
-};
