@@ -8,7 +8,7 @@ import {
   PlusOutlined, EditOutlined, CheckCircleOutlined, ClockCircleOutlined,
   UserOutlined, ToolOutlined, FileTextOutlined, ExclamationCircleOutlined,
 } from '@ant-design/icons';
-import { workOrderApi, stationApi, sparePartApi } from '../services/api';
+import { workOrderApi, stationApi, sparePartApi, personnelApi } from '../services/api';
 
 const { Text, Title } = Typography;
 const { TextArea } = Input;
@@ -28,14 +28,6 @@ const STATUS_MAP: Record<string, { color: string; text: string; step: number }> 
 const PRIORITY_COLOR: Record<string, string> = { urgent: 'red', important: 'orange', normal: 'blue' };
 const PRIORITY_TEXT: Record<string, string> = { urgent: '紧急', important: '重要', normal: '一般' };
 const TYPE_TEXT: Record<string, string> = { fault: '故障维修', maintenance: '预防性维护', inspection: '巡检', upgrade: '升级改造' };
-
-// 模拟运维人员数据（后续从 API 获取）
-const TECHNICIANS = [
-  { _id: 'tech-1', name: '张伟', phone: '138-1111-0001', skills: ['光伏', '储能', '充电桩'] },
-  { _id: 'tech-2', name: '李强', phone: '139-2222-0002', skills: ['储能', 'PCS'] },
-  { _id: 'tech-3', name: '王鹏', phone: '137-3333-0003', skills: ['光伏', '通讯'] },
-  { _id: 'tech-4', name: '赵亮', phone: '136-4444-0004', skills: ['充电桩', '电气'] },
-];
 
 // ─── Stat Cards ─────────────────────────────────────────────────────────────
 function StatCards({ orders }: { orders: any[] }) {
@@ -82,9 +74,10 @@ export default function WorkOrders() {
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [filterPriority, setFilterPriority] = useState<string>('');
   const [spareParts, setSpareParts] = useState<any[]>([]);
+  const [personnel, setPersonnel] = useState<any[]>([]);
   const [form] = Form.useForm();
 
-  useEffect(() => { loadOrders(); loadStations(); }, []);
+  useEffect(() => { loadOrders(); loadStations(); loadPersonnel(); }, []);
   useEffect(() => { loadOrders(); }, [filterStatus, filterPriority]);
 
   async function loadOrders() {
@@ -100,6 +93,12 @@ export default function WorkOrders() {
   async function loadStations() {
     const res = await stationApi.getAll();
     if (res.success) setStations(res.data);
+  }
+
+  async function loadPersonnel() {
+    // 只加载技术人员（可派工）
+    const res = await personnelApi.getAll({ role: 'technician' });
+    if (res.success) setPersonnel(res.data);
   }
 
   async function handleAdd() {
@@ -157,7 +156,7 @@ export default function WorkOrders() {
   }
 
   async function handleAssignTech(orderId: string, techId: string) {
-    const tech = TECHNICIANS.find(t => t._id === techId);
+    const tech = personnel.find((t: any) => t._id === techId);
     const res = await workOrderApi.update(orderId, { assigneeId: techId, status: 'assigned' });
     if (res.success) {
       message.success(`已派发给：${tech?.name}`);
@@ -228,7 +227,7 @@ export default function WorkOrders() {
               <Select
                 size="small" placeholder="派发" style={{ width: 100 }}
                 onChange={v => handleAssignTech(r._id, v)}
-                options={TECHNICIANS.map(t => ({ value: t._id, label: t.name }))}
+                options={personnel.map((t: any) => ({ value: t._id, label: `${t.name}（${t.workStatus === 'available' ? '空闲' : t.workStatus === 'busy' ? '忙碌' : '离线'}）` }))}
               />
             )}
             {prevStatus && prevStatus !== 'created' && (
@@ -418,7 +417,7 @@ export default function WorkOrders() {
                     placeholder="→ 派发给"
                     style={{ width: 140 }}
                     onChange={v => handleAssignTech(detail._id, v)}
-                    options={TECHNICIANS.map(t => ({ value: t._id, label: t.name }))}
+                    options={personnel.map((t: any) => ({ value: t._id, label: `${t.name}（${t.workStatus === 'available' ? '空闲' : t.workStatus === 'busy' ? '忙碌' : '离线'}）` }))}
                   />
                 )}
                 {STATUS_MAP[detail.status]?.step < 5 && (

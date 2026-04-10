@@ -136,3 +136,14 @@ export const sparePartApi = {
   update: (id: string, data: any) => api.put(`/spare-parts/${id}`, data).then(r => r.data),
   delete: (id: string) => api.delete(`/spare-parts/${id}`).then(r => r.data),
 };
+
+export const personnelApi = {
+  getAll: (params?: any) => api.get<any, any>('/personnel', { params }).then(r => r.data),
+  getTechnicians: (params?: any) => api.get<any, any>('/personnel/technicians', { params }).then(r => r.data),
+  getById: (id: string) => api.get<any, any>(`/personnel/${id}`).then(r => r.data),
+  create: (data: any) => api.post('/personnel', data).then(r => r.data),
+  update: (id: string, data: any) => api.put(`/personnel/${id}`, data).then(r => r.data),
+  delete: (id: string) => api.delete(`/personnel/${id}`).then(r => r.data),
+  updateWorkStatus: (id: string, workStatus: string, currentTaskId?: string) =>
+    api.put(`/personnel/${id}/work-status`, { workStatus, currentTaskId }).then(r => r.data),
+};

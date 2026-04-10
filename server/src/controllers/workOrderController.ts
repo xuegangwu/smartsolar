@@ -23,7 +23,7 @@ export const workOrderController = {
     const workOrders = await WorkOrder.find(filter)
       .populate('stationId', 'name location')
       .populate('equipmentId', 'name type brand')
-      .populate('assigneeId', 'name phone')
+      .populate('assigneeId', 'name phone role skills workStatus')
       .sort({ createdAt: -1 });
     res.json({ success: true, data: workOrders });
   },
@@ -32,7 +32,7 @@ export const workOrderController = {
     const workOrder = await WorkOrder.findById(req.params.id)
       .populate('stationId', 'name location contact')
       .populate('equipmentId', 'name type brand model serialNumber')
-      .populate('assigneeId', 'name phone skills');
+      .populate('assigneeId', 'name phone role skills workStatus organization');
     if (!workOrder) return res.status(404).json({ success: false, message: 'Work order not found' });
     res.json({ success: true, data: workOrder });
   },
@@ -65,7 +65,7 @@ export const workOrderController = {
     const workOrder = await WorkOrder.findByIdAndUpdate(req.params.id, req.body, { new: true })
       .populate('stationId', 'name')
       .populate('equipmentId', 'name')
-      .populate('assigneeId', 'name phone');
+      .populate('assigneeId', 'name phone role skills workStatus');
     if (!workOrder) return res.status(404).json({ success: false, message: 'Work order not found' });
 
     // 通知：派发给技术人员
@@ -150,7 +150,7 @@ export const workOrderController = {
     const populated = await WorkOrder.findById(workOrder._id)
       .populate('stationId', 'name')
       .populate('equipmentId', 'name')
-      .populate('assigneeId', 'name phone');
+      .populate('assigneeId', 'name phone role skills workStatus');
     res.json({ success: true, data: populated });
   },
 

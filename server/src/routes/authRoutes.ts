@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
+import mongoose from 'mongoose';
+import { Personnel } from '../models/index.js';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'smartsolar_secret_key_change_in_production';
@@ -60,6 +62,22 @@ router.post('/login', async (req, res) => {
   }
 
   const token = generateToken(user);
+
+  // 确保 Personnel 档案存在（自动创建或更新）
+  if (Personnel) {
+    await Personnel.findOneAndUpdate(
+      { authId: user.id },
+      {
+        authId: user.id,
+        name: user.name,
+        role: user.role,
+        status: 'active',
+        $setOnInsert: { skills: [], organization: '集团总部', workStatus: 'offline' },
+      },
+      { upsert: true, new: true }
+    );
+  }
+
   res.json({
     success: true,
     token,

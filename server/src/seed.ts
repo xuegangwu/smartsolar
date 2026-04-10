@@ -15,7 +15,7 @@ async function seed() {
   // ── 清空所有集合 ──────────────────────────────────────────────────────────────
   const models = [
     'Station', 'EquipmentCategory', 'Equipment',
-    'WorkOrder', 'Alert', 'InspectionPlan', 'SparePart', 'Technician',
+    'WorkOrder', 'Alert', 'InspectionPlan', 'SparePart', 'Technician', 'Personnel',
   ];
   for (const name of models) {
     try {
@@ -69,7 +69,7 @@ async function seed() {
   const { Equipment } = await import('./models/index.js');
   const { WorkOrder } = await import('./models/index.js');
   const { Alert } = await import('./models/index.js');
-  const { Technician } = await import('./models/index.js');
+  const { Technician, Personnel } = await import('./models/index.js');
 
   const createdStations = await Station.insertMany(stations);
   console.log(`✅ Inserted ${createdStations.length} stations\n`);
@@ -107,15 +107,27 @@ async function seed() {
   const createdEquipments = await Equipment.insertMany(equipments);
   console.log(`✅ Inserted ${createdEquipments.length} equipments\n`);
 
-  // ── 3. 运维人员 ──────────────────────────────────────────────────────────────
-  const technicians = [
-    { name: '张伟', phone: '138-1111-0001', skills: ['光伏', '储能', '充电桩'], status: 'available' },
-    { name: '李强', phone: '139-2222-0002', skills: ['储能', 'PCS'], status: 'busy' },
-    { name: '王鹏', phone: '137-3333-0003', skills: ['光伏', '通讯'], status: 'available' },
-    { name: '赵亮', phone: '136-4444-0004', skills: ['充电桩', '电气'], status: 'offline' },
+  // ── 3. 运维人员 (Personnel) ────────────────────────────────────────────────
+  const personnel = [
+    // 这3个对应 AuthUser 的账号（authId = 用户ID）
+    { authId: '1', name: '系统管理员', phone: '138-0000-0001', role: 'admin', organization: '集团总部', status: 'active', workStatus: 'available', skills: ['系统管理'] },
+    { authId: '2', name: '运维主值', phone: '138-0000-0002', role: 'operator', organization: '集团总部', status: 'active', workStatus: 'available', skills: ['监控', '调度'] },
+    { authId: '3', name: '张伟', phone: '138-1111-0001', role: 'technician', organization: '华东区域', status: 'active', workStatus: 'available', skills: ['光伏', '储能', '充电桩'] },
+    // 以下为纯技术人员档案（无登录账号）
+    { name: '李强', phone: '139-2222-0002', role: 'technician', organization: '华东区域', status: 'active', workStatus: 'busy', skills: ['储能', 'PCS'] },
+    { name: '王鹏', phone: '137-3333-0003', role: 'technician', organization: '华北区域', status: 'active', workStatus: 'available', skills: ['光伏', '通讯'] },
+    { name: '赵亮', phone: '136-4444-0004', role: 'technician', organization: '华北区域', status: 'active', workStatus: 'offline', skills: ['充电桩', '电气'] },
   ];
-  const createdTechs = await Technician.insertMany(technicians);
-  console.log(`✅ Inserted ${createdTechs.length} technicians\n`);
+  const createdPersonnel = await Personnel.insertMany(personnel);
+  console.log(`✅ Inserted ${createdPersonnel.length} personnel\n`);
+
+  // 保存技术人员ID（用于工单派发）
+  const techIds = {
+    张伟: createdPersonnel[2]._id,   // authId='3' 的张伟
+    李强: createdPersonnel[3]._id,
+    王鹏: createdPersonnel[4]._id,
+    赵亮: createdPersonnel[5]._id,
+  };
 
   // ── 4. 工单 ──────────────────────────────────────────────────────────────────
   const workOrders = [
@@ -128,7 +140,7 @@ async function seed() {
       type: 'fault',
       priority: 'urgent',
       status: 'processing',
-      assigneeId: createdTechs[2]._id,
+      assigneeId: techIds.张伟,
       createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
     },
     {
@@ -140,7 +152,7 @@ async function seed() {
       type: 'inspection',
       priority: 'normal',
       status: 'closed',
-      assigneeId: createdTechs[0]._id,
+      assigneeId: techIds.王鹏,
       createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
       closedAt: new Date(Date.now() - 20 * 60 * 60 * 1000),
     },
@@ -153,7 +165,7 @@ async function seed() {
       type: 'maintenance',
       priority: 'important',
       status: 'assigned',
-      assigneeId: createdTechs[1]._id,
+      assigneeId: techIds.李强,
       createdAt: new Date(Date.now() - 12 * 60 * 60 * 1000),
     },
   ];
@@ -177,7 +189,7 @@ async function seed() {
   console.log(`   电站:    ${createdStations.length} 个`);
   console.log(`   设备类型: ${createdCats.length} 个`);
   console.log(`   设备台账: ${createdEquipments.length} 条`);
-  console.log(`   运维人员: ${createdTechs.length} 人`);
+  console.log(`   运维人员: ${createdPersonnel.length} 人`);
   console.log(`   工单:    ${createdOrders.length} 个`);
   console.log(`   告警:    ${createdAlerts.length} 条`);
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');

@@ -63,7 +63,7 @@ const workOrderSchema = new mongoose.Schema({
     enum: ['created', 'assigned', 'accepted', 'processing', 'accepted_check', 'closed'],
     default: 'created',
   },
-  assigneeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Technician' },
+  assigneeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Personnel' },
   // 备件消耗（工单关闭时自动扣减库存）
   spareParts: [{
     sparePartId: { type: mongoose.Schema.Types.ObjectId, ref: 'SparePart' },
@@ -165,6 +165,37 @@ const technicianSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 export const Technician = mongoose.model('Technician', technicianSchema);
+
+// ─── Personnel ─────────────────────────────────────────────────────────────────
+const personnelSchema = new mongoose.Schema({
+  authId: { type: String, sparse: true }, // 绑定 AuthUser.id（非必填，技术员可无登录账号）
+  name: { type: String, required: true },
+  phone: String,
+  email: String,
+  role: {
+    type: String,
+    enum: ['admin', 'operator', 'technician', 'supervisor', 'manager'],
+    required: true,
+  },
+  organization: { type: String, default: '集团总部' },
+  stationIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Station' }],
+  skills: [String],
+  status: {
+    type: String,
+    enum: ['active', 'leave', 'fired'],
+    default: 'active',
+  },
+  // 技术人员专用
+  workStatus: {
+    type: String,
+    enum: ['available', 'busy', 'offline'],
+    default: 'available',
+  },
+  currentTaskId: { type: mongoose.Schema.Types.ObjectId, ref: 'WorkOrder' },
+  joinDate: Date,
+}, { timestamps: true });
+
+export const Personnel = mongoose.model('Personnel', personnelSchema);
 
 // ─── Notification ──────────────────────────────────────────────────────────────
 const NotificationSchema = new mongoose.Schema({
