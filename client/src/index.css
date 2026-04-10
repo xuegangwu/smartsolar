@@ -1,3 +1,5 @@
+/* SmartSolar — Responsive & Mobile Styles */
+
 * {
   margin: 0;
   padding: 0;
@@ -8,8 +10,205 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background: #f0f2f5;
   color: #333;
+  -webkit-text-size-adjust: 100%;
 }
 
 #root {
   min-height: 100vh;
+}
+
+/* ── Responsive Utilities ─────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  /* Remove horizontal margin on mobile */
+  .ant-layout-content .ant-card {
+    border-radius: 12px;
+  }
+
+  /* Make stat cards 2-col grid */
+  .ant-row > .ant-col {
+    margin-bottom: 12px;
+  }
+
+  /* Stat cards: 2 per row */
+  .stat-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 12px !important;
+  }
+  .stat-grid > .ant-col {
+    margin-bottom: 0 !important;
+  }
+
+  /* Tables → card list on mobile */
+  .mobile-card-list .ant-table-tbody > tr {
+    display: block;
+    background: #fff;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    padding: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+  .mobile-card-list .ant-table-tbody > tr > td {
+    display: block;
+    border: none;
+    padding: 4px 0;
+  }
+  .mobile-card-list .ant-table-thead {
+    display: none;
+  }
+  .mobile-card-list .ant-table {
+    background: transparent !important;
+  }
+  .mobile-card-list .ant-table-wrapper {
+    background: transparent !important;
+  }
+
+  /* Full-width cards on mobile */
+  .ant-card {
+    border-radius: 12px !important;
+    margin-bottom: 12px !important;
+  }
+
+  /* Stack rows on mobile */
+  .ant-row {
+    display: block !important;
+  }
+  .ant-col {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: none !important;
+    margin-bottom: 12px !important;
+  }
+
+  /* Modal full screen on mobile */
+  .ant-modal {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding-bottom: 0 !important;
+    top: 0 !important;
+  }
+  .ant-modal-content {
+    border-radius: 16px 16px 0 0 !important;
+    min-height: 100vh !important;
+  }
+  .ant-modal-body {
+    padding: 20px 16px 40px !important;
+  }
+  .ant-modal-header {
+    border-radius: 16px 16px 0 0 !important;
+  }
+  .ant-modal-footer {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    padding: 12px 16px !important;
+    border-top: 1px solid #f0f0f0 !important;
+    background: #fff;
+    border-radius: 0 !important;
+  }
+  .ant-modal-footer .ant-btn {
+    width: 100% !important;
+  }
+
+  /* Buttons full width on mobile */
+  .ant-btn.ant-btn-block {
+    height: 48px !important;
+    font-size: 16px !important;
+  }
+
+  /* Form full width */
+  .ant-form-item {
+    margin-bottom: 16px !important;
+  }
+  .ant-form label {
+    font-size: 14px !important;
+  }
+
+  /* Select/Input full width */
+  .ant-select, .ant-picker, .ant-input-number {
+    width: 100% !important;
+  }
+
+  /* Drawer full height on mobile */
+  .ant-drawer .ant-drawer-content {
+    border-radius: 16px 16px 0 0;
+  }
+  .ant-drawer .ant-drawer-body {
+    padding: 16px !important;
+  }
+
+  /* Typography */
+  .ant-typography h1 { font-size: 24px !important; }
+  .ant-typography h2 { font-size: 20px !important; }
+  .ant-typography h3 { font-size: 18px !important; }
+  .ant-typography h4 { font-size: 16px !important; }
+
+  /* Steps small on mobile */
+  .ant-steps-item-title {
+    font-size: 12px !important;
+  }
+
+  /* Tags wrap */
+  .ant-tag {
+    margin-bottom: 4px;
+  }
+
+  /* Timeline compact */
+  .ant-timeline-item-content {
+    margin-inline-start: 24px !important;
+  }
+
+  /* Filter bar */
+  .ant-card-extra {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+  .ant-card-extra > * {
+    width: 100% !important;
+  }
+}
+
+/* ── Desktop ─────────────────────────────────────────────────────────────── */
+@media (min-width: 768px) {
+  .stat-grid {
+    display: flex !important;
+  }
+
+  /* Smooth table on desktop */
+  .ant-table-wrapper .ant-table-thead > tr > th {
+    background: #fafafa;
+  }
+}
+
+/* ── Common ──────────────────────────────────────────────────────────────── */
+.urgent-row td {
+  background: #fff2f0 !important;
+}
+
+.critical-unack-row td {
+  background: #fff2f0 !important;
+}
+
+/* Page title */
+.page-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: #333;
+}
+
+/* Card hover */
+.ant-card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* Badge pulse for alerts */
+@keyframes alertPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 77, 79, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(255, 77, 79, 0); }
+}
+.alert-badge-pulse {
+  animation: alertPulse 2s infinite;
 }
