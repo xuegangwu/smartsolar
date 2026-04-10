@@ -1,7 +1,7 @@
-import { useState, useRef } from 'react';
-import { Card, Form, Input, InputNumber, Button, Space, Tag, Typography, Divider, message, Row, Col } from 'antd';
+import { useState, useRef, useEffect } from 'react';
+import { Card, Form, Input, InputNumber, Button, Space, Tag, Typography, Divider, message, Row, Col, Spin } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import { SaveOutlined, ThunderboltOutlined, BatteryOutlined, ApiOutlined, CarOutlined, NodeIndexOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { SaveOutlined, ThunderboltOutlined, BatteryOutlined, ApiOutlined, CarOutlined, NodeIndexOutlined, CheckCircleOutlined, EnvironmentOutlined, AimOutlined } from '@ant-design/icons';
 
 const { Text, Title } = Typography;
 
@@ -27,6 +27,114 @@ interface ConfiguredEquip {
 
 // ─── Step 1: Choose station type ──────────────────────────────────────────────
 function StepStationInfo({ data, onChange }: { data: any; onChange: (d: any) => void }) {
+  const [geoLoading, setGeoLoading] = useState(false);
+  const [geoError, setGeoError] = useState('');
+  const [mapKey, setMapKey] = useState(0);
+  const mapDivRef = useRef<HTMLDivElement>(null);
+  const mapInstRef = useRef<any>(null);
+
+  // Show mini map when we have coordinates
+  useEffect(() => {
+    const lat = data.lat || 0;
+    const lng = data.lng || 0;
+    if (!lat || !lng || lat === 0) return;
+    if (!mapDivRef.current) return;
+
+    import('leaflet').then(L => {
+      if (mapInstRef.current) {
+        mapInstRef.current.remove();
+        mapInstRef.current = null;
+      }
+      const map = L.map(mapDivRef.current, {
+        center: [lat, lng],
+        zoom: 13,
+        zoomControl: true,
+        dragging: true,
+        scrollWheelZoom: false,
+      });
+      mapInstRef.current = map;
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '', maxZoom: 18,
+      }).addTo(map);
+      // Draggable marker
+      const marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+      marker.on('dragend', (e: any) => {
+        const { lat: l, lng: g } = e.target.getLatLng();
+        onChange({ ...data, lat: l, lng: g });
+      });
+      // Click to set marker
+      map.on('click', (e: any) => {
+        marker.setLatLng(e.latlng);
+        onChange({ ...data, lat: e.latlng.lat, lng: e.latlng.lng });
+      });
+    });
+    return () => {
+      if (mapInstRef.current) {
+        mapInstRef.current.remove();
+        mapInstRef.current = null;
+      }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data.lat, data.lng, mapKey]);
+
+  // Geocode address → lat/lng using Nominatim
+  async function handleGeoCode() {
+    const addr = data.location || data.address || '';
+    if (!addr.trim()) {
+      message.warning('请先填写地址');
+      return;
+    }
+    setGeoLoading(true);
+    setGeoError('');
+    try {
+      // Try China-focused search first, then general
+      const queries = [
+        `${addr} 中国`,
+        addr,
+      ];
+      for (const q of queries) {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`,
+          { headers: { 'Accept-Language': 'zh-CN' } }
+        );
+        const results = await res.json();
+        if (results && results.length > 0) {
+          const r = results[0];
+          const lat = parseFloat(r.lat);
+          const lng = parseFloat(r.lon);
+          onChange({ ...data, lat, lng });
+          setMapKey(k => k + 1);
+          message.success(`坐标已定位：${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+          setGeoLoading(false);
+          return;
+        }
+      }
+      setGeoError('未找到该地址，请尝试更详细的地址或手动输入坐标');
+    } catch (e: any) {
+      setGeoError('地理编码失败，请检查网络或手动输入坐标');
+    } finally {
+      setGeoLoading(false);
+    }
+  }
+
+  // Use browser geolocation
+  function handleGeoLocate() {
+    if (!navigator.geolocation) {
+      message.warning('浏览器不支持定位功能');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        const { latitude: lat, longitude: lng } = pos.coords;
+        onChange({ ...data, lat, lng });
+        setMapKey(k => k + 1);
+        message.success(`已获取当前位置：${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+      },
+      () => message.error('获取定位失败，请检查定位权限'),
+      { timeout: 10000 }
+    );
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div>
@@ -39,16 +147,78 @@ function StepStationInfo({ data, onChange }: { data: any; onChange: (d: any) => 
           style={{ background: '#f5f6f8', border: '1px solid rgba(255,255,255,0.07)', color: '#1a1a2e', fontFamily: 'Inter, sans-serif', borderRadius: 10 }}
         />
       </div>
+
+      {/* Address + geocode */}
       <div>
-        <Text style={{ fontSize: 12, color: '#4a5568', fontFamily: 'Inter, sans-serif', display: 'block', marginBottom: 8 }}>建设地点</Text>
-        <Input
-          value={data.location || ''}
-          onChange={e => onChange({ ...data, location: e.target.value })}
-          placeholder="例如：江苏省苏州市工业园区"
-          size="large"
-          style={{ background: '#f5f6f8', border: '1px solid rgba(255,255,255,0.07)', color: '#1a1a2e', fontFamily: 'Inter, sans-serif', borderRadius: 10 }}
-        />
+        <Text style={{ fontSize: 12, color: '#4a5568', fontFamily: 'Inter, sans-serif', display: 'block', marginBottom: 8 }}>
+          地址（用于地图标注）
+        </Text>
+        <Space.Compact style={{ width: '100%' }}>
+          <Input
+            value={data.location || ''}
+            onChange={e => onChange({ ...data, location: e.target.value })}
+            placeholder="输入完整地址，如：江苏省苏州市工业园区星湖街328号"
+            style={{ background: '#f5f6f8', border: '1px solid rgba(255,255,255,0.07)', color: '#1a1a2e', fontFamily: 'Inter, sans-serif', borderRadius: '10px 0 0 10px', flex: 1 }}
+          />
+          <Button
+            icon={<AimOutlined />}
+            onClick={handleGeoLocate}
+            style={{ borderRadius: 0, background: '#f5f6f8' }}
+            title="获取当前位置"
+          />
+          <Button
+            icon={<EnvironmentOutlined />}
+            onClick={handleGeoCode}
+            loading={geoLoading}
+            style={{ borderRadius: '0 10px 10px 0', background: '#e6342a', color: '#fff', borderColor: '#e6342a' }}
+          >
+            定位
+          </Button>
+        </Space.Compact>
+        {geoError && <div style={{ fontSize: 11, color: '#e6342a', marginTop: 4 }}>{geoError}</div>}
       </div>
+
+      {/* Coordinates */}
+      <Row gutter={12}>
+        <Col span={12}>
+          <Text style={{ fontSize: 12, color: '#4a5568', fontFamily: 'Inter, sans-serif', display: 'block', marginBottom: 8 }}>纬度 (lat)</Text>
+          <InputNumber
+            value={data.lat || 0}
+            onChange={v => { onChange({ ...data, lat: v || 0 }); setMapKey(k => k + 1); }}
+            placeholder="如：31.2989"
+            step={0.0001}
+            style={{ width: '100%', background: '#f5f6f8', border: '1px solid rgba(255,255,255,0.07)', color: '#1a1a2e', fontFamily: 'Inter, sans-serif', borderRadius: 10 }}
+          />
+        </Col>
+        <Col span={12}>
+          <Text style={{ fontSize: 12, color: '#4a5568', fontFamily: 'Inter, sans-serif', display: 'block', marginBottom: 8 }}>经度 (lng)</Text>
+          <InputNumber
+            value={data.lng || 0}
+            onChange={v => { onChange({ ...data, lng: v || 0 }); setMapKey(k => k + 1); }}
+            placeholder="如：120.6853"
+            step={0.0001}
+            style={{ width: '100%', background: '#f5f6f8', border: '1px solid rgba(255,255,255,0.07)', color: '#1a1a2e', fontFamily: 'Inter, sans-serif', borderRadius: 10 }}
+          />
+        </Col>
+      </Row>
+
+      {/* Mini map preview */}
+      {data.lat && data.lng && data.lat !== 0 && (
+        <div>
+          <Text style={{ fontSize: 12, color: '#4a5568', fontFamily: 'Inter, sans-serif', display: 'block', marginBottom: 6 }}>
+            地图预览 {data.location && `— ${data.location}`}
+          </Text>
+          <div
+            ref={mapDivRef}
+            key={mapKey}
+            style={{ height: 200, borderRadius: 10, overflow: 'hidden', border: '1px solid #e8eaed' }}
+          />
+          <div style={{ fontSize: 11, color: '#8896a6', marginTop: 4 }}>
+            💡 点击地图可调整位置，或拖动标记精确定位
+          </div>
+        </div>
+      )}
+
       <div>
         <Text style={{ fontSize: 12, color: '#4a5568', fontFamily: 'Inter, sans-serif', display: 'block', marginBottom: 8 }}>电站规模</Text>
         <Row gutter={12}>
@@ -220,7 +390,7 @@ const STEPS = ['基本信息', '设备配置', '确认保存'];
 
 export default function StationBuilder() {
   const [step, setStep] = useState(0);
-  const [stationData, setStationData] = useState({ name: '苏州工业园光储示范站', location: '江苏省苏州市工业园区', capacity: 1000, owner: 'Risen' });
+  const [stationData, setStationData] = useState({ name: '苏州工业园光储示范站', location: '江苏省苏州市工业园区', lat: 0, lng: 0, capacity: 1000, owner: 'Risen' });
   const [equips, setEquips] = useState<ConfiguredEquip[]>([
     { type: 'pv', label: '光伏组串', icon: '☀️', color: '#d97706', count: 10, power: 100 },
     { type: 'battery', label: '储能电池', icon: '🔋', color: '#e6342a', count: 2, power: 500, capacity: 2000 },
@@ -235,7 +405,7 @@ export default function StationBuilder() {
     const totalPV = (equips.find(e => e.type === 'pv')?.power || 0) * (equips.find(e => e.type === 'pv')?.count || 0);
     const payload = {
       name: stationData.name,
-      location: { address: stationData.location, lat: 0, lng: 0 },
+      location: { address: stationData.location || '', lat: stationData.lat || 0, lng: stationData.lng || 0 },
       capacity: totalPV / 1000,
       installedCapacity: totalPV,
       peakPower: totalPV,
