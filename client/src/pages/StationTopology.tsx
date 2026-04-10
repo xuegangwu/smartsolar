@@ -79,7 +79,7 @@ export default function StationTopology() {
             ⚡ {station.name}
           </Title>
           <Text style={{ fontSize: 13, color: '#8896a6', marginTop: 2, display: 'block' }}>
-            {station.location} · 装机 {station.capacity || station.installedCapacity || 0}MW
+            {typeof station.location === 'string' ? station.location : station.location?.address} · 装机 {station.capacity || station.installedCapacity || 0}MW
           </Text>
         </div>
         <Tag style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#e6342a', borderRadius: 20, fontSize: 12, padding: '2px 12px' }}>
