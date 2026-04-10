@@ -3,7 +3,7 @@ import { Layout as AntLayout, Menu, Avatar, Dropdown, Badge } from 'antd';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import {
   DashboardOutlined, HomeOutlined, ToolOutlined, FileTextOutlined,
-  BellOutlined, CalendarOutlined, UserOutlined, LogoutOutlined, InboxOutlined, RiseOutlined, ApiOutlined, DownloadOutlined,
+  BellOutlined, CalendarOutlined, UserOutlined, LogoutOutlined, InboxOutlined, RiseOutlined, ApiOutlined, DownloadOutlined, PlusSquareOutlined,
 } from '@ant-design/icons';
 
 const { Sider, Header, Content } = AntLayout;
@@ -18,6 +18,7 @@ const NAV_ITEMS = [
   { key: '/spare-parts', icon: <InboxOutlined />, label: '备件' },
   { key: '/kpi', icon: <RiseOutlined />, label: 'KPI' },
   { key: '/reports', icon: <DownloadOutlined />, label: '导出' },
+  { key: '/stations/new/builder', icon: <PlusSquareOutlined />, label: '建站' },
   { key: '/ems-simulator', icon: <ApiOutlined />, label: 'EMS模拟' },
 ];
 
