@@ -7,10 +7,10 @@ import { alertApi, workOrderApi, stationApi } from '../services/api';
 const { Text } = Typography;
 
 const LEVEL_COLOR: Record<string, string> = {
-  critical: '#ff5252', major: '#ffab40', minor: '#5a6a7a',
+  critical: '#dc2626', major: '#d97706', minor: '#8896a6',
 };
 const PRIORITY_COLOR: Record<string, string> = {
-  urgent: '#ff5252', important: '#ffab40', normal: '#5a6a7a',
+  urgent: '#dc2626', important: '#d97706', normal: '#8896a6',
 };
 const PRIORITY_TEXT: Record<string, string> = {
   urgent: '紧急', important: '重要', normal: '一般',
@@ -29,23 +29,23 @@ function StatCard({ title, value, icon, accentColor, onClick }: {
       onClick={onClick}
       style={{
         cursor: onClick ? 'pointer' : 'default',
-        background: '#141c2e',
-        border: `1px solid ${accentColor ? accentColor + '30' : '#2a3a52'}`,
+        background: '#ffffff',
+        border: `1px solid ${accentColor ? accentColor + '30' : '#e8eaed'}`,
         borderRadius: 10,
         textAlign: 'center',
         transition: 'border-color 0.2s, transform 0.2s',
       }}
       styles={{ body: { padding: '14px 10px' } }}
-      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = accentColor || '#00e5c0'; (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; }}
-      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = accentColor ? accentColor + '30' : '#2a3a52'; (e.currentTarget as HTMLElement).style.transform = 'none'; }}
+      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = accentColor || '#e6342a'; (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = accentColor ? accentColor + '30' : '#e8eaed'; (e.currentTarget as HTMLElement).style.transform = 'none'; }}
     >
-      <div style={{ color: '#5a6a7a', fontSize: 10, fontFamily: 'JetBrains Mono, monospace', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
+      <div style={{ color: '#8896a6', fontSize: 10, fontFamily: 'JetBrains Mono, monospace', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
         {title}
       </div>
-      <div style={{ fontSize: 30, fontWeight: 700, color: accentColor || '#00e5c0', fontFamily: 'JetBrains Mono, monospace', lineHeight: 1 }}>
+      <div style={{ fontSize: 30, fontWeight: 700, color: accentColor || '#e6342a', fontFamily: 'JetBrains Mono, monospace', lineHeight: 1 }}>
         {value}
       </div>
-      <div style={{ fontSize: 18, marginTop: 6, color: accentColor ? accentColor + '99' : '#5a6a7a' }}>{icon}</div>
+      <div style={{ fontSize: 18, marginTop: 6, color: accentColor ? accentColor + '99' : '#8896a6' }}>{icon}</div>
     </Card>
   );
 }
@@ -62,17 +62,17 @@ function AlertItem({ item, onClick }: { item: any; onClick?: () => void }) {
         background: isUrgent ? 'rgba(255,82,82,0.06)' : 'transparent',
         transition: 'background 0.2s',
       }}
-      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#1a2438'; }}
+      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#f5f6f8'; }}
       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = isUrgent ? 'rgba(255,82,82,0.06)' : 'transparent'; }}
     >
       <div style={{ width: 8, height: 8, borderRadius: '50%', background: LEVEL_COLOR[item.level], boxShadow: `0 0 6px ${LEVEL_COLOR[item.level]}`, flexShrink: 0 }} />
       <Tag style={{ background: LEVEL_COLOR[item.level] + '15', border: `1px solid ${LEVEL_COLOR[item.level]}50`, color: LEVEL_COLOR[item.level], fontSize: 10, padding: '0 6px', flexShrink: 0 }}>
         {LEVEL_TEXT[item.level]}
       </Tag>
-      <Text style={{ flex: 1, fontSize: 13, color: isUrgent ? LEVEL_COLOR[item.level] : '#c8d4e0', fontFamily: 'Inter, sans-serif' }} ellipsis>
+      <Text style={{ flex: 1, fontSize: 13, color: isUrgent ? LEVEL_COLOR[item.level] : '#1a1a2e', fontFamily: 'Inter, sans-serif' }} ellipsis>
         {item.message}
       </Text>
-      <Text style={{ fontSize: 11, color: '#5a6a7a', fontFamily: 'JetBrains Mono, monospace', flexShrink: 0 }}>
+      <Text style={{ fontSize: 11, color: '#8896a6', fontFamily: 'JetBrains Mono, monospace', flexShrink: 0 }}>
         {new Date(item.createdAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
       </Text>
     </div>
@@ -89,16 +89,16 @@ function OrderItem({ item, onClick }: { item: any; onClick?: () => void }) {
         cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10,
         transition: 'background 0.2s',
       }}
-      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#1a2438'; }}
+      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#f5f6f8'; }}
       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
     >
       <Tag style={{ background: PRIORITY_COLOR[item.priority] + '15', border: `1px solid ${PRIORITY_COLOR[item.priority]}50`, color: PRIORITY_COLOR[item.priority], fontSize: 10, padding: '0 6px', flexShrink: 0 }}>
         {PRIORITY_TEXT[item.priority]}
       </Tag>
-      <Text style={{ flex: 1, fontSize: 13, color: '#c8d4e0', fontFamily: 'Inter, sans-serif' }} ellipsis>
+      <Text style={{ flex: 1, fontSize: 13, color: '#1a1a2e', fontFamily: 'Inter, sans-serif' }} ellipsis>
         {item.title}
       </Text>
-      <Text style={{ fontSize: 11, color: '#5a6a7a', fontFamily: 'JetBrains Mono, monospace', flexShrink: 0 }}>
+      <Text style={{ fontSize: 11, color: '#8896a6', fontFamily: 'JetBrains Mono, monospace', flexShrink: 0 }}>
         {item.orderNo}
       </Text>
     </div>
@@ -137,16 +137,16 @@ export default function Dashboard() {
       {/* Stat Cards */}
       <Row gutter={[12, 12]}>
         <Col xs={12} sm={6}>
-          <StatCard title="电站总数" value={stationCount} icon={<ToolOutlined />} accentColor="#00e5c0" onClick={() => navigate('/stations')} />
+          <StatCard title="电站总数" value={stationCount} icon={<ToolOutlined />} accentColor="#e6342a" onClick={() => navigate('/stations')} />
         </Col>
         <Col xs={12} sm={6}>
-          <StatCard title="未确认告警" value={alertStats.unacknowledged} icon={<AlertOutlined />} accentColor={alertStats.unacknowledged > 0 ? '#ff5252' : '#00e676'} onClick={() => navigate('/alerts')} />
+          <StatCard title="未确认告警" value={alertStats.unacknowledged} icon={<AlertOutlined />} accentColor={alertStats.unacknowledged > 0 ? '#dc2626' : '#16a34a'} onClick={() => navigate('/alerts')} />
         </Col>
         <Col xs={12} sm={6}>
-          <StatCard title="严重告警" value={alertStats.critical} icon={<ThunderboltOutlined />} accentColor="#ff5252" onClick={() => navigate('/alerts?level=critical')} />
+          <StatCard title="严重告警" value={alertStats.critical} icon={<ThunderboltOutlined />} accentColor="#dc2626" onClick={() => navigate('/alerts?level=critical')} />
         </Col>
         <Col xs={12} sm={6}>
-          <StatCard title="待处理工单" value={recentOrders.length} icon={<FileTextOutlined />} accentColor="#ffab40" onClick={() => navigate('/work-orders')} />
+          <StatCard title="待处理工单" value={recentOrders.length} icon={<FileTextOutlined />} accentColor="#d97706" onClick={() => navigate('/work-orders')} />
         </Col>
       </Row>
 
@@ -157,16 +157,16 @@ export default function Dashboard() {
           <Card
             title={
               <Space>
-                <AlertOutlined style={{ color: '#00e5c0' }} />
-                <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13, fontWeight: 600, color: '#c8d4e0', textTransform: 'uppercase', letterSpacing: '0.06em' }}>最近告警</span>
+                <AlertOutlined style={{ color: '#e6342a' }} />
+                <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13, fontWeight: 600, color: '#1a1a2e', textTransform: 'uppercase', letterSpacing: '0.06em' }}>最近告警</span>
               </Space>
             }
-            extra={<a onClick={() => navigate('/alerts')} style={{ color: '#00e5c0', fontSize: 12, fontFamily: 'JetBrains Mono, monospace', cursor: 'pointer' }}>查看全部 <RightOutlined /></a>}
-            style={{ background: '#141c2e', border: '1px solid #2a3a52', borderRadius: 10 }}
+            extra={<a onClick={() => navigate('/alerts')} style={{ color: '#e6342a', fontSize: 12, fontFamily: 'JetBrains Mono, monospace', cursor: 'pointer' }}>查看全部 <RightOutlined /></a>}
+            style={{ background: '#ffffff', border: '1px solid #e8eaed', borderRadius: 10 }}
             styles={{ body: { padding: 0 } }}
           >
             {recentAlerts.length === 0 ? (
-              <div style={{ padding: 32, textAlign: 'center', color: '#5a6a7a', fontFamily: 'JetBrains Mono, monospace', fontSize: 13 }}>暂无告警 ✅</div>
+              <div style={{ padding: 32, textAlign: 'center', color: '#8896a6', fontFamily: 'JetBrains Mono, monospace', fontSize: 13 }}>暂无告警 ✅</div>
             ) : (
               recentAlerts.map((item, i) => <AlertItem key={item._id || i} item={item} onClick={() => navigate('/alerts')} />)
             )}
@@ -178,16 +178,16 @@ export default function Dashboard() {
           <Card
             title={
               <Space>
-                <FileTextOutlined style={{ color: '#00e5c0' }} />
-                <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13, fontWeight: 600, color: '#c8d4e0', textTransform: 'uppercase', letterSpacing: '0.06em' }}>待处理工单</span>
+                <FileTextOutlined style={{ color: '#e6342a' }} />
+                <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13, fontWeight: 600, color: '#1a1a2e', textTransform: 'uppercase', letterSpacing: '0.06em' }}>待处理工单</span>
               </Space>
             }
-            extra={<a onClick={() => navigate('/work-orders')} style={{ color: '#00e5c0', fontSize: 12, fontFamily: 'JetBrains Mono, monospace', cursor: 'pointer' }}>查看全部 <RightOutlined /></a>}
-            style={{ background: '#141c2e', border: '1px solid #2a3a52', borderRadius: 10 }}
+            extra={<a onClick={() => navigate('/work-orders')} style={{ color: '#e6342a', fontSize: 12, fontFamily: 'JetBrains Mono, monospace', cursor: 'pointer' }}>查看全部 <RightOutlined /></a>}
+            style={{ background: '#ffffff', border: '1px solid #e8eaed', borderRadius: 10 }}
             styles={{ body: { padding: 0 } }}
           >
             {recentOrders.length === 0 ? (
-              <div style={{ padding: 32, textAlign: 'center', color: '#5a6a7a', fontFamily: 'JetBrains Mono, monospace', fontSize: 13 }}>暂无待处理工单 ✅</div>
+              <div style={{ padding: 32, textAlign: 'center', color: '#8896a6', fontFamily: 'JetBrains Mono, monospace', fontSize: 13 }}>暂无待处理工单 ✅</div>
             ) : (
               recentOrders.map((item, i) => <OrderItem key={item._id || i} item={item} onClick={() => navigate('/work-orders')} />)
             )}

@@ -22,7 +22,7 @@ export default function Login() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#050810',
+      background: '#f5f6f8',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -30,30 +30,29 @@ export default function Login() {
       position: 'relative',
       overflow: 'hidden',
     }}>
-      {/* Ambient glow */}
-      <div style={{
-        position: 'absolute', inset: 0, pointerEvents: 'none',
-        background: 'radial-gradient(ellipse 60% 50% at 50% 40%, rgba(45,212,191,0.06) 0%, transparent 70%)',
-      }} />
-
-      {/* Grid */}
+      {/* Subtle bg pattern */}
       <div style={{
         position: 'absolute', inset: 0, pointerEvents: 'none',
         backgroundImage: `
-          linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)
+          linear-gradient(rgba(230,52,42,0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(230,52,42,0.03) 1px, transparent 1px)
         `,
         backgroundSize: '48px 48px',
+      }} />
+
+      {/* Top accent line */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0, height: 4,
+        background: 'linear-gradient(90deg, #e6342a, #ff6b6b)',
       }} />
 
       <Card
         style={{
           width: 380, maxWidth: '100%',
-          background: 'rgba(17,24,39,0.8)',
-          border: '1px solid rgba(255,255,255,0.07)',
-          borderRadius: 20,
-          boxShadow: '0 8px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(45,212,191,0.08)',
-          backdropFilter: 'blur(20px)',
+          background: '#ffffff',
+          border: '1px solid #e8eaed',
+          borderRadius: 18,
+          boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
           position: 'relative', zIndex: 1,
         }}
         bodyStyle={{ padding: '36px 32px' }}
@@ -61,31 +60,31 @@ export default function Login() {
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
           <div style={{
-            width: 56, height: 56, borderRadius: 14,
-            background: 'linear-gradient(135deg, #0d9488, #2dd4bf)',
+            width: 52, height: 52, borderRadius: 12,
+            background: 'linear-gradient(135deg, #e6342a, #ff6b6b)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 28, margin: '0 auto 14px',
-            boxShadow: '0 4px 16px rgba(45,212,191,0.3)',
+            fontSize: 26, margin: '0 auto 14px',
+            boxShadow: '0 4px 16px rgba(230,52,42,0.3)',
           }}>
             ☀️
           </div>
           <Title level={3} style={{
-            color: '#2dd4bf', margin: 0,
+            color: '#1a1a2e', margin: 0,
             fontFamily: 'Inter, sans-serif', fontWeight: 800,
             letterSpacing: '-0.03em',
           }}>
-            SmartSolar
+            Smart<span style={{ color: '#e6342a' }}>Solar</span>
           </Title>
-          <Text style={{ color: '#64748b', fontFamily: 'Inter, sans-serif', fontSize: 13, display: 'block', marginTop: 6 }}>
+          <Text style={{ color: '#8896a6', fontFamily: 'Inter, sans-serif', fontSize: 13, display: 'block', marginTop: 6 }}>
             光储电站运维管理平台
           </Text>
         </div>
 
-        <div style={{ height: 1, background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.07), transparent)', marginBottom: 24 }} />
+        <div style={{ height: 1, background: '#f0f2f5', marginBottom: 24 }} />
 
         <Form layout="vertical" onFinish={handleLogin}>
           <Form.Item name="username" label={
-            <span style={{ color: '#94a3b8', fontFamily: 'Inter, sans-serif', fontSize: 12, fontWeight: 500 }}>
+            <span style={{ color: '#4a5568', fontFamily: 'Inter, sans-serif', fontSize: 12, fontWeight: 500 }}>
               用户名
             </span>
           } rules={[{ required: true }]}>
@@ -93,14 +92,14 @@ export default function Login() {
               placeholder="admin"
               size="large"
               style={{
-                background: '#162032', border: '1px solid rgba(255,255,255,0.07)',
-                color: '#f1f5f9', fontFamily: 'Inter, sans-serif',
+                background: '#fafbfc', border: '1px solid #e8eaed',
+                color: '#1a1a2e', fontFamily: 'Inter, sans-serif',
                 borderRadius: 10, height: 46,
               }}
             />
           </Form.Item>
           <Form.Item name="password" label={
-            <span style={{ color: '#94a3b8', fontFamily: 'Inter, sans-serif', fontSize: 12, fontWeight: 500 }}>
+            <span style={{ color: '#4a5568', fontFamily: 'Inter, sans-serif', fontSize: 12, fontWeight: 500 }}>
               密码
             </span>
           } rules={[{ required: true }]}>
@@ -108,8 +107,8 @@ export default function Login() {
               placeholder="••••••"
               size="large"
               style={{
-                background: '#162032', border: '1px solid rgba(255,255,255,0.07)',
-                color: '#f1f5f9', fontFamily: 'Inter, sans-serif',
+                background: '#fafbfc', border: '1px solid #e8eaed',
+                color: '#1a1a2e', fontFamily: 'Inter, sans-serif',
                 borderRadius: 10, height: 46,
               }}
             />
@@ -124,9 +123,8 @@ export default function Login() {
               height: 48, borderRadius: 10,
               fontFamily: 'Inter, sans-serif',
               fontWeight: 600, fontSize: 15,
-              background: 'linear-gradient(135deg, #0d9488, #2dd4bf)',
-              border: 'none',
-              boxShadow: '0 4px 16px rgba(45,212,191,0.3)',
+              background: '#e6342a', border: 'none',
+              boxShadow: '0 4px 16px rgba(230,52,42,0.25)',
               marginTop: 4,
             }}
           >
@@ -135,7 +133,7 @@ export default function Login() {
         </Form>
 
         <div style={{ marginTop: 20, textAlign: 'center' }}>
-          <Text style={{ color: '#334155', fontFamily: 'Inter, sans-serif', fontSize: 12 }}>
+          <Text style={{ color: '#b8c0cc', fontFamily: 'Inter, sans-serif', fontSize: 12 }}>
             演示账号 · admin / admin
           </Text>
         </div>

@@ -1,6 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ConfigProvider, App as AntApp } from 'antd';
-import zhCN from 'antd/locale/zh_CN';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Stations from './pages/Stations';
@@ -16,16 +15,9 @@ import StationTopology from './pages/StationTopology';
 import StationBuilder from './pages/StationBuilder';
 import Login from './pages/Login';
 
-const theme = {
-  token: {
-    colorPrimary: '#1677ff',
-    borderRadius: 8,
-  },
-};
-
 export default function App() {
   return (
-    <ConfigProvider theme={theme} locale={zhCN}>
+    <ConfigProvider>
       <AntApp>
         <BrowserRouter>
           <Routes>
@@ -40,10 +32,10 @@ export default function App() {
               <Route path="inspection" element={<Inspection />} />
               <Route path="spare-parts" element={<SpareParts />} />
               <Route path="kpi" element={<KPI />} />
-              <Route path="ems-simulator" element={<EmsSimulator />} />
               <Route path="reports" element={<Reports />} />
-              <Route path="stations/:id/topology" element={<StationTopology />} />
               <Route path="stations/new/builder" element={<StationBuilder />} />
+              <Route path="stations/:id/topology" element={<StationTopology />} />
+              <Route path="ems-simulator" element={<EmsSimulator />} />
             </Route>
           </Routes>
         </BrowserRouter>
