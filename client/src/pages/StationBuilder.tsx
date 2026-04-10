@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Card, Form, Input, InputNumber, Button, Space, Tag, Typography, Divider, message, Row, Col, Stepper } from 'antd';
+import { Card, Form, Input, InputNumber, Button, Space, Tag, Typography, Divider, message, Row, Col } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { SaveOutlined, ThunderboltOutlined, BatteryOutlined, ApiOutlined, CarOutlined, NodeIndexOutlined, CheckCircleOutlined } from '@ant-design/icons';
 
@@ -106,28 +106,43 @@ function StepEquipConfig({ equips, onChange }: { equips: ConfiguredEquip[]; onCh
                 {count > 0 && <Tag style={{ background: eq.color + '20', border: 'none', color: eq.color, fontSize: 10, borderRadius: 20 }}>{count}台</Tag>}
               </div>
               {count > 0 && (
-                <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                   <InputNumber
                     min={0} max={999} value={count}
                     onChange={v => {
                       const arr = [...equips.filter(e => e.type !== eq.type)];
-                      if (v && v > 0) arr.push({ type: eq.type, label: eq.label, icon: eq.icon, color: eq.color, count: v, power: configured?.power || 100, capacity: configured?.capacity });
+                      if (v && v > 0) arr.push({ type: eq.type, label: eq.label, icon: eq.icon, color: eq.color, count: v, power: configured?.power || 100, capacity: eq.type === 'battery' ? (configured?.capacity || 1000) : undefined });
                       onChange(arr);
                     }}
-                    style={{ width: 70, background: '#0c1220', border: '1px solid ' + eq.color + '40', color: eq.color, fontFamily: 'JetBrains Mono, monospace', borderRadius: 6 }}
+                    style={{ width: 64, background: '#0c1220', border: '1px solid ' + eq.color + '40', color: '#f1f5f9', fontFamily: 'JetBrains Mono, monospace', borderRadius: 6, height: 34 }}
                   />
-                  <InputNumber
-                    min={0} value={configured?.power || 0}
-                    onChange={v => update(equips.findIndex(e => e.type === eq.type), 'power', v || 0)}
-                    addonAfter={eq.unit}
-                    style={{ flex: 1, background: '#0c1220', border: '1px solid rgba(255,255,255,0.07)', color: '#f1f5f9', fontFamily: 'JetBrains Mono, monospace', borderRadius: 6 }}
-                  />
+                  <div style={{ position: 'relative', flex: 1 }}>
+                    <InputNumber
+                      min={0} value={configured?.power || 0}
+                      onChange={v => update(equips.findIndex(e => e.type === eq.type), 'power', v || 0)}
+                      style={{ width: '100%', background: '#0c1220', border: '1px solid rgba(255,255,255,0.07)', color: '#f1f5f9', fontFamily: 'JetBrains Mono, monospace', borderRadius: 6, height: 34 }}
+                    />
+                    <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: 12, fontFamily: 'JetBrains Mono, monospace', pointerEvents: 'none' }}>{eq.unit}</span>
+                  </div>
+                  {eq.type === 'battery' && (
+                    <>
+                      <span style={{ color: '#64748b', fontSize: 12, flexShrink: 0 }}>×</span>
+                      <div style={{ position: 'relative', flex: 1 }}>
+                        <InputNumber
+                          min={0} value={configured?.capacity || 0}
+                          onChange={v => update(equips.findIndex(e => e.type === eq.type), 'capacity', v || 0)}
+                          style={{ width: '100%', background: '#0c1220', border: '1px solid rgba(255,255,255,0.07)', color: '#f1f5f9', fontFamily: 'JetBrains Mono, monospace', borderRadius: 6, height: 34 }}
+                        />
+                        <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: 12, fontFamily: 'JetBrains Mono, monospace', pointerEvents: 'none' }}>kWh</span>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>
             {count === 0 && (
               <Button size="small"
-                onClick={() => onChange([...equips, { type: eq.type, label: eq.label, icon: eq.icon, color: eq.color, count: 1, power: 100 }])}
+                onClick={() => onChange([...equips, { type: eq.type, label: eq.label, icon: eq.icon, color: eq.color, count: 1, power: 100, capacity: eq.type === 'battery' ? 1000 : undefined }])}
                 style={{ borderColor: eq.color + '60', color: eq.color, fontSize: 12, borderRadius: 6, background: 'transparent' }}>
                 + 添加
               </Button>
