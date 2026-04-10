@@ -67,13 +67,20 @@ export default function StationMap() {
       delete L.Icon.Default.prototype._getIconUrl;
       L.Icon.Default.mergeOptions({ iconRetinaUrl: '', iconUrl: '', shadowUrl: '' });
 
-      const map = L.map(mapRef.current!, { center: [35, 105], zoom: 4, zoomControl: true, attributionControl: false });
+      const map = L.map(mapRef.current!, { center: [30, 120], zoom: 6, zoomControl: true, attributionControl: false });
       mapInstRef.current = map;
       L.control.attribution({ position: 'bottomright', prefix: '' }).addTo(map);
-      map.attributionControl.addAttribution('© ESRI | © OpenStreetMap');
+      map.attributionControl.addAttribution('© OpenStreetMap | © CARTO');
 
-      const streetLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 });
-      const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 });
+      // Use OSM tiles directly - most reliable globally
+      const streetLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      });
+      // Dark satellite style via CartoDB
+      const satelliteLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', {
+        maxZoom: 19, subdomains: 'abcd',
+      });
       (map as any)._streetLayer = streetLayer;
       (map as any)._satelliteLayer = satelliteLayer;
       if (tileLayer === 'street') streetLayer.addTo(map); else satelliteLayer.addTo(map);
@@ -93,7 +100,7 @@ export default function StationMap() {
               ${count === 1 ? (sts[0].type === 'solar_storage' ? '⚡' : sts[0].type === 'solar' ? '☀️' : '🔋')
               : `<span style="font-size:${count > 9 ? 13 : 15}px;font-weight:800;color:${color};font-family:monospace">${count}</span>`}
             </div>${count > 1 ? `<div style="margin-top:2px;font-size:9px;color:${STATUS_COLOR[online === count ? 'online' : 'maintenance']};font-weight:700;text-align:center">${online}/${count}</div>` : ''}`,
-            className: '', iconSize: L.point(size, count > 1 ? size + 16 : size), iconAnchor: [size / 2, size / 2],
+            className: '', iconSize: [size, count > 1 ? size + 16 : size], iconAnchor: [size / 2, size / 2],
           });
         },
       });
