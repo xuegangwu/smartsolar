@@ -5,6 +5,7 @@ import {
   DashboardOutlined, HomeOutlined, ToolOutlined, FileTextOutlined,
   BellOutlined, CalendarOutlined, UserOutlined, LogoutOutlined,
   InboxOutlined, RiseOutlined, ApiOutlined, DownloadOutlined, PlusSquareOutlined,
+  EnvironmentOutlined,
 } from '@ant-design/icons';
 
 const { Sider, Header, Content } = AntLayout;
@@ -12,6 +13,7 @@ const { Sider, Header, Content } = AntLayout;
 const NAV_ITEMS = [
   { key: '/dashboard', icon: <DashboardOutlined />, label: '首页' },
   { key: '/stations', icon: <HomeOutlined />, label: '电站' },
+  { key: '/map', icon: <EnvironmentOutlined />, label: '地图' },
   { key: '/equipment', icon: <ToolOutlined />, label: '设备' },
   { key: '/work-orders', icon: <FileTextOutlined />, label: '工单' },
   { key: '/alerts', icon: <BellOutlined />, label: '告警' },

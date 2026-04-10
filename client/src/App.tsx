@@ -3,6 +3,7 @@ import { ConfigProvider, App as AntApp } from 'antd';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Stations from './pages/Stations';
+import StationMap from './pages/StationMap';
 import Equipment from './pages/Equipment';
 import WorkOrders from './pages/WorkOrders';
 import Alerts from './pages/Alerts';
@@ -26,6 +27,7 @@ export default function App() {
               <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="stations" element={<Stations />} />
+              <Route path="map" element={<StationMap />} />
               <Route path="equipment" element={<Equipment />} />
               <Route path="work-orders" element={<WorkOrders />} />
               <Route path="alerts" element={<Alerts />} />
