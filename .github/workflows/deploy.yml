@@ -1,4 +1,4 @@
-name: Build & Deploy SmartSolar
+name: 🚀 Build & Deploy SmartSolar
 
 on:
   push:
@@ -8,20 +8,21 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      # ── Build Client ──────────────────────────────────────────────────────────
+      # ── Client Build ──────────────────────────────────────────────────────
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: 'client/package-lock.json'
+          cache-dependency-path: client/package-lock.json
 
-      - name: Install client deps
+      - name: Install client dependencies
         run: cd client && npm ci
 
       - name: Build client
@@ -29,15 +30,15 @@ jobs:
         env:
           CI: false
 
-      # ── Build Server ─────────────────────────────────────────────────────────
+      # ── Server Build ──────────────────────────────────────────────────────
       - name: Setup Node.js (server)
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: 'server/package-lock.json'
+          cache-dependency-path: server/package-lock.json
 
-      - name: Install server deps
+      - name: Install server dependencies
         run: cd server && npm ci
 
       - name: Build server
@@ -45,7 +46,7 @@ jobs:
         env:
           CI: false
 
-      # ── Deploy via SSH ──────────────────────────────────────────────────────
+      # ── Deploy via SSH ──────────────────────────────────────────────────
       - name: Deploy to SmartSolar Server
         uses: appleboy/ssh-action@v1
         with:
@@ -53,26 +54,46 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ secrets.DEPLOY_PORT || '22' }}
+          timeout: 20m
           script: |
             set -e
-            export DEPLOY_DIR=${{ secrets.DEPLOY_PATH }}/smartsolar
-            mkdir -p $DEPLOY_DIR
+            DEPLOY_DIR="${{ secrets.DEPLOY_PATH }}"
+            echo "📁 Deploy directory: $DEPLOY_DIR"
 
-            # Stop existing pm2 process
+            # Stop existing process
+            echo "🛑 Stopping PM2 process..."
             pm2 stop smartsolar-server || true
+            pm2 delete smartsolar-server || true
 
-            # Copy build artifacts
-            cp -r ${{ github.workspace }}/client/dist/* $DEPLOY_DIR/client/
-            cp -r ${{ github.workspace }}/server/dist/* $DEPLOY_DIR/server/
-            cp ${{ github.workspace }}/server/package.json $DEPLOY_DIR/server/
-            cp ${{ github.workspace }}/server/.env.example $DEPLOY_DIR/server/.env
+            # Create directories
+            mkdir -p $DEPLOY_DIR/client $DEPLOY_DIR/server
 
-            # Install server deps (production)
+            # Copy client build
+            echo "📦 Deploying client..."
+            rsync -avz --delete "$GITHUB_WORKSPACE/client/dist/" "$DEPLOY_DIR/client/"
+            chown -R www-data:www-data "$DEPLOY_DIR/client"
+
+            # Copy server build + package.json
+            echo "📦 Deploying server..."
+            rsync -avz --delete "$GITHUB_WORKSPACE/server/dist/" "$DEPLOY_DIR/server/"
+            cp "$GITHUB_WORKSPACE/server/package.json" "$DEPLOY_DIR/server/"
+            echo "PORT=3003
+MONGO_URI=mongodb://localhost:27017/smartsolar
+MONGO_MEMORY=false" > "$DEPLOY_DIR/server/.env"
+
+            # Install server deps
+            echo "📦 Installing server production deps..."
+            cd $DEPLOY_DIR/server && npm install --production
+
+            # Start server
+            echo "🚀 Starting SmartSolar server..."
             cd $DEPLOY_DIR/server
-            npm install --production
+            PORT=3003 MONGO_URI=mongodb://localhost:27017/smartsolar MONGO_MEMORY=false pm2 start dist/index.js --name smartsolar-server
+            pm2 save
 
-            # Start with pm2
-            cd $DEPLOY_DIR/server
-            pm2 start dist/index.js --name smartsolar-server
+            # Verify
+            sleep 3
+            curl -sf http://127.0.0.1:3003/api/health && echo "✅ Server health check passed" || echo "❌ Server health check failed"
 
-            echo "✅ SmartSolar deployed at $(date)"
+            echo ""
+            echo "🎉 SmartSolar deployed successfully at $(date)"
