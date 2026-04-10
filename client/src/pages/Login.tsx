@@ -1,22 +1,25 @@
 import { useState } from 'react';
 import { Form, Input, Button, Card, message, Typography } from 'antd';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 const { Title, Text } = Typography;
 
 export default function Login() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   async function handleLogin(values: any) {
     setLoading(true);
-    if (values.username === 'admin' && values.password === 'admin') {
-      localStorage.setItem('smartsolar_user', JSON.stringify({ name: 'Admin', role: 'admin' }));
+    const result = await login(values.username, values.password);
+    setLoading(false);
+    if (result.success) {
+      message.success('登录成功！');
       navigate('/dashboard');
     } else {
-      message.error('用户名或密码错误');
+      message.error(result.message || '用户名或密码错误');
     }
-    setLoading(false);
   }
 
   return (

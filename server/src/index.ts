@@ -8,6 +8,7 @@ import { workOrderRoutes } from './routes/workOrderRoutes.js';
 import { alertRoutes } from './routes/alertRoutes.js';
 import { alertSyncRoutes } from './routes/alertSyncRoutes.js';
 import { inspectionRoutes } from './routes/inspectionRoutes.js';
+import authRoutes from './routes/authRoutes.js';
 import { sparePartRoutes } from './routes/sparePartRoutes.js';
 
 dotenv.config();
@@ -21,6 +22,7 @@ app.use(cors());
 app.use(express.json());
 
 // Routes
+app.use('/api/auth', authRoutes);
 app.use('/api', stationRoutes);
 app.use('/api/work-orders', workOrderRoutes);
 app.use('/api/alerts', alertRoutes);

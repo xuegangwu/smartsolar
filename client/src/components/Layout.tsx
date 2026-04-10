@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Layout as AntLayout, Menu, Avatar, Dropdown, Badge } from 'antd';
+import { Layout as AntLayout, Menu, Avatar, Dropdown, Badge, Select, Tag } from 'antd';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import {
   DashboardOutlined, HomeOutlined, ToolOutlined, FileTextOutlined,
@@ -7,6 +7,8 @@ import {
   InboxOutlined, RiseOutlined, ApiOutlined, DownloadOutlined, PlusSquareOutlined,
   EnvironmentOutlined,
 } from '@ant-design/icons';
+import { useStation } from '../contexts/StationContext';
+import { useAuth } from '../contexts/AuthContext';
 
 const { Sider, Header, Content } = AntLayout;
 
@@ -31,6 +33,8 @@ export default function Layout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobile, setMobile] = useState(false);
   const [sysStatus, setSysStatus] = useState({ mongo: 'checking', alerts: 0 });
+  const { stations, currentStation, setCurrentStation } = useStation();
+  const { user, logout } = useAuth();
 
   useEffect(() => {
     const check = () => setMobile(window.innerWidth < 768);
@@ -58,7 +62,7 @@ export default function Layout() {
   }, []);
 
   const userMenu = {
-    items: [{ key: 'logout', icon: <LogoutOutlined />, label: '退出登录' }],
+    items: [{ key: 'logout', icon: <LogoutOutlined />, label: '退出登录', onClick: () => logout() }],
   };
 
   const mongoColor = sysStatus.mongo === 'ok' ? '#16a34a' : sysStatus.mongo === 'error' ? '#dc2626' : '#d97706';
@@ -101,6 +105,38 @@ export default function Layout() {
               </div>
             )}
           </div>
+
+          {/* Global Station Selector */}
+          {!collapsed && (
+            <div style={{ padding: '10px 16px 8px' }}>
+              <div style={{ fontSize: 10, color: '#8896a6', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 5 }}>
+                当前电站
+              </div>
+              <Select
+                size="small"
+                style={{ width: '100%' }}
+                value={currentStation?._id || undefined}
+                onChange={(_, option: any) => {
+                  const s = stations.find((st: any) => st._id === option?.value);
+                  setCurrentStation(s || null);
+                }}
+                options={stations.map((s: any) => ({
+                  value: s._id,
+                  label: (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span>{s.type === 'solar_storage' ? '⚡' : s.type === 'solar' ? '☀️' : '🔋'}</span>
+                      <span style={{ fontWeight: 600, color: '#1a1a2e', fontSize: 12 }}>{s.name}</span>
+                    </div>
+                  ),
+                }))}
+              />
+              {currentStation && (
+                <div style={{ marginTop: 4, fontSize: 10, color: '#8896a6' }}>
+                  📍 {currentStation.location?.address || '地址未知'}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Nav */}
           <Menu
@@ -146,9 +182,15 @@ export default function Layout() {
                 {new Date().toLocaleString('zh-CN', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
               </span>
               <Dropdown menu={userMenu} placement="bottomRight" trigger={['click']}>
-                <Avatar style={{ cursor: 'pointer', background: '#e6342a', color: '#fff', fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 13, flexShrink: 0 }} size={34}>
-                  <UserOutlined />
-                </Avatar>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                  <Avatar style={{ background: '#e6342a', color: '#fff', fontWeight: 700, fontSize: 13, flexShrink: 0 }} size={34}>
+                    {user?.name?.[0] || user?.username?.[0] || 'A'}
+                  </Avatar>
+                  <div style={{ flexShrink: 0 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#1a1a2e', lineHeight: 1.2 }}>{user?.name || '管理员'}</div>
+                    <div style={{ fontSize: 10, color: '#8896a6' }}>{user?.role === 'admin' ? '超级管理员' : user?.role === 'operator' ? '运维员' : user?.role === 'technician' ? '技术员' : '经理'}</div>
+                  </div>
+                </div>
               </Dropdown>
             </div>
           </Header>
