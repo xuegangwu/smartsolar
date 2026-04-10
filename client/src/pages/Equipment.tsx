@@ -222,7 +222,16 @@ export default function Equipment() {
     const res = await stationApi.getAll();
     if (res.success) {
       setStations(res.data);
-      if (res.data.length > 0 && !selectedStation) setSelectedStation(res.data[0]._id);
+      if (res.data.length > 0 && !selectedStation) {
+        // Find the first station that has categories/equipment — batch check all stations at once
+        const checkResults = await Promise.all(
+          res.data.map(s =>
+            fetch(`/api/stations/${s._id}/categories`).then(r => r.json()).then(d => ({ id: s._id, count: d.success ? d.data.length : 0 }))
+          )
+        );
+        const withData = checkResults.filter(r => r.count > 0);
+        setSelectedStation(withData.length > 0 ? withData[0].id : res.data[0]._id);
+      }
     }
   }
 
