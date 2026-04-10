@@ -502,3 +502,15 @@ code, .ant-code {
   font-family: Inter, sans-serif !important;
 }
 
+
+/* Station marker pulse animation */
+@keyframes pulseStation {
+  0% { opacity: 0.8; transform: scale(1); }
+  70% { opacity: 0; transform: scale(1.8); }
+  100% { opacity: 0; transform: scale(1.8); }
+}
+
+/* Larger markers for better visibility */
+.leaflet-marker-icon {
+  transition: transform 0.2s ease;
+}

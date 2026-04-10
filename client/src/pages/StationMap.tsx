@@ -87,7 +87,7 @@ export default function StationMap() {
           const types = [...new Set(sts.map((s: Station) => s.type))];
           const color = types.length > 1 ? '#7c3aed' : TYPE_COLOR[types[0]] || '#8896a6';
           const online = sts.filter((s: Station) => s.status === 'online').length;
-          const size = count <= 1 ? 36 : count <= 3 ? 44 : count <= 10 ? 52 : 60;
+          const size = count <= 1 ? 48 : count <= 3 ? 56 : count <= 10 ? 64 : 72;
           return L.divIcon({
             html: `<div style="width:${size}px;height:${size}px;border-radius:50%;background:#fff;border:3px solid ${color};box-shadow:0 3px 12px ${color}40;display:flex;align-items:center;justify-content:center;flex-direction:column;line-height:1.2;cursor:pointer;">
               ${count === 1 ? (sts[0].type === 'solar_storage' ? '⚡' : sts[0].type === 'solar' ? '☀️' : '🔋')
@@ -135,13 +135,19 @@ export default function StationMap() {
         const color = TYPE_COLOR[s.type] || '#8896a6';
         const sc = STATUS_COLOR[s.status] || '#b8c0cc';
         const cap = s.capacity || s.installedCapacity || s.peakPower || 0;
-        const size = cap >= 1000 ? 44 : cap >= 500 ? 38 : 32;
+        const size = cap >= 1000 ? 52 : cap >= 500 ? 46 : 40;
+
+        // Build icon HTML with pulse ring for online stations
+        const pulseRing = sc === '#16a34a'
+          ? `<div style="position:absolute;width:${size + 16}px;height:${size + 16}px;top:${-8}px;left:${-8}px;border-radius:50%;border:2px solid ${color};opacity:0;animation:pulseStation 2s ease-out infinite;pointer-events:none"></div>`
+          : '';
+        const innerIcon = `<div style="width:${size}px;height:${size}px;border-radius:50%;background:#fff;border:4px solid ${color};box-shadow:0 4px 16px ${color}60,0 0 0 ${sc === '#16a34a' ? '4px' : '0'} ${sc}40;display:flex;align-items:center;justify-content:center;font-size:${size * 0.45}px;cursor:pointer;position:relative;z-index:2;transition:transform 0.15s"
+          onmouseover="this.style.transform='scale(1.15)'"
+          onmouseout="this.style.transform='scale(1)'"
+        >${s.type === 'solar_storage' ? '⚡' : s.type === 'solar' ? '☀️' : '🔋'}</div>`;
 
         const icon = L.divIcon({
-          html: `<div style="width:${size}px;height:${size}px;border-radius:50%;background:#fff;border:3px solid ${color};box-shadow:0 2px 10px ${color}40,0 0 0 ${sc === '#16a34a' ? '3px' : '0'} ${sc}30;display:flex;align-items:center;justify-content:center;font-size:${size * 0.45}px;cursor:pointer;transition:transform 0.15s"
-            onmouseover="this.style.transform='scale(1.2)'"
-            onmouseout="this.style.transform='scale(1)'"
-          >${s.type === 'solar_storage' ? '⚡' : s.type === 'solar' ? '☀️' : '🔋'}</div>`,
+          html: `<div style="position:relative;width:${size}px;height:${size}px">${pulseRing}${innerIcon}</div>`,
           iconSize: [size, size], iconAnchor: [size / 2, size / 2], className: '',
         });
 
