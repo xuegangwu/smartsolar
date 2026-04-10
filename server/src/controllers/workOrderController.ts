@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { WorkOrder, SparePart, SparePartConsume, Notification } from '../models/index.js';
+import { WorkOrder, SparePart, SparePartConsume, Notification, Alert, Personnel } from '../models/index.js';
 
 // 生成工单号
 function generateOrderNo(): string {
@@ -39,6 +39,12 @@ export const workOrderController = {
 
   create: async (req: Request, res: Response) => {
     const data = { ...req.body, orderNo: generateOrderNo() };
+    data.handlingSteps = [{
+      step: '创建工单',
+      operator: '系统',
+      at: new Date(),
+      note: `工单号：${generateOrderNo()}`,
+    }];
     const workOrder = new WorkOrder(data);
     await workOrder.save();
     const populated = await WorkOrder.findById(workOrder._id)
@@ -108,25 +114,74 @@ export const workOrderController = {
     }
 
     const prevStatus = workOrder.status;
+    const prev = await WorkOrder.findById(req.params.id).select('+handlingSteps');
     workOrder.status = status;
+    // 时间戳
+    if (status === 'assigned') workOrder.assignedAt = new Date();
+    if (status === 'accepted') workOrder.acceptedAt = new Date();
     if (status === 'closed') {
       workOrder.closedAt = new Date();
-      // 自动扣减备件库存
-      if (workOrder.spareParts && workOrder.spareParts.length > 0) {
-        for (const sp of workOrder.spareParts) {
-          try {
-            const part = await SparePart.findById(sp.sparePartId);
-            if (part && part.quantity >= sp.quantity) {
-              part.quantity -= sp.quantity;
-              await part.save();
-              await new SparePartConsume({
-                sparePartId: sp.sparePartId,
-                workOrderId: workOrder._id,
-                quantity: sp.quantity,
+      workOrder.completedAt = new Date();
+    }
+
+    // 如果状态变更，记录操作时间线
+    if (status && status !== prev?.status) {
+      const STEP_LABELS: Record<string, string> = {
+        created: '创建工单', assigned: '派发给技术员', accepted: '技术员接单',
+        processing: '开始处理', accepted_check: '提交验收', closed: '工单关闭',
+      };
+      const operatorName = prev?.assigneeId
+        ? ((await Personnel.findById(prev.assigneeId))?.name || '未知')
+        : '运维人员';
+      (workOrder as any).handlingSteps = prev?.handlingSteps || [];
+      (workOrder as any).handlingSteps.push({
+        step: STEP_LABELS[status] || status,
+        operator: operatorName,
+        at: new Date(),
+      });
+    }
+
+    // 操作时间线记录
+    const STEP_LABELS: Record<string, string> = {
+      created: '创建工单', assigned: '派发给技术员', accepted: '技术员接单',
+      processing: '开始处理', accepted_check: '提交验收', closed: '工单关闭',
+    };
+    const operatorName = workOrder.assigneeId
+      ? ((await Personnel.findById(workOrder.assigneeId))?.name || '未知')
+      : '系统';
+    workOrder.handlingSteps = workOrder.handlingSteps || [];
+    workOrder.handlingSteps.push({
+      step: STEP_LABELS[status] || status,
+      operator: operatorName,
+      at: new Date(),
+    });
+
+    // 自动扣减备件库存 + 低库存告警
+    if (status === 'closed' && workOrder.spareParts && workOrder.spareParts.length > 0) {
+      for (const sp of workOrder.spareParts) {
+        try {
+          const part = await SparePart.findById(sp.sparePartId);
+          if (part && part.quantity >= sp.quantity) {
+            part.quantity -= sp.quantity;
+            await part.save();
+            await new SparePartConsume({
+              sparePartId: sp.sparePartId,
+              workOrderId: workOrder._id,
+              quantity: sp.quantity,
+            }).save();
+            // 低库存告警
+            if (part.safeStock && part.quantity <= part.safeStock) {
+              await new Alert({
+                stationId: (workOrder as any).stationId,
+                code: 'LOW_STOCK',
+                level: part.quantity === 0 ? 'critical' : 'warning',
+                message: `备件库存不足：${part.name}（剩余 ${part.quantity} ${part.unit || '件'}，安全库存 ${part.safeStock}）`,
+                relatedId: part._id as any,
+                relatedType: 'sparepart',
               }).save();
             }
-          } catch {}
-        }
+          }
+        } catch {}
       }
     }
     await workOrder.save();

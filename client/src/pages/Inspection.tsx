@@ -6,7 +6,7 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import {
   PlusOutlined, CheckCircleOutlined, ClockCircleOutlined,
-  CalendarOutlined, FileTextOutlined, TeamOutlined,
+  CalendarOutlined, FileTextOutlined, TeamOutlined, ToolOutlined, PlusCircleOutlined, DeleteOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 
@@ -59,8 +59,8 @@ function StatCards({ stats }: { stats: any }) {
 }
 
 // ─── Plan Modal ──────────────────────────────────────────────────────────────
-function PlanModal({ open, editing, stations, onClose, onOk }: {
-  open: boolean; editing: any; stations: any[]; onClose: () => void; onOk: () => void;
+function PlanModal({ open, editing, stations, templates, onClose, onOk }: {
+  open: boolean; editing: any; stations: any[]; templates: any[]; onClose: () => void; onOk: () => void;
 }) {
   const [form] = Form.useForm();
   const [selectedStation, setSelectedStation] = useState<string>('');
@@ -95,7 +95,16 @@ function PlanModal({ open, editing, stations, onClose, onOk }: {
     onClose();
   }
 
-  const itemsPreview = TEMPLATE_ITEMS[selectedEqType] || [];
+  // 从 API 模板获取巡检项（优先），否则用硬编码兜底
+  const templateItems = templates.find(t => t.equipmentType === selectedEqType)?.items || [];
+  const fallbackItems: Record<string, string[]> = {
+    solar: ['组件外观检查', '支架紧固检查', 'MC4接头检查', '光伏组串电流测量', '逆变器运行状态'],
+    battery: ['BMS数据检查', '电池单体电压', '温度传感器检查', '冷却系统检查', 'SOC校准'],
+    pcs: ['功率模块温度', '电网连接检查', 'PCS运行噪音', '消防联动检查'],
+    ev_charger: ['充电枪检查', '绝缘电阻测试', '通讯功能检查', '计费系统检查'],
+    default: ['设备外观检查', '安全标识检查', '运行参数核对', '台账记录检查'],
+  };
+  const itemsPreview = templateItems.length > 0 ? templateItems.map((i: any) => i.name) : (fallbackItems[selectedEqType] || fallbackItems.default);
 
   return (
     <Modal title={editing ? '编辑巡检计划' : '新建巡检计划'} open={open} onOk={handleSubmit} onCancel={onClose} width={680}>
@@ -240,7 +249,11 @@ export default function Inspection() {
   const [recordModal, setRecordModal] = useState(false);
   const [filterPeriod, setFilterPeriod] = useState<string>('');
 
-  useEffect(() => { loadStations(); loadStats(); loadPlans(); loadRecords(); }, []);
+  useEffect(() => { loadStations(); loadStats(); loadPlans(); loadRecords(); loadTemplates(); }, []);
+  async function loadTemplates() {
+    const res = await templateApi.getAll();
+    if (res.success) setTemplates(res.data);
+  }
 
   async function loadStations() {
     const res = await fetch('/api/stations');
@@ -450,13 +463,151 @@ export default function Inspection() {
 
       {/* Modals */}
       <PlanModal
-        open={planModal} editing={editingPlan} stations={stations}
+        open={planModal} editing={editingPlan} stations={stations} templates={templates}
         onClose={() => setPlanModal(false)} onOk={() => { loadPlans(); loadStats(); }}
+      />
+      <TemplateModal
+        open={templateModal} templates={templates} onClose={() => setTemplateModal(false)}
+        onSave={() => { loadTemplates(); }}
       />
       <RecordModal
         open={recordModal} plans={plans}
         onClose={() => setRecordModal(false)} onOk={() => { loadRecords(); loadStats(); }}
       />
     </div>
+  );
+}
+
+// ─── 巡检模板管理 Modal ───────────────────────────────────────────────────────
+function TemplateModal({ open, templates, onClose, onSave }: {
+  open: boolean; templates: any[]; onClose: () => void; onSave: () => void;
+}) {
+  const [form] = Form.useForm();
+  const [editing, setEditing] = useState<any>(null);
+  const [items, setItems] = useState<any[]>([]);
+  const EQ_TYPES = [
+    { value: 'solar', label: '☀️ 光伏组件' },
+    { value: 'battery', label: '🔋 储能电池' },
+    { value: 'pcs', label: '⚡ 储能变流器' },
+    { value: 'ev_charger', label: '🚗 充电桩' },
+    { value: 'default', label: '📋 通用巡检' },
+  ];
+
+  function openAdd() {
+    setEditing(null);
+    form.resetFields();
+    setItems([{ name: '', standard: '', method: '' }]);
+  }
+
+  function openEdit(t: any) {
+    setEditing(t);
+    form.setFieldsValue(t);
+    setItems(t.items || []);
+  }
+
+  function addItem() {
+    setItems([...items, { name: '', standard: '', method: '' }]);
+  }
+
+  function removeItem(i: number) {
+    setItems(items.filter((_, idx) => idx !== i));
+  }
+
+  async function handleSave() {
+    const values = await form.validateFields();
+    const payload = { ...values, items };
+    if (editing) {
+      const res = await templateApi.update(editing._id, payload);
+      if (res.success) { message.success('已更新'); onSave(); }
+      else message.error(res.message || '更新失败');
+    } else {
+      const res = await templateApi.create(payload);
+      if (res.success) { message.success('已添加'); onSave(); }
+      else message.error(res.message || '添加失败');
+    }
+  }
+
+  async function handleDelete(id: string) {
+    const res = await templateApi.delete(id);
+    if (res.success) { message.success('已删除'); onSave(); }
+    else message.error(res.message || '删除失败');
+  }
+
+  return (
+    <Modal open={open} title="巡检模板管理" onCancel={onClose} footer={null} width={700}>
+      <div style={{ marginBottom: 16 }}>
+        <Space style={{ marginBottom: 12 }}>
+          <Button size="small" type="primary" icon={<PlusOutlined />} onClick={openAdd}>新建模板</Button>
+        </Space>
+        <Table
+          dataSource={templates}
+          rowKey="_id"
+          size="small"
+          pagination={false}
+          columns={[
+            { title: '模板名称', dataIndex: 'name', render: v => <b>{v}</b> },
+            { title: '适用设备', dataIndex: 'equipmentType', render: v => EQ_TYPES.find(e => e.value === v)?.label || v },
+            { title: '检查项数', render: (_, r) => r.items?.length || 0 },
+            {
+              title: '操作', width: 120,
+              render: (_, r) => (
+                <Space size="small">
+                  <Button size="small" onClick={() => openEdit(r)}>编辑</Button>
+                  <Popconfirm title="确认删除？" onConfirm={() => handleDelete(r._id)}>
+                    <Button size="small" danger>删除</Button>
+                  </Popconfirm>
+                </Space>
+              ),
+            },
+          ]}
+        />
+      </div>
+
+      {(editing || items.length > 0 || form.getFieldValue('name')) && (
+        <Divider>{(editing ? '编辑' : '新建') + '模板'}</Divider>
+      )}
+      {(editing || items.length > 0 || form.getFieldValue('name')) && (
+        <Form form={form} layout="vertical">
+          <Row gutter={12}>
+            <Col span={12}>
+              <Form.Item name="name" label="模板名称" rules={[{ required: true }]}>
+                <Input placeholder="如：光伏组件周巡检" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="equipmentType" label="适用设备类型" rules={[{ required: true }]}>
+                <Select options={EQ_TYPES} placeholder="选择设备类型" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <div style={{ fontWeight: 500, marginBottom: 8 }}>检查项</div>
+          {items.map((item, i) => (
+            <Row key={i} gutter={8} style={{ marginBottom: 8 }} align="middle">
+              <Col span={8}>
+                <Input
+                  placeholder="检查项名称"
+                  value={item.name}
+                  onChange={e => { const ni = [...items]; ni[i].name = e.target.value; setItems(ni); }}
+                />
+              </Col>
+              <Col span={10}>
+                <Input
+                  placeholder="合格标准"
+                  value={item.standard}
+                  onChange={e => { const ni = [...items]; ni[i].standard = e.target.value; setItems(ni); }}
+                />
+              </Col>
+              <Col span={4}>
+                <Button size="small" danger icon={<DeleteOutlined />} onClick={() => removeItem(i)} />
+              </Col>
+            </Row>
+          ))}
+          <Button size="small" icon={<PlusOutlined />} onClick={addItem} style={{ marginBottom: 12 }}>添加检查项</Button>
+          <div>
+            <Button type="primary" onClick={handleSave}>保存模板</Button>
+          </div>
+        </Form>
+      )}
+    </Modal>
   );
 }

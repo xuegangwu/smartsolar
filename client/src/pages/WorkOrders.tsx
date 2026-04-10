@@ -8,7 +8,7 @@ import {
   PlusOutlined, EditOutlined, CheckCircleOutlined, ClockCircleOutlined,
   UserOutlined, ToolOutlined, FileTextOutlined, ExclamationCircleOutlined,
 } from '@ant-design/icons';
-import { workOrderApi, stationApi, sparePartApi, personnelApi } from '../services/api';
+import { workOrderApi, stationApi, sparePartApi, personnelApi, equipmentApi } from '../services/api';
 
 const { Text, Title } = Typography;
 const { TextArea } = Input;
@@ -75,6 +75,7 @@ export default function WorkOrders() {
   const [filterPriority, setFilterPriority] = useState<string>('');
   const [spareParts, setSpareParts] = useState<any[]>([]);
   const [personnel, setPersonnel] = useState<any[]>([]);
+  const [equipmentList, setEquipmentList] = useState<any[]>([]);
   const [form] = Form.useForm();
 
   useEffect(() => { loadOrders(); loadStations(); loadPersonnel(); }, []);
@@ -101,10 +102,16 @@ export default function WorkOrders() {
     if (res.success) setPersonnel(res.data);
   }
 
+  async function loadEquipment(stationId: string) {
+    const res = await equipmentApi.getAll({ stationId });
+    if (res.success) setEquipmentList(res.data);
+  }
+
   async function handleAdd() {
     setEditing(null);
     form.resetFields();
     form.setFieldsValue({ type: 'fault', priority: 'normal', status: 'created', stationId: stations[0]?._id });
+    if (stations[0]?._id) loadEquipment(stations[0]._id);
     const res = await sparePartApi.getAll();
     if (res.success) setSpareParts(res.data);
     setIsModalOpen(true);
@@ -119,6 +126,8 @@ export default function WorkOrders() {
       // spareParts is [{sparePartId, quantity}], convert to array of IDs for Select
       spareParts: (record.spareParts || []).map((s: any) => s.sparePartId),
     });
+    const recStationId = typeof record.stationId === 'object' ? record.stationId?._id : record.stationId;
+    if (recStationId) loadEquipment(recStationId);
     const res = await sparePartApi.getAll();
     if (res.success) setSpareParts(res.data);
     setIsModalOpen(true);
@@ -277,7 +286,7 @@ export default function WorkOrders() {
           <Row gutter={12}>
             <Col span={16}>
               <Form.Item name="stationId" label="所属电站" rules={[{ required: true }]}>
-                <Select options={stations.map(s => ({ value: s._id, label: s.name }))} placeholder="选择电站" />
+                <Select options={stations.map(s => ({ value: s._id, label: s.name }))} placeholder="选择电站" onChange={v => loadEquipment(v as string)} />
               </Form.Item>
             </Col>
             <Col span={8}>
@@ -292,6 +301,13 @@ export default function WorkOrders() {
           </Row>
           <Form.Item name="title" label="工单标题" rules={[{ required: true }]}>
             <Input placeholder="简要描述问题或任务" />
+          </Form.Item>
+          <Form.Item name="equipmentId" label="关联设备">
+            <Select
+              allowClear
+              placeholder="选择关联设备（可选）"
+              options={equipmentList.map((e: any) => ({ value: e._id, label: `${e.name}（${e.model || e.type || '—'}）` }))}
+            />
           </Form.Item>
           <Row gutter={12}>
             <Col span={12}>
@@ -438,6 +454,28 @@ export default function WorkOrders() {
                 )}
               </Space>
             </div>
+
+            {/* 操作时间线 */}
+            {detail.handlingSteps && detail.handlingSteps.length > 0 && (
+              <div style={{ marginTop: 16 }}>
+                <Divider style={{ marginBottom: 12 }}>操作时间线</Divider>
+                <Timeline
+                  items={detail.handlingSteps.map((s: any, i: number) => ({
+                    color: i === detail.handlingSteps.length - 1 ? 'blue' : 'gray',
+                    children: (
+                      <div>
+                        <b>{s.step}</b>
+                        <div style={{ fontSize: 12, color: '#888' }}>
+                          {s.operator && `操作人：${s.operator}`}
+                          {s.at && ` · ${new Date(s.at).toLocaleString('zh-CN')}`}
+                        </div>
+                        {s.note && <div style={{ fontSize: 12, color: '#666' }}>{s.note}</div>}
+                      </div>
+                    ),
+                  }))}
+                />
+              </div>
+            )}
           </div>
         )}
       </Modal>

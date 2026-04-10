@@ -69,6 +69,18 @@ const workOrderSchema = new mongoose.Schema({
     sparePartId: { type: mongoose.Schema.Types.ObjectId, ref: 'SparePart' },
     quantity: { type: Number, default: 1 },
   }],
+  // 操作时间线
+  handlingSteps: [{
+    step: { type: String, required: true },   // 步骤名称
+    operator: { type: String },                // 操作人姓名
+    operatorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Personnel' },
+    at: { type: Date, default: Date.now },
+    note: { type: String },
+  }],
+  // 时间戳
+  assignedAt: Date,
+  acceptedAt: Date,
+  completedAt: Date,
   createdAt: Date,
   updatedAt: Date,
   closedAt: Date,
@@ -210,3 +222,18 @@ const NotificationSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 export const Notification = mongoose.model('Notification', NotificationSchema);
+
+// ─── InspectionTemplate ───────────────────────────────────────────────────────
+const inspectionTemplateSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  equipmentType: { type: String, required: true },  // solar/battery/pcs/ev_charger/default
+  items: [{
+    name: { type: String, required: true },
+    checkPoint: String,
+    standard: String,       // 合格标准
+    method: String,         // 检查方法
+  }],
+  remark: String,
+}, { timestamps: true });
+
+export const InspectionTemplate = mongoose.model('InspectionTemplate', inspectionTemplateSchema);

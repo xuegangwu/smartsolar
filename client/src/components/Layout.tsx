@@ -5,7 +5,7 @@ import {
   DashboardOutlined, HomeOutlined, ToolOutlined, FileTextOutlined,
   BellOutlined, CalendarOutlined, UserOutlined, LogoutOutlined,
   InboxOutlined, RiseOutlined, ApiOutlined, DownloadOutlined, PlusSquareOutlined,
-  EnvironmentOutlined,
+  EnvironmentOutlined, TeamOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
@@ -22,6 +22,7 @@ const NAV_ITEMS = [
   { key: '/inspection', icon: <CalendarOutlined />, label: '巡检' },
   { key: '/spare-parts', icon: <InboxOutlined />, label: '备件' },
   { key: '/kpi', icon: <RiseOutlined />, label: 'KPI' },
+  { key: '/personnel', icon: <TeamOutlined />, label: '人员管理' },
   { key: '/reports', icon: <DownloadOutlined />, label: '导出' },
   { key: '/stations/new/builder', icon: <PlusSquareOutlined />, label: '建站' },
   { key: '/ems-simulator', icon: <ApiOutlined />, label: 'EMS模拟' },

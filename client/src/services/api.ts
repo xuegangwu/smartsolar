@@ -147,3 +147,11 @@ export const personnelApi = {
   updateWorkStatus: (id: string, workStatus: string, currentTaskId?: string) =>
     api.put(`/personnel/${id}/work-status`, { workStatus, currentTaskId }).then(r => r.data),
 };
+
+export const templateApi = {
+  getAll: (params?: any) => api.get<any, any>('/inspection/templates', { params }).then(r => r.data),
+  getById: (id: string) => api.get<any, any>(`/inspection/templates/${id}`).then(r => r.data),
+  create: (data: any) => api.post('/inspection/templates', data).then(r => r.data),
+  update: (id: string, data: any) => api.put(`/inspection/templates/${id}`, data).then(r => r.data),
+  delete: (id: string) => api.delete(`/inspection/templates/${id}`).then(r => r.data),
+};

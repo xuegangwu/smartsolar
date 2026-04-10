@@ -11,6 +11,7 @@ import Equipment from './pages/Equipment';
 import WorkOrders from './pages/WorkOrders';
 import Alerts from './pages/Alerts';
 import Inspection from './pages/Inspection';
+import Personnel from './pages/Personnel';
 import SpareParts from './pages/SpareParts';
 import KPI from './pages/KPI';
 import EmsSimulator from './pages/EmsSimulator';
@@ -56,6 +57,7 @@ export default function App() {
                   <Route path="equipment" element={<Equipment />} />
                   <Route path="work-orders" element={<WorkOrders />} />
                   <Route path="alerts" element={<Alerts />} />
+                  <Route path="personnel" element={<Personnel />} />
                   <Route path="inspection" element={<Inspection />} />
                   <Route path="spare-parts" element={<SpareParts />} />
                   <Route path="kpi" element={<KPI />} />

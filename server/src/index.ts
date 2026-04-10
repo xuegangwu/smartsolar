@@ -13,6 +13,7 @@ import emsLiveRoutes from './routes/emsLiveRoutes.js';
 import { sparePartRoutes } from './routes/sparePartRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import { personnelRoutes } from './routes/personnelRoutes.js';
+import { inspectionTemplateRoutes } from './routes/inspectionTemplateRoutes.js';
 
 dotenv.config();
 
@@ -35,6 +36,7 @@ app.use('/api/inspection', inspectionRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/spare-parts', sparePartRoutes);  // 备件仓库
 app.use('/api/personnel', personnelRoutes);      // 人员档案
+app.use('/api/inspection/templates', inspectionTemplateRoutes); // 巡检模板
 
 // Health check
 app.get('/api/health', (req, res) => {
