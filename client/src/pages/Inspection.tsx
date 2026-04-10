@@ -162,12 +162,33 @@ function RecordModal({ open, plans, onClose, onOk }: {
 
   async function handleSubmit() {
     const values = await form.validateFields();
-    await fetch('/api/inspection/records', {
+    const res = await fetch('/api/inspection/records', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(values),
     });
-    message.success('巡检记录已提交！');
+    const data = await res.json();
+    if (!data.success) { message.error('提交失败'); return; }
+
+    // 异常待处理 → 自动创建工单
+    if (values.result === '异常待处理') {
+      const plan = plans.find((p: any) => p._id === values.planId);
+      await fetch('/api/work-orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: `🚨 【巡检异常】${plan?.name || '巡检计划'}`,
+          stationId: plan?.stationId?._id || plan?.stationId,
+          type: 'repair',
+          priority: 'high',
+          description: `巡检结果：异常待处理\n备注：${values.notes || '无'}\n巡检时间：${values.signedAt}`,
+          status: 'pending',
+        }),
+      });
+      message.warning('已提交记录并自动创建抢修工单！');
+    } else {
+      message.success('巡检记录已提交！');
+    }
     onOk();
     onClose();
   }
@@ -265,6 +286,52 @@ export default function Inspection() {
     loadStats();
   }
 
+  async function handleDispatchPlan(plan: any) {
+    const stationId = typeof plan.stationId === 'object' ? plan.stationId?._id : plan.stationId;
+    const stationName = typeof plan.stationId === 'object' ? plan.stationId?.name : '';
+    Modal.confirm({
+      title: '派发巡检工单',
+      content: (
+        <Form layout="vertical">
+          <Form.Item label="工单标题" required>
+            <Input defaultValue={`巡检：${plan.name}`} id="dispatch-title" />
+          </Form.Item>
+          <Form.Item label="巡检人员" required>
+            <Select id="dispatch-tech" placeholder="选择执行人员" options={TECHNICIANS.map(t => ({ value: t._id, label: t.name }))} />
+          </Form.Item>
+          <Form.Item label="优先级">
+            <Select id="dispatch-priority" defaultValue="medium" options={[
+              { value: 'low', label: '低' },
+              { value: 'medium', label: '中' },
+              { value: 'high', label: '高' },
+            ]} />
+          </Form.Item>
+        </Form>
+      ),
+      onOk: async () => {
+        const title = (document.getElementById('dispatch-title') as any)?.value || `巡检：${plan.name}`;
+        const techId = (document.getElementById('dispatch-tech') as any)?.value;
+        const priority = (document.getElementById('dispatch-priority') as any)?.value || 'medium';
+        if (!techId) { message.error('请选择巡检人员'); return; }
+        await fetch('/api/work-orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title,
+            stationId,
+            type: 'inspection',
+            priority,
+            assigneeId: techId,
+            description: `📋 巡检计划：${plan.name}\n🏭 电站：${stationName}\n📅 计划周期：${PERIOD_MAP[plan.period]?.text || plan.period}\n\n请按照巡检计划执行巡检任务并提交记录。`,
+            status: 'assigned',
+            relatedPlanId: plan._id,
+          }),
+        });
+        message.success('工单已派发！');
+      },
+    });
+  }
+
   const planColumns: ColumnsType<any> = [
     { title: '计划名称', dataIndex: 'name', render: v => <b>{v}</b>, ellipsis: true },
     {
@@ -284,10 +351,11 @@ export default function Inspection() {
       render: v => v ? new Date(v).toLocaleDateString('zh-CN') : <Text type="secondary">—</Text>,
     },
     {
-      title: '操作', key: 'action', width: 200,
+      title: '操作', key: 'action', width: 260,
       render: (_, r) => (
         <Space size="small">
           <Button size="small" type="primary" onClick={() => { setEditingPlan(r); setRecordModal(true); }}>执行</Button>
+          <Button size="small" onClick={() => handleDispatchPlan(r)} style={{ background: '#f0f5ff', color: '#2563eb', borderColor: '#bfdbfe' }}>派发工单</Button>
           <Button size="small" onClick={() => { setEditingPlan(r); setPlanModal(true); }}>编辑</Button>
           <Button size="small" onClick={() => handleTogglePlan(r)}>{r.enabled ? '停用' : '启用'}</Button>
           <Popconfirm title="删除计划？" onConfirm={() => handleDeletePlan(r._id)}>

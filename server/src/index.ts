@@ -9,6 +9,7 @@ import { alertRoutes } from './routes/alertRoutes.js';
 import { alertSyncRoutes } from './routes/alertSyncRoutes.js';
 import { inspectionRoutes } from './routes/inspectionRoutes.js';
 import authRoutes from './routes/authRoutes.js';
+import emsLiveRoutes from './routes/emsLiveRoutes.js';
 import { sparePartRoutes } from './routes/sparePartRoutes.js';
 
 dotenv.config();
@@ -23,6 +24,7 @@ app.use(express.json());
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/ems', emsLiveRoutes);
 app.use('/api', stationRoutes);
 app.use('/api/work-orders', workOrderRoutes);
 app.use('/api/alerts', alertRoutes);

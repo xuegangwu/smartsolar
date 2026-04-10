@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useStation } from '../contexts/StationContext';
 import {
   Card, Table, Tag, Button, Space, Input, Modal, Form, Select, message,
   Row, Col, Statistic, Typography, Tree, Drawer, Descriptions, Timeline, Popconfirm,
@@ -9,7 +10,7 @@ import {
   PlusOutlined, SearchOutlined, EditOutlined, DeleteOutlined,
   AppstoreOutlined, FolderOutlined, ToolOutlined, ExclamationCircleOutlined,
 } from '@ant-design/icons';
-import { stationApi, equipmentApi, type Station, type Equipment, type EquipmentCategory } from '../services/api';
+import { equipmentApi, type Station, type Equipment, type EquipmentCategory } from '../services/api';
 
 const { Text, Title } = Typography;
 const { confirm } = Modal;
@@ -193,7 +194,7 @@ function EquipmentModal({
 
 // ─── Main Page ──────────────────────────────────────────────────────────────
 export default function Equipment() {
-  const [stations, setStations] = useState<Station[]>([]);
+  const { stations, currentStation, setCurrentStation } = useStation();
   const [selectedStation, setSelectedStation] = useState<string>('');
   const [categories, setCategories] = useState<EquipmentCategory[]>([]);
   const [equipments, setEquipments] = useState<Equipment[]>([]);
@@ -212,28 +213,18 @@ export default function Equipment() {
 
   const [form] = Form.useForm();
 
-  useEffect(() => { loadStations(); }, []);
+  // Sync global station context → local selectedStation
+  useEffect(() => {
+    if (currentStation?._id) {
+      setSelectedStation(currentStation._id);
+    }
+  }, [currentStation]);
 
   useEffect(() => {
     if (selectedStation) { loadCategories(); loadEquipments(); }
   }, [selectedStation]);
 
-  async function loadStations() {
-    const res = await stationApi.getAll();
-    if (res.success) {
-      setStations(res.data);
-      if (res.data.length > 0 && !selectedStation) {
-        // Find the first station that has categories/equipment — batch check all stations at once
-        const checkResults = await Promise.all(
-          res.data.map(s =>
-            fetch(`/api/stations/${s._id}/categories`).then(r => r.json()).then(d => ({ id: s._id, count: d.success ? d.data.length : 0 }))
-          )
-        );
-        const withData = checkResults.filter(r => r.count > 0);
-        setSelectedStation(withData.length > 0 ? withData[0].id : res.data[0]._id);
-      }
-    }
-  }
+  // stations now come from global StationContext — no local load needed
 
   async function loadCategories() {
     const res = await fetch(`/api/stations/${selectedStation}/categories`);

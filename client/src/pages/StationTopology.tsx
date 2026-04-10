@@ -139,7 +139,8 @@ export default function StationTopology() {
   const { id } = useParams();
   const [station, setStation] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState({ solar: 847, battery: 75, pcs: 320, grid: 120, ev: 45 });
+  const [data, setData] = useState({ solar: 0, battery: 75, pcs: 0, grid: 0, ev: 0 });
+  const [liveConnected, setLiveConnected] = useState(false);
 
   useEffect(() => {
     if (!id) { setLoading(false); return; }
@@ -150,17 +151,31 @@ export default function StationTopology() {
   }, [id]);
 
   useEffect(() => {
-    const t = setInterval(() => {
-      setData(d => ({
-        solar: 800 + Math.floor(Math.random() * 100),
-        battery: Math.round(Math.min(100, Math.max(20, d.battery + (Math.random() - 0.5) * 4))),
-        pcs: 300 + Math.floor(Math.random() * 50),
-        grid: 100 + Math.floor(Math.random() * 40),
-        ev: 40 + Math.floor(Math.random() * 20),
-      }));
-    }, 5000);
-    return () => clearInterval(t);
-  }, []);
+    if (!id) return;
+    const token = localStorage.getItem('smartsolar_token');
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const es = new EventSource(`https://smartsolar.solaripple.com/api/ems/live/${id}`, { withCredentials: false } as any);
+
+    es.onopen = () => setLiveConnected(true);
+    es.onerror = () => setLiveConnected(false);
+    es.onmessage = (e) => {
+      try {
+        const d = JSON.parse(e.data);
+        if (d.error) return;
+        setData({
+          solar: Math.round((d.pv?.power || 0) * 1000), // kW → W for display
+          battery: d.battery?.soc || 75,
+          pcs: Math.round((d.battery?.power || 0) * 1000),
+          grid: Math.round((d.grid?.power || 0) * 1000),
+          ev: Math.round((d.load?.power || 0) * 200), // estimate
+        });
+      } catch {}
+    };
+
+    return () => { es.close(); setLiveConnected(false); };
+  }, [id]);
 
   if (loading) {
     return (
@@ -200,8 +215,8 @@ export default function StationTopology() {
           </Text>
         </div>
         <Space direction="vertical" align="end" size={4}>
-          <Tag style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#e6342a', borderRadius: 20, fontSize: 12, padding: '2px 12px' }}>
-            ● 实时拓扑
+          <Tag style={{ background: liveConnected ? '#f0fdf4' : '#fef9c3', border: `1px solid ${liveConnected ? '#86efac' : '#fde047'}`, color: liveConnected ? '#16a34a' : '#ca8a04', borderRadius: 20, fontSize: 12, padding: '2px 12px' }}>
+            {liveConnected ? '🟢 实时数据' : '🔴 连接中...'}
           </Tag>
           <Space size={16} wrap>
             <Space size={5}>
