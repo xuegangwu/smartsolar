@@ -11,7 +11,7 @@ export default function Login() {
   async function handleLogin(values: any) {
     setLoading(true);
     if (values.username === 'admin' && values.password === 'admin') {
-      localStorage.setItem('smartsolar_user', JSON.stringify({ name: 'Admin', role: 'admin' });
+      localStorage.setItem('smartsolar_user', JSON.stringify({ name: 'Admin', role: 'admin' }));
       navigate('/dashboard');
     } else {
       message.error('用户名或密码错误');
