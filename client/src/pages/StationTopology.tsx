@@ -1,271 +1,188 @@
-import { useState, useEffect, useRef } from 'react';
-import { Card, Row, Col, Typography, Switch, Spin, Space, message } from 'antd';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Card, Row, Col, Typography, Switch, Spin, Space, Tag, message } from 'antd';
 import { useParams } from 'react-router-dom';
 import { stationApi } from '../services/api';
 
 const { Text, Title } = Typography;
 
-// ─── Color Palette ──────────────────────────────────────────────────────────
+// ─── Color Palette ─────────────────────────────────────────────────────────
 const C = {
   solar: '#f59e0b',
   battery: '#2dd4bf',
   pcs: '#3b82f6',
   grid: '#8b5cf6',
   ev: '#f97316',
-  bg: '#111827',
-  border: 'rgba(255,255,255,0.06)',
+  bg: '#0c1220',
   text: '#94a3b8',
-  textBright: '#f1f5f9',
+  textDim: '#334155',
 };
 
-// ─── 2D SVG Topology ───────────────────────────────────────────────────────
-function Topology2D({ data, width = 600, height = 300 }: {
+// ─── Animated Canvas Topology ─────────────────────────────────────────────
+function TopologyCanvas({ data, width = 680, height = 360 }: {
   data: { solarPower: number; batterySOC: number; pcsPower: number; gridPower: number; evPower: number; solarStatus: string; batteryStatus: string; pcsStatus: string; gridStatus: string; evStatus: string };
   width?: number; height?: number;
 }) {
-  const cx = width / 2;
-  const cy = height / 2;
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const animRef = useRef(0);
+  const phaseRef = useRef(0);
 
-  const nodes = [
-    { id: 'solar', x: cx, y: 46, label: '光伏', value: data.solarPower.toFixed(0), unit: 'kW', color: C.solar, status: data.solarStatus },
-    { id: 'pcs', x: cx - 90, y: cy + 40, label: 'PCS', value: data.pcsPower.toFixed(0), unit: 'kW', color: C.pcs, status: data.pcsStatus },
-    { id: 'battery', x: cx + 90, y: cy + 40, label: '储能', value: data.batterySOC.toFixed(0), unit: '%', color: C.battery, status: data.batteryStatus },
-    { id: 'grid', x: cx, y: cy + 115, label: '电网', value: Math.abs(data.gridPower).toFixed(0), unit: 'kW', color: C.grid, status: data.gridStatus },
-    { id: 'ev', x: cx + 200, y: cy - 10, label: '充电桩', value: data.evPower.toFixed(0), unit: 'kW', color: C.ev, status: data.evStatus },
-  ];
+  const draw = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
-  const lines: [number, number, number, number][] = [
-    [cx, 46 + 28, cx - 90, cy + 40 - 28],   // solar → pcs
-    [cx, 46 + 28, cx + 90, cy + 40 - 28],    // solar → battery
-    [cx - 90, cy + 40 + 28, cx, cy + 115 - 20], // pcs → grid
-    [cx + 90, cy + 40 + 28, cx, cy + 115 + 5], // battery → grid
-    [cx - 90, cy + 40, cx + 200 - 28, cy - 10], // pcs → ev
-  ];
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    canvas.style.width = width + 'px';
+    canvas.style.height = height + 'px';
+    ctx.scale(dpr, dpr);
 
-  const statusColor = (s: string) => s === 'online' ? '#34d399' : s === 'warning' ? '#fbbf24' : '#334155';
+    ctx.clearRect(0, 0, width, height);
 
-  return (
-    <svg
-      width="100%"
-      height={height}
-      viewBox={`0 0 ${width} ${height}`}
-      style={{ display: 'block', background: 'transparent', overflow: 'visible' }}
-    >
-      {/* Grid bg */}
-      <defs>
-        <pattern id="topo-grid" width="30" height="30" patternUnits="userSpaceOnUse">
-          <path d="M 30 0 L 0 0 0 30" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="0.5" />
-        </pattern>
-        <filter id="glow">
-          <feGaussianBlur stdDeviation="3" result="coloredBlur" />
-          <feMerge><feMergeNode in="coloredBlur" /><feMergeNode in="SourceGraphic" /></feMerge>
-        </filter>
-      </defs>
-      <rect width={width} height={height} fill="url(#topo-grid)" rx="8" />
-
-      {/* Connection lines */}
-      {lines.map(([x1, y1, x2, y2], i) => (
-        <g key={i}>
-          <line x1={y1} y1={x1} x2={y2} y2={x2}
-            stroke="rgba(255,255,255,0.08)" strokeWidth={2}
-            strokeDasharray="6 4"
-          />
-          {/* Arrow */}
-          <circle cx={(x1+x2)/2} cy={(y1+y2)/2} r={3} fill="rgba(255,255,255,0.15)" />
-        </g>
-      ))}
-
-      {/* Nodes */}
-      {nodes.map(n => {
-        const sc = statusColor(n.status);
-        const r = n.id === 'ev' ? 22 : 26;
-        return (
-          <g key={n.id} transform={`translate(${n.x},${n.y})`}>
-            {/* Outer glow */}
-            {n.status !== 'offline' && (
-              <circle r={r + 5} fill="none" stroke={n.color} strokeWidth={1} opacity={0.2}
-                style={{ filter: 'blur(4px)' }} />
-            )}
-            {/* Main circle */}
-            <circle r={r} fill={C.bg} stroke={sc} strokeWidth={2}
-              style={{ filter: `drop-shadow(0 0 6px ${sc}60)` }} />
-            {/* Inner dot */}
-            <circle r={6} fill={sc} />
-            {/* Label */}
-            <text y={r + 14} textAnchor="middle"
-              style={{ fontSize: 11, fill: C.text, fontFamily: 'Inter, sans-serif', fontWeight: 500 }}>
-              {n.label}
-            </text>
-            {/* Value */}
-            <text y={r + 26} textAnchor="middle"
-              style={{ fontSize: 10, fill: n.color, fontFamily: 'JetBrains Mono, monospace', fontWeight: 600 }}>
-              {n.value}{n.unit}
-            </text>
-          </g>
-        );
-      })}
-
-      {/* Direction labels */}
-      <text x={cx - 30} y={cy + 10} style={{ fontSize: 9, fill: 'rgba(255,255,255,0.2)', fontFamily: 'Inter, sans-serif' }}>DC</text>
-      <text x={cx - 20} y={cy + 75} style={{ fontSize: 9, fill: 'rgba(255,255,255,0.2)', fontFamily: 'Inter, sans-serif' }}>AC</text>
-    </svg>
-  );
-}
-
-// ─── 3D Digital Twin (lazy) ─────────────────────────────────────────────────
-function Topology3D({ data }: { data: any }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [error, setError] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-    let cancelled = false;
-    let renderer: any;
-
-    async function init() {
-      setLoading(true);
-      try {
-        const THREE = await import('three');
-        if (cancelled || !containerRef.current) return;
-
-        const el = containerRef.current;
-        const w = el.clientWidth || 600;
-        const h = 280;
-
-        // Check WebGL support
-        const canvas = document.createElement('canvas');
-        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-        if (!gl) {
-          setError(true);
-          setLoading(false);
-          return;
-        }
-
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color('#070b14');
-        scene.fog = new THREE.Fog('#070b14', 20, 50);
-
-        const camera = new THREE.PerspectiveCamera(50, w / h, 0.1, 100);
-        camera.position.set(10, 7, 10);
-        camera.lookAt(0, 0, 0);
-
-        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-        renderer.setSize(w, h);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.shadowMap.enabled = true;
-        el.appendChild(renderer.domElement);
-
-        // Lights
-        scene.add(new THREE.AmbientLight('#ffffff', 0.5));
-        const sun = new THREE.DirectionalLight('#ffe4a0', 1.0);
-        sun.position.set(10, 15, 10);
-        sun.castShadow = true;
-        scene.add(sun);
-        const fill = new THREE.PointLight('#2dd4bf', 0.4, 20);
-        fill.position.set(-5, 3, 5);
-        scene.add(fill);
-
-        // Ground
-        const groundMat = new THREE.MeshStandardMaterial({ color: '#0c1220', roughness: 0.9 });
-        const ground = new THREE.Mesh(new THREE.PlaneGeometry(16, 16), groundMat);
-        ground.rotation.x = -Math.PI / 2;
-        ground.receiveShadow = true;
-        scene.add(ground);
-
-        const grid = new THREE.GridHelper(16, 16, '#1a2438', '#1a2438');
-        scene.add(grid);
-
-        // Solar panels
-        const panelMat = new THREE.MeshStandardMaterial({ color: '#1a3a6e', metalness: 0.6, roughness: 0.3 });
-        for (let row = 0; row < 3; row++) {
-          for (let col = 0; col < 4; col++) {
-            const panel = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.06, 0.9), panelMat);
-            panel.position.set(-3 + col * 1.8, 0.5 + row * 0.12, -3 + row * 1.2);
-            panel.rotation.x = -0.4;
-            panel.castShadow = true;
-            scene.add(panel);
-          }
-        }
-
-        // Battery
-        const batMat = new THREE.MeshStandardMaterial({ color: '#2dd4bf', metalness: 0.5, roughness: 0.4, emissive: '#2dd4bf', emissiveIntensity: 0.1 });
-        const battery = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.2, 0.8), batMat);
-        battery.position.set(3, 0.6, -2);
-        battery.castShadow = true;
-        scene.add(battery);
-
-        // PCS
-        const pcsMat = new THREE.MeshStandardMaterial({ color: '#3b82f6', metalness: 0.5, roughness: 0.4, emissive: '#3b82f6', emissiveIntensity: 0.1 });
-        const pcs = new THREE.Mesh(new THREE.BoxGeometry(1, 1.2, 0.6), pcsMat);
-        pcs.position.set(3, 0.6, 0);
-        pcs.castShadow = true;
-        scene.add(pcs);
-
-        // EV
-        const evMat = new THREE.MeshStandardMaterial({ color: '#f97316', metalness: 0.4, roughness: 0.5 });
-        const ev = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.0, 0.4), evMat);
-        ev.position.set(3, 0.5, 2);
-        ev.castShadow = true;
-        scene.add(ev);
-
-        let frameId: number;
-        function animate() {
-          frameId = requestAnimationFrame(animate);
-          scene.rotation.y += 0.004;
-          renderer.render(scene, camera);
-        }
-        animate();
-
-        const ro = new ResizeObserver(() => {
-          if (!containerRef.current || !renderer) return;
-          const w2 = containerRef.current.clientWidth;
-          renderer.setSize(w2, 280);
-          camera.aspect = w2 / 280;
-          camera.updateProjectionMatrix();
-        });
-        ro.observe(el);
-
-        setLoading(false);
-      } catch (err) {
-        console.error('3D init error:', err);
-        setError(true);
-        setLoading(false);
-      }
+    // ── Grid ──
+    ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x < width; x += 30) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
+    }
+    for (let y = 0; y < height; y += 30) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
     }
 
-    init();
-    return () => {
-      cancelled = true;
-      if (renderer) renderer.dispose();
-      if (containerRef.current) containerRef.current.innerHTML = '';
-    };
-  }, []);
+    // ── Node positions ──
+    const nodes: Array<{
+      x: number; y: number; label: string; value: number; unit: string;
+      color: string; status: string; icon: string; size: number;
+    }> = [
+      { x: width / 2, y: 60, label: '光伏', value: data.solarPower, unit: 'kW', color: C.solar, status: data.solarStatus, icon: '☀️', size: 52 },
+      { x: width / 2 - 120, y: 210, label: 'PCS', value: data.pcsPower, unit: 'kW', color: C.pcs, status: data.pcsStatus, icon: '⚡', size: 48 },
+      { x: width / 2 + 120, y: 210, label: '储能', value: data.batterySOC, unit: '%', color: C.battery, status: data.batteryStatus, icon: '🔋', size: 48 },
+      { x: width / 2, y: 320, label: '电网', value: Math.abs(data.gridPower), unit: 'kW', color: C.grid, status: data.gridStatus, icon: '🏭', size: 52 },
+      { x: width - 90, y: 120, label: '充电桩', value: data.evPower, unit: 'kW', color: C.ev, status: data.evStatus, icon: '🚗', size: 44 },
+    ];
 
-  if (error) {
-    return (
-      <div style={{
-        height: 280, display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center', gap: 8,
-        background: '#0c1220', borderRadius: 8,
-        color: '#64748b', fontFamily: 'Inter, sans-serif',
-      }}>
-        <span style={{ fontSize: 32 }}>🖼️</span>
-        <Text style={{ color: '#64748b', fontSize: 13 }}>3D 数字孪生在此设备上不可用</Text>
-        <Text style={{ color: '#334155', fontSize: 11 }}>请使用支持 WebGL 的浏览器</Text>
-      </div>
-    );
-  }
+    // ── Draw flows ──
+    const flows: Array<[number, number, number, number, string, number]> = [
+      [width/2, 60+26, width/2-120, 210-24, C.solar, data.solarPower],
+      [width/2, 60+26, width/2+120, 210-24, C.solar, data.solarPower],
+      [width/2-120, 210+24, width/2, 320-26, C.pcs, data.pcsPower],
+      [width/2+120, 210+24, width/2, 320+10, C.battery, data.batterySOC/20],
+      [width/2-120, 210, width-90-24, 120, C.ev, data.evPower],
+    ];
+
+    phaseRef.current += 0.03;
+    const phase = phaseRef.current;
+
+    flows.forEach(([x1, y1, x2, y2, color, flow]) => {
+      if (flow <= 0) return;
+      const mx = (x1 + x2) / 2;
+      const my = (y1 + y2) / 2;
+
+      // Flow dashes
+      const speed = Math.min(flow / 200, 1);
+      const dashLen = 8 + speed * 12;
+      const gapLen = 6 + speed * 6;
+      const offset = (phase * 20 * speed) % (dashLen + gapLen);
+
+      ctx.save();
+      ctx.setLineDash([dashLen, gapLen]);
+      ctx.lineDashOffset = -offset;
+      ctx.strokeStyle = color + '60';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+      ctx.restore();
+
+      // Animated particles along line
+      const dx = x2 - x1, dy = y2 - y1;
+      const len = Math.sqrt(dx*dx + dy*dy);
+      const nx = dx / len, ny = dy / len;
+      for (let i = 0; i < 3; i++) {
+        const t = ((phase * 0.5 + i * 0.33) % 1);
+        const px = x1 + nx * t * len;
+        const py = y1 + ny * t * len;
+        const alpha = Math.sin(t * Math.PI);
+        ctx.beginPath();
+        ctx.arc(px, py, 3, 0, Math.PI * 2);
+        ctx.fillStyle = color + Math.floor(alpha * 180).toString(16).padStart(2, '0');
+        ctx.fill();
+      }
+
+      // Mid label
+      ctx.fillStyle = 'rgba(255,255,255,0.25)';
+      ctx.font = '10px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(Math.round(flow) + (flow > 100 ? 'kW' : ''), mx + (ny < 0 ? 12 : -12), my);
+    });
+
+    // ── Draw nodes ──
+    nodes.forEach(n => {
+      const sc = n.status === 'online' ? n.color : n.status === 'warning' ? '#fbbf24' : C.textDim;
+      const glow = n.status === 'offline' ? 0 : 8;
+
+      // Outer glow
+      if (glow > 0) {
+        const grd = ctx.createRadialGradient(n.x, n.y, n.size, n.x, n.y, n.size + glow + 8);
+        grd.addColorStop(0, sc + '40');
+        grd.addColorStop(1, sc + '00');
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, n.size + glow + 8, 0, Math.PI * 2);
+        ctx.fillStyle = grd;
+        ctx.fill();
+      }
+
+      // Circle bg
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, n.size, 0, Math.PI * 2);
+      ctx.fillStyle = '#111827';
+      ctx.fill();
+      ctx.strokeStyle = sc;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Icon
+      ctx.font = `${Math.round(n.size * 0.55)}px serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(n.icon, n.x, n.y);
+
+      // Label
+      ctx.font = '500 11px Inter, sans-serif';
+      ctx.fillStyle = C.text;
+      ctx.textBaseline = 'top';
+      ctx.fillText(n.label, n.x, n.y + n.size + 6);
+
+      // Value
+      ctx.font = `700 11px JetBrains Mono, monospace`;
+      ctx.fillStyle = n.color;
+      ctx.textBaseline = 'top';
+      ctx.fillText(`${Math.round(n.value)}${n.unit}`, n.x, n.y + n.size + 20);
+    });
+
+    // ── Energy flow text ──
+    ctx.font = '500 10px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.fillText('直流侧', width/2 - 30, 140);
+    ctx.fillText('交流侧', width/2 - 30, 270);
+
+    animRef.current = requestAnimationFrame(draw);
+  }, [data, width, height]);
+
+  useEffect(() => {
+    draw();
+    return () => cancelAnimationFrame(animRef.current);
+  }, [draw]);
 
   return (
-    <div style={{ position: 'relative' }}>
-      {loading && (
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#070b14', borderRadius: 8, zIndex: 10 }}>
-          <Spin size="large" />
-        </div>
-      )}
-      <div ref={containerRef} style={{ width: '100%', height: 280, borderRadius: 8, overflow: 'hidden' }} />
-    </div>
+    <canvas
+      ref={canvasRef}
+      style={{ display: 'block', borderRadius: 12, background: C.bg }}
+    />
   );
 }
 
@@ -276,10 +193,9 @@ function KPICard({ label, value, unit, color }: { label: string; value: string; 
       size="small"
       style={{
         background: 'rgba(17,24,39,0.6)',
-        border: `1px solid ${color}30`,
+        border: `1px solid ${color}25`,
         borderRadius: 12,
         textAlign: 'center',
-        backdropFilter: 'blur(8px)',
       }}
       styles={{ body: { padding: '12px 8px' } }}
     >
@@ -294,42 +210,18 @@ function KPICard({ label, value, unit, color }: { label: string; value: string; 
   );
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────
-export default function StationTopology() {
-  const { id } = useParams();
-  const [station, setStation] = useState<any>(null);
-  const [liveData, setLiveData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [show3D, setShow3D] = useState(false);
+// ─── Live Data (simulated) ─────────────────────────────────────────────────
+function useLiveData(station: any) {
+  const [data, setData] = useState({
+    solarPower: 847, batterySOC: 75, pcsPower: 320,
+    gridPower: -120, evPower: 45,
+    solarStatus: 'online', batteryStatus: 'online',
+    pcsStatus: 'online', gridStatus: 'online', evStatus: 'online',
+  });
 
   useEffect(() => {
-    if (!id) return;
-    stationApi.getAll().then(r => {
-      if (r.success) {
-        const s = r.data.find((s: any) => s._id === id);
-        setStation(s);
-        setLiveData({
-          solarPower: s ? 847 + Math.random() * 50 : 0,
-          batterySOC: s ? 75 + Math.random() * 10 : 0,
-          pcsPower: s ? 320 + Math.random() * 30 : 0,
-          gridPower: s ? -120 + Math.random() * 40 : 0,
-          evPower: s ? 45 + Math.random() * 20 : 0,
-          solarStatus: 'online',
-          batteryStatus: 'online',
-          pcsStatus: 'online',
-          gridStatus: 'online',
-          evStatus: Math.random() > 0.7 ? 'warning' : 'online',
-        });
-        setLoading(false);
-      }
-    });
-  }, [id]);
-
-  // Fake data refresh every 5s
-  useEffect(() => {
-    if (!station) return;
     const t = setInterval(() => {
-      setLiveData(d => d ? {
+      setData(d => ({
         ...d,
         solarPower: 847 + Math.random() * 50,
         batterySOC: Math.min(100, Math.max(20, d.batterySOC + (Math.random() - 0.5) * 2)),
@@ -337,10 +229,33 @@ export default function StationTopology() {
         gridPower: -120 + Math.random() * 40,
         evPower: 45 + Math.random() * 20,
         evStatus: Math.random() > 0.85 ? 'warning' : 'online',
-      } : d);
+      }));
     }, 5000);
     return () => clearInterval(t);
-  }, [station]);
+  }, []);
+
+  return data;
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────────
+export default function StationTopology() {
+  const { id } = useParams();
+  const [station, setStation] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [showFlow, setShowFlow] = useState(true);
+
+  useEffect(() => {
+    if (!id) return;
+    stationApi.getAll().then(r => {
+      if (r.success) {
+        const s = r.data.find((s: any) => s._id === id);
+        setStation(s);
+        setLoading(false);
+      }
+    });
+  }, [id]);
+
+  const liveData = useLiveData(station);
 
   if (loading) {
     return (
@@ -352,7 +267,7 @@ export default function StationTopology() {
 
   if (!station) {
     return (
-      <Card style={{ background: '#111827', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12 }}>
+      <Card style={{ background: '#111827', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 16 }}>
         <div style={{ padding: 40, textAlign: 'center', color: '#64748b', fontFamily: 'Inter, sans-serif' }}>
           未找到该电站
         </div>
@@ -360,110 +275,85 @@ export default function StationTopology() {
     );
   }
 
-  const defaultData = {
-    solarPower: 0, batterySOC: 0, pcsPower: 0, gridPower: 0, evPower: 0,
-    solarStatus: 'offline', batteryStatus: 'offline', pcsStatus: 'offline',
-    gridStatus: 'offline', evStatus: 'offline',
-  };
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <div>
           <Title level={4} style={{ margin: 0, color: '#f1f5f9', fontFamily: 'Inter, sans-serif', fontWeight: 700 }}>
             ⚡ {station.name}
           </Title>
           <Text style={{ fontSize: 12, color: '#64748b', fontFamily: 'Inter, sans-serif' }}>
-            {station.location} · 装机 {station.capacity || station.installedCapacity}MW
+            {station.location} · 装机 {station.capacity || station.installedCapacity || 0}MW
           </Text>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <Space>
-            <Text style={{ fontSize: 12, color: '#64748b', fontFamily: 'Inter, sans-serif' }}>2D</Text>
-            <Switch
-              checked={show3D}
-              onChange={v => setShow3D(v)}
-              size="small"
-              style={{ background: show3D ? '#2dd4bf' : '#334155' }}
-            />
-            <Text style={{ fontSize: 12, color: '#64748b', fontFamily: 'Inter, sans-serif' }}>3D孪生</Text>
+            <Text style={{ fontSize: 12, color: '#64748b', fontFamily: 'Inter, sans-serif' }}>功率流向</Text>
+            <Switch checked={showFlow} onChange={v => setShowFlow(v)} size="small" />
           </Space>
           <Tag style={{
             background: 'rgba(45,212,191,0.1)', border: '1px solid rgba(45,212,191,0.25)',
             color: '#2dd4bf', fontFamily: 'Inter, sans-serif', fontSize: 11, borderRadius: 20,
           }}>
-            ● 实时数据
+            ● {showFlow ? '实时数据' : '静态拓扑'}
           </Tag>
         </div>
       </div>
 
-      {/* Live KPIs */}
-      {liveData && (
-        <Row gutter={[10, 10]}>
-          {[
-            { label: '光伏出力', value: liveData.solarPower.toFixed(0), unit: 'kW', color: C.solar },
-            { label: '电池SOC', value: liveData.batterySOC.toFixed(0), unit: '%', color: C.battery },
-            { label: 'PCS功率', value: liveData.pcsPower.toFixed(0), unit: 'kW', color: C.pcs },
-            { label: '电网交互', value: Math.abs(liveData.gridPower).toFixed(0), unit: 'kW', color: C.grid },
-            { label: '充电桩', value: liveData.evPower.toFixed(0), unit: 'kW', color: C.ev },
-          ].map(kpi => (
-            <Col xs={12} sm={8} md={4} key={kpi.label}>
-              <KPICard {...kpi} />
-            </Col>
-          ))}
-        </Row>
-      )}
+      {/* KPIs */}
+      <Row gutter={[10, 10]}>
+        {[
+          { label: '光伏出力', value: Math.round(liveData.solarPower), unit: 'kW', color: C.solar },
+          { label: '电池SOC', value: Math.round(liveData.batterySOC), unit: '%', color: C.battery },
+          { label: 'PCS功率', value: Math.round(liveData.pcsPower), unit: 'kW', color: C.pcs },
+          { label: '电网交互', value: Math.round(Math.abs(liveData.gridPower)), unit: 'kW', color: C.grid },
+          { label: '充电桩', value: Math.round(liveData.evPower), unit: 'kW', color: C.ev },
+        ].map(kpi => (
+          <Col xs={12} sm={8} md={4} key={kpi.label}>
+            <KPICard {...kpi} />
+          </Col>
+        ))}
+      </Row>
 
-      {/* Topology / 3D */}
+      {/* Topology Canvas */}
       <Card
         style={{
-          background: 'rgba(17,24,39,0.5)',
+          background: 'rgba(12,18,32,0.8)',
           border: '1px solid rgba(255,255,255,0.06)',
           borderRadius: 16,
           backdropFilter: 'blur(8px)',
         }}
         styles={{ body: { padding: 16 } }}
       >
-        {show3D ? (
-          <Topology3D data={liveData} />
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <Topology2D
-              data={liveData || defaultData}
-              width={Math.min(620, typeof window !== 'undefined' ? window.innerWidth - 100 : 600)}
-              height={300}
-            />
-          </div>
-        )}
+        <TopologyCanvas data={showFlow ? liveData : { ...liveData, solarPower: 1000, batterySOC: 80, pcsPower: 500, gridPower: -500, evPower: 120, evStatus: 'online' }} width={680} height={380} />
       </Card>
 
-      {/* Energy flow summary */}
-      {liveData && (
-        <Card
-          size="small"
-          style={{
-            background: 'rgba(17,24,39,0.5)', border: '1px solid rgba(255,255,255,0.06)',
-            borderRadius: 12, backdropFilter: 'blur(8px)',
-          }}
-          styles={{ body: { padding: '10px 16px' } }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', fontFamily: 'Inter, sans-serif', fontSize: 12 }}>
-            <Text style={{ color: '#64748b', fontSize: 11, fontWeight: 500 }}>能量流向</Text>
-            <Text style={{ color: C.solar }}>☀️ {liveData.solarPower.toFixed(0)}kW</Text>
-            <Text style={{ color: '#64748b' }}>→</Text>
-            <Text style={{ color: C.pcs }}>⚡PCS {liveData.pcsPower.toFixed(0)}kW</Text>
-            <Text style={{ color: '#64748b' }}>→</Text>
-            <Text style={{ color: liveData.gridPower > 0 ? '#34d399' : C.grid }}>
-              {liveData.gridPower > 0 ? '⚡馈电' : '🔌取电'} {Math.abs(liveData.gridPower).toFixed(0)}kW
-            </Text>
-            <Text style={{ color: '#64748b' }}>|</Text>
-            <Text style={{ color: C.battery }}>🔋{liveData.batterySOC.toFixed(0)}%</Text>
-            <Text style={{ color: '#64748b' }}>|</Text>
-            <Text style={{ color: C.ev }}>🚗{liveData.evPower.toFixed(0)}kW</Text>
-          </div>
-        </Card>
-      )}
+      {/* Status row */}
+      <Card
+        size="small"
+        style={{ background: 'rgba(17,24,39,0.6)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 12 }}
+        styles={{ body: { padding: '10px 16px' } }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', fontFamily: 'Inter, sans-serif', fontSize: 12 }}>
+          <Text style={{ color: '#64748b', fontSize: 11, fontWeight: 500, textTransform: 'uppercase' }}>设备状态</Text>
+          {[
+            { label: '光伏', status: liveData.solarStatus, color: C.solar },
+            { label: '储能', status: liveData.batteryStatus, color: C.battery },
+            { label: 'PCS', status: liveData.pcsStatus, color: C.pcs },
+            { label: '电网', status: liveData.gridStatus, color: C.grid },
+            { label: '充电桩', status: liveData.evStatus, color: C.ev },
+          ].map(s => (
+            <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: s.status === 'online' ? '#34d399' : s.status === 'warning' ? '#fbbf24' : '#334155', boxShadow: s.status !== 'offline' ? `0 0 6px ${s.status === 'online' ? '#34d399' : '#fbbf24'}` : 'none' }} />
+              <Text style={{ color: '#94a3b8', fontSize: 12 }}>{s.label}</Text>
+              <Text style={{ color: s.status === 'online' ? '#34d399' : s.status === 'warning' ? '#fbbf24' : '#334155', fontSize: 11, fontFamily: 'JetBrains Mono, monospace' }}>
+                {s.status === 'online' ? '在线' : s.status === 'warning' ? '告警' : '离线'}
+              </Text>
+            </div>
+          ))}
+        </div>
+      </Card>
     </div>
   );
 }
