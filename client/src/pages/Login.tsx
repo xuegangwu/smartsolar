@@ -22,7 +22,7 @@ export default function Login() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#080c14',
+      background: '#050810',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -30,76 +30,87 @@ export default function Login() {
       position: 'relative',
       overflow: 'hidden',
     }}>
+      {/* Ambient glow */}
       <div style={{
-        position: 'absolute', inset: 0,
-        backgroundImage: `
-          linear-gradient(rgba(0,229,192,0.04) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(0,229,192,0.04) 1px, transparent 1px)
-        `,
-        backgroundSize: '40px 40px',
-        pointerEvents: 'none',
+        position: 'absolute', inset: 0, pointerEvents: 'none',
+        background: 'radial-gradient(ellipse 60% 50% at 50% 40%, rgba(45,212,191,0.06) 0%, transparent 70%)',
       }} />
 
+      {/* Grid */}
       <div style={{
-        position: 'absolute',
-        top: '30%', left: '50%',
-        transform: 'translate(-50%,-50%)',
-        width: 500, height: 500,
-        background: 'radial-gradient(circle, rgba(0,229,192,0.07) 0%, transparent 70%)',
-        pointerEvents: 'none',
+        position: 'absolute', inset: 0, pointerEvents: 'none',
+        backgroundImage: `
+          linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)
+        `,
+        backgroundSize: '48px 48px',
       }} />
 
       <Card
         style={{
-          width: 400, maxWidth: '100%',
-          background: '#141c2e',
-          border: '1px solid #2a3a52',
-          borderRadius: 14,
-          boxShadow: '0 0 60px rgba(0,0,0,0.6), 0 0 30px rgba(0,229,192,0.1)',
+          width: 380, maxWidth: '100%',
+          background: 'rgba(17,24,39,0.8)',
+          border: '1px solid rgba(255,255,255,0.07)',
+          borderRadius: 20,
+          boxShadow: '0 8px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(45,212,191,0.08)',
+          backdropFilter: 'blur(20px)',
           position: 'relative', zIndex: 1,
         }}
         bodyStyle={{ padding: '36px 32px' }}
       >
+        {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <div style={{ fontSize: 48, marginBottom: 10 }}>☀️</div>
-          <Title level={3} style={{ color: '#00e5c0', margin: 0, fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.12em', fontWeight: 700 }}>
-            SMART<span style={{ color: '#c8d4e0' }}>SOLAR</span>
+          <div style={{
+            width: 56, height: 56, borderRadius: 14,
+            background: 'linear-gradient(135deg, #0d9488, #2dd4bf)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 28, margin: '0 auto 14px',
+            boxShadow: '0 4px 16px rgba(45,212,191,0.3)',
+          }}>
+            ☀️
+          </div>
+          <Title level={3} style={{
+            color: '#2dd4bf', margin: 0,
+            fontFamily: 'Inter, sans-serif', fontWeight: 800,
+            letterSpacing: '-0.03em',
+          }}>
+            SmartSolar
           </Title>
-          <Text style={{ color: '#5a6a7a', fontFamily: 'JetBrains Mono, monospace', fontSize: 11, display: 'block', marginTop: 6 }}>
+          <Text style={{ color: '#64748b', fontFamily: 'Inter, sans-serif', fontSize: 13, display: 'block', marginTop: 6 }}>
             光储电站运维管理平台
           </Text>
         </div>
 
-        <div style={{ height: 1, background: 'linear-gradient(90deg, transparent, #2a3a52, transparent)', marginBottom: 24 }} />
+        <div style={{ height: 1, background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.07), transparent)', marginBottom: 24 }} />
 
         <Form layout="vertical" onFinish={handleLogin}>
           <Form.Item name="username" label={
-            <span style={{ color: '#8899aa', fontFamily: 'JetBrains Mono, monospace', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              Username
+            <span style={{ color: '#94a3b8', fontFamily: 'Inter, sans-serif', fontSize: 12, fontWeight: 500 }}>
+              用户名
             </span>
           } rules={[{ required: true }]}>
             <Input
               placeholder="admin"
               size="large"
               style={{
-                background: '#1e2a3d', border: '1px solid #2a3a52',
-                color: '#f0f4f8', fontFamily: 'JetBrains Mono, monospace',
-                borderRadius: 8, height: 44,
+                background: '#162032', border: '1px solid rgba(255,255,255,0.07)',
+                color: '#f1f5f9', fontFamily: 'Inter, sans-serif',
+                borderRadius: 10, height: 46,
               }}
             />
           </Form.Item>
           <Form.Item name="password" label={
-            <span style={{ color: '#8899aa', fontFamily: 'JetBrains Mono, monospace', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              Password
+            <span style={{ color: '#94a3b8', fontFamily: 'Inter, sans-serif', fontSize: 12, fontWeight: 500 }}>
+              密码
             </span>
           } rules={[{ required: true }]}>
             <Input.Password
               placeholder="••••••"
               size="large"
               style={{
-                background: '#1e2a3d', border: '1px solid #2a3a52',
-                color: '#f0f4f8', fontFamily: 'JetBrains Mono, monospace',
-                borderRadius: 8, height: 44,
+                background: '#162032', border: '1px solid rgba(255,255,255,0.07)',
+                color: '#f1f5f9', fontFamily: 'Inter, sans-serif',
+                borderRadius: 10, height: 46,
               }}
             />
           </Form.Item>
@@ -110,21 +121,22 @@ export default function Login() {
             block
             size="large"
             style={{
-              height: 48, borderRadius: 8,
-              fontFamily: 'JetBrains Mono, monospace',
-              fontWeight: 700, fontSize: 15, letterSpacing: '0.06em',
-              background: '#00e5c0', border: 'none',
-              boxShadow: '0 0 24px rgba(0,229,192,0.35)',
+              height: 48, borderRadius: 10,
+              fontFamily: 'Inter, sans-serif',
+              fontWeight: 600, fontSize: 15,
+              background: 'linear-gradient(135deg, #0d9488, #2dd4bf)',
+              border: 'none',
+              boxShadow: '0 4px 16px rgba(45,212,191,0.3)',
               marginTop: 4,
             }}
           >
-            [ LOGIN ]
+            登录
           </Button>
         </Form>
 
         <div style={{ marginTop: 20, textAlign: 'center' }}>
-          <Text style={{ color: '#5a6a7a', fontFamily: 'JetBrains Mono, monospace', fontSize: 11 }}>
-            demo · admin / admin
+          <Text style={{ color: '#334155', fontFamily: 'Inter, sans-serif', fontSize: 12 }}>
+            演示账号 · admin / admin
           </Text>
         </div>
       </Card>
