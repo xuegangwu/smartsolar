@@ -7,6 +7,7 @@ import Stations from './pages/Stations';
 import Equipment from './pages/Equipment';
 import WorkOrders from './pages/WorkOrders';
 import Alerts from './pages/Alerts';
+import Inspection from './pages/Inspection';
 import Login from './pages/Login';
 
 const theme = {
@@ -30,6 +31,7 @@ export default function App() {
               <Route path="equipment" element={<Equipment />} />
               <Route path="work-orders" element={<WorkOrders />} />
               <Route path="alerts" element={<Alerts />} />
+              <Route path="inspection" element={<Inspection />} />
             </Route>
           </Routes>
         </BrowserRouter>

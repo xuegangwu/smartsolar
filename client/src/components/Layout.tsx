@@ -19,6 +19,7 @@ const NAV_ITEMS = [
   { key: '/equipment', icon: <ToolOutlined />, label: '设备台账' },
   { key: '/work-orders', icon: <FileTextOutlined />, label: '工单管理' },
   { key: '/alerts', icon: <BellOutlined />, label: '告警管理' },
+  { key: '/inspection', icon: <CalendarOutlined />, label: '巡检管理' },
 ];
 
 export default function Layout() {
