@@ -13,9 +13,9 @@ import { alertApi } from '../services/api';
 const { Text } = Typography;
 
 const LEVEL_COLOR: Record<string, string> = {
-  critical: '#ef4444',
-  major: '#f59e0b',
-  minor: '#64748b',
+  critical: '#ff5252',
+  major: '#ffab40',
+  minor: '#5a6a7a',
 };
 const LEVEL_TEXT: Record<string, string> = {
   critical: '严重', major: '重要', minor: '一般',
@@ -35,19 +35,19 @@ function MiniDonut({ critical, major, minor }: { critical: number; major: number
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
       <svg viewBox="0 0 80 80" width="80" height="80" style={{ transform: 'rotate(-90deg)' }}>
-        <circle cx="40" cy="40" r={r} fill="transparent" stroke="#1a2540" strokeWidth="10" />
-        <circle cx="40" cy="40" r={r} fill="transparent" stroke="#ef4444" strokeWidth="10"
+        <circle cx="40" cy="40" r={r} fill="transparent" stroke="#1a2438" strokeWidth="10" />
+        <circle cx="40" cy="40" r={r} fill="transparent" stroke="#ff5252" strokeWidth="10"
           strokeDasharray={`${cDash} ${circ}`} strokeDashoffset="0" />
-        <circle cx="40" cy="40" r={r} fill="transparent" stroke="#f59e0b" strokeWidth="10"
+        <circle cx="40" cy="40" r={r} fill="transparent" stroke="#ffab40" strokeWidth="10"
           strokeDasharray={`${mDash} ${circ}`} strokeDashoffset={`${(-cPct * circ).toFixed(1)}`} />
-        <circle cx="40" cy="40" r={r} fill="transparent" stroke="#64748b" strokeWidth="10"
+        <circle cx="40" cy="40" r={r} fill="transparent" stroke="#5a6a7a" strokeWidth="10"
           strokeDasharray={`${iDash} ${circ}`} strokeDashoffset={`${(-(cPct + mPct) * circ).toFixed(1)}`} />
-        <circle cx="40" cy="40" r="24" fill="#151d2e" />
+        <circle cx="40" cy="40" r="24" fill="#141c2e" />
       </svg>
       <div style={{ fontSize: 11, fontFamily: 'JetBrains Mono, monospace', lineHeight: 2 }}>
-        <div style={{ color: '#ef4444' }}>● 严重 {critical}</div>
-        <div style={{ color: '#f59e0b' }}>● 重要 {major}</div>
-        <div style={{ color: '#64748b' }}>● 一般 {minor}</div>
+        <div style={{ color: '#ff5252' }}>● 严重 {critical}</div>
+        <div style={{ color: '#ffab40' }}>● 重要 {major}</div>
+        <div style={{ color: '#5a6a7a' }}>● 一般 {minor}</div>
       </div>
     </div>
   );
@@ -58,51 +58,51 @@ function StatCards({ stats, onClick }: { stats: any; onClick?: () => void }) {
   return (
     <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
       <Col xs={12} sm={5}>
-        <Card size="small" style={{ background: '#151d2e', border: '1px solid #1e2d45', borderRadius: 12, textAlign: 'center', cursor: onClick ? 'pointer' : 'default' }} bodyStyle={{ padding: '12px 8px' }} onClick={onClick}>
-          <div style={{ color: '#64748b', fontSize: 11, fontFamily: 'JetBrains Mono, monospace', textTransform: 'uppercase', marginBottom: 6 }}>
+        <Card size="small" style={{ background: '#141c2e', border: '1px solid #2a3a52', borderRadius: 12, textAlign: 'center', cursor: onClick ? 'pointer' : 'default' }} bodyStyle={{ padding: '12px 8px' }} onClick={onClick}>
+          <div style={{ color: '#5a6a7a', fontSize: 11, fontFamily: 'JetBrains Mono, monospace', textTransform: 'uppercase', marginBottom: 6 }}>
             告警总数
           </div>
-          <div style={{ fontSize: 28, fontWeight: 700, color: '#00D4AA', fontFamily: 'JetBrains Mono, monospace' }}>
+          <div style={{ fontSize: 28, fontWeight: 700, color: '#00e5c0', fontFamily: 'JetBrains Mono, monospace' }}>
             {stats.total}
           </div>
         </Card>
       </Col>
       <Col xs={12} sm={5}>
-        <Card size="small" style={{ background: '#151d2e', border: '1px solid #ef444430', borderRadius: 12, textAlign: 'center' }} bodyStyle={{ padding: '12px 8px' }}>
-          <div style={{ color: '#64748b', fontSize: 11, fontFamily: 'JetBrains Mono, monospace', textTransform: 'uppercase', marginBottom: 6 }}>
+        <Card size="small" style={{ background: '#141c2e', border: '1px solid #ff525230', borderRadius: 12, textAlign: 'center' }} bodyStyle={{ padding: '12px 8px' }}>
+          <div style={{ color: '#5a6a7a', fontSize: 11, fontFamily: 'JetBrains Mono, monospace', textTransform: 'uppercase', marginBottom: 6 }}>
             🔴 严重
           </div>
-          <div style={{ fontSize: 28, fontWeight: 700, color: '#ef4444', fontFamily: 'JetBrains Mono, monospace' }}>
+          <div style={{ fontSize: 28, fontWeight: 700, color: '#ff5252', fontFamily: 'JetBrains Mono, monospace' }}>
             {stats.critical}
           </div>
         </Card>
       </Col>
       <Col xs={12} sm={5}>
-        <Card size="small" style={{ background: '#151d2e', border: '1px solid #f59e0b30', borderRadius: 12, textAlign: 'center' }} bodyStyle={{ padding: '12px 8px' }}>
-          <div style={{ color: '#64748b', fontSize: 11, fontFamily: 'JetBrains Mono, monospace', textTransform: 'uppercase', marginBottom: 6 }}>
+        <Card size="small" style={{ background: '#141c2e', border: '1px solid #ffab4030', borderRadius: 12, textAlign: 'center' }} bodyStyle={{ padding: '12px 8px' }}>
+          <div style={{ color: '#5a6a7a', fontSize: 11, fontFamily: 'JetBrains Mono, monospace', textTransform: 'uppercase', marginBottom: 6 }}>
             🟠 重要
           </div>
-          <div style={{ fontSize: 28, fontWeight: 700, color: '#f59e0b', fontFamily: 'JetBrains Mono, monospace' }}>
+          <div style={{ fontSize: 28, fontWeight: 700, color: '#ffab40', fontFamily: 'JetBrains Mono, monospace' }}>
             {stats.major}
           </div>
         </Card>
       </Col>
       <Col xs={12} sm={5}>
-        <Card size="small" style={{ background: '#151d2e', border: '1px solid #64748b30', borderRadius: 12, textAlign: 'center' }} bodyStyle={{ padding: '12px 8px' }}>
-          <div style={{ color: '#64748b', fontSize: 11, fontFamily: 'JetBrains Mono, monospace', textTransform: 'uppercase', marginBottom: 6 }}>
+        <Card size="small" style={{ background: '#141c2e', border: '1px solid #5a6a7a30', borderRadius: 12, textAlign: 'center' }} bodyStyle={{ padding: '12px 8px' }}>
+          <div style={{ color: '#5a6a7a', fontSize: 11, fontFamily: 'JetBrains Mono, monospace', textTransform: 'uppercase', marginBottom: 6 }}>
             🟡 一般
           </div>
-          <div style={{ fontSize: 28, fontWeight: 700, color: '#64748b', fontFamily: 'JetBrains Mono, monospace' }}>
+          <div style={{ fontSize: 28, fontWeight: 700, color: '#5a6a7a', fontFamily: 'JetBrains Mono, monospace' }}>
             {stats.minor}
           </div>
         </Card>
       </Col>
       <Col xs={12} sm={4}>
-        <Card size="small" style={{ background: '#151d2e', border: '1px solid #1e2d45', borderRadius: 12, textAlign: 'center' }} bodyStyle={{ padding: '12px 8px' }}>
-          <div style={{ color: '#64748b', fontSize: 11, fontFamily: 'JetBrains Mono, monospace', textTransform: 'uppercase', marginBottom: 6 }}>
+        <Card size="small" style={{ background: '#141c2e', border: '1px solid #2a3a52', borderRadius: 12, textAlign: 'center' }} bodyStyle={{ padding: '12px 8px' }}>
+          <div style={{ color: '#5a6a7a', fontSize: 11, fontFamily: 'JetBrains Mono, monospace', textTransform: 'uppercase', marginBottom: 6 }}>
             未确认
           </div>
-          <div style={{ fontSize: 28, fontWeight: 700, color: stats.unacknowledged > 0 ? '#ef4444' : '#00D4AA', fontFamily: 'JetBrains Mono, monospace' }}>
+          <div style={{ fontSize: 28, fontWeight: 700, color: stats.unacknowledged > 0 ? '#ff5252' : '#00e5c0', fontFamily: 'JetBrains Mono, monospace' }}>
             {stats.unacknowledged}
           </div>
           {stats.total > 0 && <MiniDonut critical={stats.critical} major={stats.major} minor={stats.minor} />}
@@ -143,7 +143,7 @@ function ConvertModal({ alert, open, onClose, onOk }: { alert: any; open: boolea
     <Modal title="⚡ 告警 → 创建工单" open={open} onOk={handleSubmit} onCancel={onClose} width={600} okText="创建工单">
       <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
         <Form.Item name="title" label="工单标题" rules={[{ required: true }]}>
-          <Input style={{ background: '#1a2540', borderColor: '#1e2d45', color: '#e2e8f0' }} />
+          <Input style={{ background: '#1a2438', borderColor: '#2a3a52', color: '#e2e8f0' }} />
         </Form.Item>
         <Row gutter={12}>
           <Col span={12}>
@@ -162,7 +162,7 @@ function ConvertModal({ alert, open, onClose, onOk }: { alert: any; open: boolea
           </Col>
         </Row>
         <Form.Item name="description" label="详细描述">
-          <Input.TextArea rows={5} style={{ background: '#1a2540', borderColor: '#1e2d45', color: '#e2e8f0' }} />
+          <Input.TextArea rows={5} style={{ background: '#1a2438', borderColor: '#2a3a52', color: '#e2e8f0' }} />
         </Form.Item>
       </Form>
     </Modal>
@@ -237,16 +237,16 @@ export default function Alerts() {
     {
       title: '时间', dataIndex: 'createdAt', width: 150,
       render: v => (
-        <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: '#94a3b8' }}>
+        <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: '#8899aa' }}>
           {new Date(v).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
         </span>
       ),
     },
-    { title: '电站', dataIndex: ['stationId', 'name'], width: 140, render: v => <span style={{ color: '#94a3b8' }}>{v || '—'}</span> },
+    { title: '电站', dataIndex: ['stationId', 'name'], width: 140, render: v => <span style={{ color: '#8899aa' }}>{v || '—'}</span> },
     {
       title: '告警内容', dataIndex: 'message',
       render: (v, r) => (
-        <span style={{ color: r.level === 'critical' && !r.acknowledged ? '#ef4444' : '#e2e8f0' }}>
+        <span style={{ color: r.level === 'critical' && !r.acknowledged ? '#ff5252' : '#e2e8f0' }}>
           {v}
         </span>
       ),
@@ -254,19 +254,19 @@ export default function Alerts() {
     {
       title: '状态', dataIndex: 'acknowledged', width: 90,
       render: a => a
-        ? <Tag style={{ background: '#00D4AA15', color: '#00D4AA', borderColor: '#00D4AA' }}>已确认</Tag>
-        : <Tag style={{ background: '#ef444415', color: '#ef4444', borderColor: '#ef4444' }}>未确认</Tag>,
+        ? <Tag style={{ background: '#00e5c015', color: '#00e5c0', borderColor: '#00e5c0' }}>已确认</Tag>
+        : <Tag style={{ background: '#ff525215', color: '#ff5252', borderColor: '#ff5252' }}>未确认</Tag>,
     },
     {
       title: '操作', key: 'action', width: 160,
       render: (_, r) => (
         <Space size="small">
           {!r.acknowledged && (
-            <Button size="small" icon={<CheckOutlined />} onClick={() => handleAck(r._id)} style={{ background: '#00D4AA15', borderColor: '#00D4AA', color: '#00D4AA' }}>
+            <Button size="small" icon={<CheckOutlined />} onClick={() => handleAck(r._id)} style={{ background: '#00e5c015', borderColor: '#00e5c0', color: '#00e5c0' }}>
               确认
             </Button>
           )}
-          <Button size="small" icon={<ThunderboltOutlined />} onClick={() => setConvertAlert(r)} style={{ background: '#f59e0b15', borderColor: '#f59e0b', color: '#f59e0b' }}>
+          <Button size="small" icon={<ThunderboltOutlined />} onClick={() => setConvertAlert(r)} style={{ background: '#ffab4015', borderColor: '#ffab40', color: '#ffab40' }}>
             转工单
           </Button>
         </Space>
@@ -281,11 +281,11 @@ export default function Alerts() {
       <Card
         title={
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <AlertOutlined style={{ color: '#00D4AA' }} />
+            <AlertOutlined style={{ color: '#00e5c0' }} />
             <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13, color: '#e2e8f0', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
               告警记录
             </span>
-            <span style={{ fontSize: 12, color: '#64748b', fontFamily: 'JetBrains Mono, monospace' }}>
+            <span style={{ fontSize: 12, color: '#5a6a7a', fontFamily: 'JetBrains Mono, monospace' }}>
               · 每30秒自动刷新
             </span>
           </div>
@@ -301,13 +301,13 @@ export default function Alerts() {
               icon={<CheckOutlined />}
               onClick={handleBatchAck}
               disabled={!selectedRowKeys.length}
-              style={{ background: '#00D4AA', border: 'none' }}
+              style={{ background: '#00e5c0', border: 'none' }}
             >
               批量确认 {selectedRowKeys.length > 0 ? `(${selectedRowKeys.length})` : ''}
             </Button>
           </Space>
         }
-        style={{ background: '#151d2e', border: '1px solid #1e2d45', borderRadius: 12 }}
+        style={{ background: '#141c2e', border: '1px solid #2a3a52', borderRadius: 12 }}
       >
         <Table
           columns={columns}
@@ -326,53 +326,53 @@ export default function Alerts() {
       <style>{`
         .critical-unack td {
           background: rgba(239,68,68,0.05) !important;
-          border-left: 3px solid #ef4444 !important;
+          border-left: 3px solid #ff5252 !important;
         }
         .ant-table {
           background: transparent !important;
         }
         .ant-table-thead > tr > th {
           background: #111827 !important;
-          color: #00D4AA !important;
-          border-bottom: 1px solid #1e2d45 !important;
+          color: #00e5c0 !important;
+          border-bottom: 1px solid #2a3a52 !important;
           font-family: JetBrains Mono, monospace !important;
           font-size: 11px !important;
           text-transform: uppercase;
         }
         .ant-table-tbody > tr > td {
           background: transparent !important;
-          border-bottom: 1px solid #1e2d45 !important;
-          color: #94a3b8 !important;
+          border-bottom: 1px solid #2a3a52 !important;
+          color: #8899aa !important;
         }
         .ant-table-tbody > tr:hover > td {
-          background: #1a2540 !important;
+          background: #1a2438 !important;
         }
         .ant-pagination {
-          color: #94a3b8 !important;
+          color: #8899aa !important;
         }
         .ant-tag {
           font-family: JetBrains Mono, monospace !important;
           font-size: 11px !important;
         }
         .ant-select-dropdown {
-          background: #151d2e !important;
-          border: 1px solid #1e2d45 !important;
+          background: #141c2e !important;
+          border: 1px solid #2a3a52 !important;
         }
         .ant-select-item {
-          color: #94a3b8 !important;
+          color: #8899aa !important;
         }
         .ant-select-item-option-selected {
           background: rgba(0,212,170,0.1) !important;
-          color: #00D4AA !important;
+          color: #00e5c0 !important;
         }
         .ant-input, .ant-select-selector {
-          background: #1a2540 !important;
-          border: 1px solid #1e2d45 !important;
+          background: #1a2438 !important;
+          border: 1px solid #2a3a52 !important;
           color: #e2e8f0 !important;
         }
         @media (max-width: 767px) {
           .ant-table-thead { display: none; }
-          .ant-table-tbody > tr { display: block; background: #151d2e !important; border: 1px solid #1e2d45 !important; border-radius: 12px; margin-bottom: 12px; padding: 12px; }
+          .ant-table-tbody > tr { display: block; background: #141c2e !important; border: 1px solid #2a3a52 !important; border-radius: 12px; margin-bottom: 12px; padding: 12px; }
           .ant-table-tbody > tr > td { display: block; padding: 4px 0; border: none !important; }
         }
       `}</style>
