@@ -105,7 +105,7 @@ export default function WorkOrders() {
   async function handleAdd() {
     setEditing(null);
     form.resetFields();
-    form.setFieldsValue({ type: 'fault', priority: 'normal', status: 'created' });
+    form.setFieldsValue({ type: 'fault', priority: 'normal', status: 'created', stationId: stations[0]?._id });
     const res = await sparePartApi.getAll();
     if (res.success) setSpareParts(res.data);
     setIsModalOpen(true);

@@ -118,7 +118,10 @@ function ConvertModal({ alert, open, onClose, onOk }: { alert: any; open: boolea
   useEffect(() => {
     if (open && alert) {
       const priority = alert.level === 'critical' ? 'urgent' : alert.level === 'major' ? 'important' : 'normal';
+      // stationId: 优先用alert.stationId._id，否则用alert.stationId
+      const sid = typeof alert.stationId === 'object' ? alert.stationId?._id : alert.stationId;
       form.setFieldsValue({
+        stationId: sid,
         title: `[告警] ${alert.message}`.slice(0, 100),
         type: 'fault',
         priority,
@@ -129,14 +132,16 @@ function ConvertModal({ alert, open, onClose, onOk }: { alert: any; open: boolea
 
   async function handleSubmit() {
     const values = await form.validateFields();
+    // 注入 stationId（表单中隐藏）
+    const sid = typeof alert?.stationId === 'object' ? alert?.stationId?._id : alert?.stationId;
     const res = await fetch('/api/work-orders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(values),
+      body: JSON.stringify({ ...values, stationId: sid || values.stationId }),
     });
     const data = await res.json();
     if (data.success) { message.success('工单已创建！'); onOk(); onClose(); }
-    else message.error('创建失败');
+    else { message.error(data.message || '创建失败'); }
   }
 
   return (
@@ -144,6 +149,14 @@ function ConvertModal({ alert, open, onClose, onOk }: { alert: any; open: boolea
       <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
         <Form.Item name="title" label="工单标题" rules={[{ required: true }]}>
           <Input style={{ background: '#f5f6f8', borderColor: '#e8eaed', color: '#1a1a2e' }} />
+        </Form.Item>
+        <Form.Item name="stationId" label="所属电站" rules={[{ required: true }]}>
+          <Select
+            placeholder="选择电站"
+            options={(alert?.stationId && typeof alert.stationId === 'object')
+              ? [{ value: alert.stationId._id, label: alert.stationId.name || '当前电站' }]
+              : [{ value: alert?.stationId, label: '告警关联电站' }]}
+          />
         </Form.Item>
         <Row gutter={12}>
           <Col span={12}>
