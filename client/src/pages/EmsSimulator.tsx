@@ -21,9 +21,9 @@ const ALERT_CODES = [
 ];
 
 const LEVEL_COLORS: Record<string, string> = {
-  critical: '#ff5252',
-  major: '#ffab40',
-  minor: '#5a6a7a',
+  critical: '#dc2626',
+  major: '#d97706',
+  minor: '#8896a6',
 };
 const LEVEL_LABELS: Record<string, string> = {
   critical: '严重',
@@ -135,11 +135,11 @@ export default function EmsSimulator() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <ThunderboltOutlined style={{ fontSize: 22, color: '#ffab40' }} />
-        <Title level={4} style={{ margin: 0, color: '#f0f4f8', fontFamily: 'JetBrains Mono, monospace' }}>
+        <ThunderboltOutlined style={{ fontSize: 22, color: '#d97706' }} />
+        <Title level={4} style={{ margin: 0, color: '#1a1a2e', fontFamily: 'JetBrains Mono, monospace' }}>
           EMS 模拟器
         </Title>
-        <Tag style={{ background: 'rgba(255,171,64,0.1)', border: '1px solid rgba(255,171,64,0.3)', color: '#ffab40', fontFamily: 'JetBrains Mono, monospace', fontSize: 11 }}>
+        <Tag style={{ background: 'rgba(255,171,64,0.1)', border: '1px solid rgba(255,171,64,0.3)', color: '#d97706', fontFamily: 'JetBrains Mono, monospace', fontSize: 11 }}>
           内部测试工具
         </Tag>
       </div>
@@ -147,16 +147,16 @@ export default function EmsSimulator() {
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 340px', gap: 16 }}>
         {/* Send Card */}
         <Card
-          style={{ background: '#141c2e', border: '1px solid #2a3a52', borderRadius: 10 }}
+          style={{ background: '#ffffff', border: '1px solid #e8eaed', borderRadius: 10 }}
           title={
-            <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: '#8899aa', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               发送告警
             </span>
           }
         >
           <Form form={form} layout="vertical">
             <Form.Item name="stationId" label={
-              <span style={{ color: '#8899aa', fontFamily: 'JetBrains Mono, monospace', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em' }}>目标电站</span>
+              <span style={{ color: '#4a5568', fontFamily: 'JetBrains Mono, monospace', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em' }}>目标电站</span>
             }>
               <Select
                 placeholder="选择电站"
@@ -167,7 +167,7 @@ export default function EmsSimulator() {
             </Form.Item>
 
             <Form.Item name="code" label={
-              <span style={{ color: '#8899aa', fontFamily: 'JetBrains Mono, monospace', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em' }}>告警类型</span>
+              <span style={{ color: '#4a5568', fontFamily: 'JetBrains Mono, monospace', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em' }}>告警类型</span>
             }>
               <Select placeholder="选择告警类型" size="large">
                 {ALERT_CODES.map(c => (
@@ -175,7 +175,7 @@ export default function EmsSimulator() {
                     <Space>
                       <div style={{ width: 8, height: 8, borderRadius: '50%', background: LEVEL_COLORS[c.level], boxShadow: `0 0 6px ${LEVEL_COLORS[c.level]}` }} />
                       <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }}>{c.code}</span>
-                      <span style={{ color: '#8899aa', fontSize: 12 }}>{c.label}</span>
+                      <span style={{ color: '#4a5568', fontSize: 12 }}>{c.label}</span>
                       <Tag style={{ background: LEVEL_COLORS[c.level] + '15', border: '1px solid ' + LEVEL_COLORS[c.level] + '50', color: LEVEL_COLORS[c.level], fontSize: 10, padding: '0 4px' }}>
                         {LEVEL_LABELS[c.level]}
                       </Tag>
@@ -186,7 +186,7 @@ export default function EmsSimulator() {
             </Form.Item>
 
             <Form.Item name="message" label={
-              <span style={{ color: '#8899aa', fontFamily: 'JetBrains Mono, monospace', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em' }}>告警消息（可选）</span>
+              <span style={{ color: '#4a5568', fontFamily: 'JetBrains Mono, monospace', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em' }}>告警消息（可选）</span>
             }>
               <Input.TextArea
                 placeholder="留空则使用默认消息"
@@ -205,7 +205,7 @@ export default function EmsSimulator() {
               style={{
                 height: 48, borderRadius: 8, fontFamily: 'JetBrains Mono, monospace',
                 fontWeight: 700, fontSize: 14, letterSpacing: '0.06em',
-                background: '#00e5c0', border: 'none',
+                background: '#e6342a', border: 'none',
                 boxShadow: '0 0 24px rgba(0,229,192,0.3)',
               }}
             >
@@ -213,11 +213,11 @@ export default function EmsSimulator() {
             </Button>
           </Form>
 
-          <Divider style={{ borderColor: '#2a3a52', margin: '20px 0' }} />
+          <Divider style={{ borderColor: '#e8eaed', margin: '20px 0' }} />
 
           {/* Batch Send */}
           <div style={{ marginBottom: 12 }}>
-            <Text style={{ fontSize: 12, color: '#8899aa', fontFamily: 'JetBrains Mono, monospace', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: 8 }}>
+            <Text style={{ fontSize: 12, color: '#4a5568', fontFamily: 'JetBrains Mono, monospace', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: 8 }}>
               批量模拟
             </Text>
             <Space>
@@ -226,13 +226,13 @@ export default function EmsSimulator() {
                 min={1} max={50}
                 value={batchCount}
                 onChange={e => setBatchCount(parseInt(e.target.value) || 1)}
-                style={{ width: 80, fontFamily: 'JetBrains Mono, monospace', background: '#1e2a3d', border: '1px solid #2a3a52', color: '#f0f4f8', borderRadius: 6 }}
+                style={{ width: 80, fontFamily: 'JetBrains Mono, monospace', background: '#fafbfc', border: '1px solid #e8eaed', color: '#1a1a2e', borderRadius: 6 }}
               />
-              <span style={{ color: '#5a6a7a', fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }}>条</span>
+              <span style={{ color: '#8896a6', fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }}>条</span>
               <Button
                 onClick={sendBatch}
                 loading={sending}
-                style={{ background: '#1a2438', border: '1px solid #2a3a52', color: '#ffab40', fontFamily: 'JetBrains Mono, monospace', fontSize: 12, borderRadius: 6, height: 34 }}
+                style={{ background: '#f5f6f8', border: '1px solid #e8eaed', color: '#d97706', fontFamily: 'JetBrains Mono, monospace', fontSize: 12, borderRadius: 6, height: 34 }}
               >
                 随机批量发送
               </Button>
@@ -241,13 +241,13 @@ export default function EmsSimulator() {
 
           {/* Code Example */}
           <div style={{
-            background: '#0f1623', border: '1px solid #2a3a52', borderRadius: 8,
+            background: '#fafbfc', border: '1px solid #e8eaed', borderRadius: 8,
             padding: '12px 14px', marginTop: 12,
           }}>
-            <Text style={{ fontSize: 10, color: '#5a6a7a', fontFamily: 'JetBrains Mono, monospace', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>
+            <Text style={{ fontSize: 10, color: '#8896a6', fontFamily: 'JetBrains Mono, monospace', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>
               EMS API 调用示例
             </Text>
-            <pre style={{ color: '#00e5c0', fontFamily: 'JetBrains Mono, monospace', fontSize: 11, margin: 0, lineHeight: 1.7 }}>
+            <pre style={{ color: '#e6342a', fontFamily: 'JetBrains Mono, monospace', fontSize: 11, margin: 0, lineHeight: 1.7 }}>
 {`POST /api/ems-sync/alerts
 {
   "sourceAlertId": "EMS_001",
@@ -262,11 +262,11 @@ export default function EmsSimulator() {
 
         {/* History */}
         <Card
-          style={{ background: '#141c2e', border: '1px solid #2a3a52', borderRadius: 10 }}
+          style={{ background: '#ffffff', border: '1px solid #e8eaed', borderRadius: 10 }}
           title={
             <Space>
-              <ClockCircleOutlined style={{ color: '#5a6a7a' }} />
-              <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: '#8899aa', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              <ClockCircleOutlined style={{ color: '#8896a6' }} />
+              <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                 发送记录
               </span>
             </Space>
@@ -274,25 +274,25 @@ export default function EmsSimulator() {
           styles={{ body: { padding: '8px', maxHeight: 520, overflowY: 'auto' } }}
         >
           {history.length === 0 ? (
-            <div style={{ padding: 32, textAlign: 'center', color: '#5a6a7a', fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }}>
+            <div style={{ padding: 32, textAlign: 'center', color: '#8896a6', fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }}>
               暂无发送记录
             </div>
           ) : history.map(item => (
             <div key={item.id} style={{
-              padding: '8px 10px', borderBottom: '1px solid #1e2d42',
+              padding: '8px 10px', borderBottom: '1px solid #f0f2f5',
               display: 'flex', alignItems: 'flex-start', gap: 8,
             }}>
               {item.status === 'success'
-                ? <CheckCircleOutlined style={{ color: '#00e676', fontSize: 12, marginTop: 2, flexShrink: 0 }} />
-                : <span style={{ color: '#ff5252', fontSize: 12, marginTop: 2, flexShrink: 0 }}>✗</span>
+                ? <CheckCircleOutlined style={{ color: '#16a34a', fontSize: 12, marginTop: 2, flexShrink: 0 }} />
+                : <span style={{ color: '#dc2626', fontSize: 12, marginTop: 2, flexShrink: 0 }}>✗</span>
               }
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
                   <span style={{ fontSize: 10, fontFamily: 'JetBrains Mono, monospace', color: LEVEL_COLORS[item.level], fontWeight: 600 }}>{item.code}</span>
-                  <span style={{ fontSize: 10, color: '#5a6a7a' }}>·</span>
-                  <span style={{ fontSize: 11, color: '#c8d4e0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
+                  <span style={{ fontSize: 10, color: '#8896a6' }}>·</span>
+                  <span style={{ fontSize: 11, color: '#4a5568', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
                 </div>
-                <div style={{ fontSize: 10, color: '#5a6a7a', fontFamily: 'JetBrains Mono, monospace', marginTop: 2 }}>
+                <div style={{ fontSize: 10, color: '#8896a6', fontFamily: 'JetBrains Mono, monospace', marginTop: 2 }}>
                   {item.stationName} · {item.time}
                 </div>
               </div>

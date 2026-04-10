@@ -57,7 +57,7 @@ function AlertItem({ item, onClick }: { item: any; onClick?: () => void }) {
     <div
       onClick={onClick}
       style={{
-        padding: '10px 16px', borderBottom: '1px solid #1e2d42',
+        padding: '10px 16px', borderBottom: '1px solid #f0f2f5',
         cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10,
         background: isUrgent ? 'rgba(255,82,82,0.06)' : 'transparent',
         transition: 'background 0.2s',
@@ -85,7 +85,7 @@ function OrderItem({ item, onClick }: { item: any; onClick?: () => void }) {
     <div
       onClick={onClick}
       style={{
-        padding: '10px 16px', borderBottom: '1px solid #1e2d42',
+        padding: '10px 16px', borderBottom: '1px solid #f0f2f5',
         cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10,
         transition: 'background 0.2s',
       }}

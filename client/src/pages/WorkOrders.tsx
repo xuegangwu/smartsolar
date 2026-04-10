@@ -48,7 +48,7 @@ function StatCards({ orders }: { orders: any[] }) {
   return (
     <Row gutter={16} style={{ marginBottom: 24 }}>
       <Col span={6}><Statistic title="工单总数" value={counts.total} prefix={<FileTextOutlined />} /></Col>
-      <Col span={6}><Statistic title="待处理" value={counts.created} valueStyle={{ color: '#1677ff' }} /></Col>
+      <Col span={6}><Statistic title="待处理" value={counts.created} valueStyle={{ color: '#e6342a' }} /></Col>
       <Col span={6}><Statistic title="处理中" value={counts.processing} valueStyle={{ color: '#fa8c16' }} /></Col>
       <Col span={6}><Statistic title="紧急工单" value={counts.urgent} valueStyle={{ color: '#ff4d4f' }} /></Col>
     </Row>

@@ -310,7 +310,7 @@ export default function SpareParts() {
               renderItem={(item: any) => (
                 <List.Item style={{ padding: '8px 0' }}>
                   <List.Item.Meta
-                    avatar={<Avatar size="small" style={{ background: '#1677ff' }} icon={<ToolOutlined />} />}
+                    avatar={<Avatar size="small" style={{ background: '#e6342a' }} icon={<ToolOutlined />} />}
                     title={<Text style={{ fontSize: 13 }}>{item.sparePartId?.name || '—'}</Text>}
                     description={
                       <Text type="secondary" style={{ fontSize: 11 }}>

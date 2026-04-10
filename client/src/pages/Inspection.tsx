@@ -53,7 +53,7 @@ function StatCards({ stats }: { stats: any }) {
       <Col span={6}><Statistic title="巡检计划" value={stats.totalPlans} prefix={<CalendarOutlined />} /></Col>
       <Col span={6}><Statistic title="启用中" value={stats.enabledPlans} valueStyle={{ color: '#52c41a' }} /></Col>
       <Col span={6}><Statistic title="执行记录" value={stats.totalRecords} prefix={<FileTextOutlined />} /></Col>
-      <Col span={6}><Statistic title="本周执行" value={stats.recentRecords} valueStyle={{ color: '#1677ff' }} /></Col>
+      <Col span={6}><Statistic title="本周执行" value={stats.recentRecords} valueStyle={{ color: '#e6342a' }} /></Col>
     </Row>
   );
 }

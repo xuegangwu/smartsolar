@@ -12,12 +12,12 @@ interface EquipItem {
 }
 
 const EQUIP_LIST: EquipItem[] = [
-  { type: 'pv', label: '光伏组串', icon: '☀️', color: '#f59e0b', unit: 'kW', powerLabel: '单串功率', capacityLabel: '' },
-  { type: 'battery', label: '储能电池', icon: '🔋', color: '#2dd4bf', unit: 'kWh', powerLabel: '放电功率', capacityLabel: '储能容量' },
-  { type: 'pcs', label: 'PCS变流器', icon: '⚡', color: '#3b82f6', unit: 'kW', powerLabel: '额定功率' },
-  { type: 'transformer', label: '变压器', icon: '🔌', color: '#8b5cf6', unit: 'kVA', powerLabel: '额定容量' },
-  { type: 'grid', label: '电网接入', icon: '🏭', color: '#6366f1', unit: 'kW', powerLabel: '并网容量' },
-  { type: 'ev', label: '充电桩', icon: '🚗', color: '#f97316', unit: 'kW', powerLabel: '充电功率' },
+  { type: 'pv', label: '光伏组串', icon: '☀️', color: '#d97706', unit: 'kW', powerLabel: '单串功率', capacityLabel: '' },
+  { type: 'battery', label: '储能电池', icon: '🔋', color: '#e6342a', unit: 'kWh', powerLabel: '放电功率', capacityLabel: '储能容量' },
+  { type: 'pcs', label: 'PCS变流器', icon: '⚡', color: '#2563eb', unit: 'kW', powerLabel: '额定功率' },
+  { type: 'transformer', label: '变压器', icon: '🔌', color: '#7c3aed', unit: 'kVA', powerLabel: '额定容量' },
+  { type: 'grid', label: '电网接入', icon: '🏭', color: '#4f46e5', unit: 'kW', powerLabel: '并网容量' },
+  { type: 'ev', label: '充电桩', icon: '🚗', color: '#ea580c', unit: 'kW', powerLabel: '充电功率' },
 ];
 
 interface ConfiguredEquip {
@@ -30,27 +30,27 @@ function StepStationInfo({ data, onChange }: { data: any; onChange: (d: any) => 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div>
-        <Text style={{ fontSize: 12, color: '#94a3b8', fontFamily: 'Inter, sans-serif', display: 'block', marginBottom: 8 }}>电站名称</Text>
+        <Text style={{ fontSize: 12, color: '#4a5568', fontFamily: 'Inter, sans-serif', display: 'block', marginBottom: 8 }}>电站名称</Text>
         <Input
           value={data.name || ''}
           onChange={e => onChange({ ...data, name: e.target.value })}
           placeholder="例如：苏州工业园光储示范站"
           size="large"
-          style={{ background: '#162032', border: '1px solid rgba(255,255,255,0.07)', color: '#f1f5f9', fontFamily: 'Inter, sans-serif', borderRadius: 10 }}
+          style={{ background: '#f5f6f8', border: '1px solid rgba(255,255,255,0.07)', color: '#1a1a2e', fontFamily: 'Inter, sans-serif', borderRadius: 10 }}
         />
       </div>
       <div>
-        <Text style={{ fontSize: 12, color: '#94a3b8', fontFamily: 'Inter, sans-serif', display: 'block', marginBottom: 8 }}>建设地点</Text>
+        <Text style={{ fontSize: 12, color: '#4a5568', fontFamily: 'Inter, sans-serif', display: 'block', marginBottom: 8 }}>建设地点</Text>
         <Input
           value={data.location || ''}
           onChange={e => onChange({ ...data, location: e.target.value })}
           placeholder="例如：江苏省苏州市工业园区"
           size="large"
-          style={{ background: '#162032', border: '1px solid rgba(255,255,255,0.07)', color: '#f1f5f9', fontFamily: 'Inter, sans-serif', borderRadius: 10 }}
+          style={{ background: '#f5f6f8', border: '1px solid rgba(255,255,255,0.07)', color: '#1a1a2e', fontFamily: 'Inter, sans-serif', borderRadius: 10 }}
         />
       </div>
       <div>
-        <Text style={{ fontSize: 12, color: '#94a3b8', fontFamily: 'Inter, sans-serif', display: 'block', marginBottom: 8 }}>电站规模</Text>
+        <Text style={{ fontSize: 12, color: '#4a5568', fontFamily: 'Inter, sans-serif', display: 'block', marginBottom: 8 }}>电站规模</Text>
         <Row gutter={12}>
           <Col span={12}>
             <InputNumber
@@ -60,7 +60,7 @@ function StepStationInfo({ data, onChange }: { data: any; onChange: (d: any) => 
               suffix="kW"
               min={0}
               size="large"
-              style={{ width: '100%', background: '#162032', border: '1px solid rgba(255,255,255,0.07)', color: '#f1f5f9', fontFamily: 'Inter, sans-serif', borderRadius: 10 }}
+              style={{ width: '100%', background: '#f5f6f8', border: '1px solid rgba(255,255,255,0.07)', color: '#1a1a2e', fontFamily: 'Inter, sans-serif', borderRadius: 10 }}
             />
           </Col>
           <Col span={12}>
@@ -69,7 +69,7 @@ function StepStationInfo({ data, onChange }: { data: any; onChange: (d: any) => 
               onChange={e => onChange({ ...data, owner: e.target.value })}
               placeholder="业主单位"
               size="large"
-              style={{ background: '#162032', border: '1px solid rgba(255,255,255,0.07)', color: '#f1f5f9', fontFamily: 'Inter, sans-serif', borderRadius: 10 }}
+              style={{ background: '#f5f6f8', border: '1px solid rgba(255,255,255,0.07)', color: '#1a1a2e', fontFamily: 'Inter, sans-serif', borderRadius: 10 }}
             />
           </Col>
         </Row>
@@ -94,7 +94,7 @@ function StepEquipConfig({ equips, onChange }: { equips: ConfiguredEquip[]; onCh
         return (
           <div key={eq.type} style={{
             padding: '14px 16px',
-            background: count > 0 ? `${eq.color}0a` : '#162032',
+            background: count > 0 ? `${eq.color}0a` : '#f5f6f8',
             border: `1px solid ${count > 0 ? eq.color + '40' : 'rgba(255,255,255,0.06)'}`,
             borderRadius: 10,
             display: 'flex', alignItems: 'center', gap: 12,
@@ -102,7 +102,7 @@ function StepEquipConfig({ equips, onChange }: { equips: ConfiguredEquip[]; onCh
             <div style={{ fontSize: 28, flexShrink: 0 }}>{eq.icon}</div>
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                <Text style={{ fontSize: 14, color: '#f1f5f9', fontFamily: 'Inter, sans-serif', fontWeight: 600 }}>{eq.label}</Text>
+                <Text style={{ fontSize: 14, color: '#1a1a2e', fontFamily: 'Inter, sans-serif', fontWeight: 600 }}>{eq.label}</Text>
                 {count > 0 && <Tag style={{ background: eq.color + '20', border: 'none', color: eq.color, fontSize: 10, borderRadius: 20 }}>{count}台</Tag>}
               </div>
               {count > 0 && (
@@ -114,26 +114,26 @@ function StepEquipConfig({ equips, onChange }: { equips: ConfiguredEquip[]; onCh
                       if (v && v > 0) arr.push({ type: eq.type, label: eq.label, icon: eq.icon, color: eq.color, count: v, power: configured?.power || 100, capacity: eq.type === 'battery' ? (configured?.capacity || 1000) : undefined });
                       onChange(arr);
                     }}
-                    style={{ width: 64, background: '#0c1220', border: '1px solid ' + eq.color + '40', color: '#f1f5f9', fontFamily: 'JetBrains Mono, monospace', borderRadius: 6, height: 34 }}
+                    style={{ width: 64, background: '#f5f6f8', border: '1px solid ' + eq.color + '40', color: '#1a1a2e', fontFamily: 'JetBrains Mono, monospace', borderRadius: 6, height: 34 }}
                   />
                   <div style={{ position: 'relative', flex: 1 }}>
                     <InputNumber
                       min={0} value={configured?.power || 0}
                       onChange={v => update(equips.findIndex(e => e.type === eq.type), 'power', v || 0)}
-                      style={{ width: '100%', background: '#0c1220', border: '1px solid rgba(255,255,255,0.07)', color: '#f1f5f9', fontFamily: 'JetBrains Mono, monospace', borderRadius: 6, height: 34 }}
+                      style={{ width: '100%', background: '#f5f6f8', border: '1px solid rgba(255,255,255,0.07)', color: '#1a1a2e', fontFamily: 'JetBrains Mono, monospace', borderRadius: 6, height: 34 }}
                     />
-                    <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: 12, fontFamily: 'JetBrains Mono, monospace', pointerEvents: 'none' }}>{eq.unit}</span>
+                    <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', color: '#8896a6', fontSize: 12, fontFamily: 'JetBrains Mono, monospace', pointerEvents: 'none' }}>{eq.unit}</span>
                   </div>
                   {eq.type === 'battery' && (
                     <>
-                      <span style={{ color: '#64748b', fontSize: 12, flexShrink: 0 }}>×</span>
+                      <span style={{ color: '#8896a6', fontSize: 12, flexShrink: 0 }}>×</span>
                       <div style={{ position: 'relative', flex: 1 }}>
                         <InputNumber
                           min={0} value={configured?.capacity || 0}
                           onChange={v => update(equips.findIndex(e => e.type === eq.type), 'capacity', v || 0)}
-                          style={{ width: '100%', background: '#0c1220', border: '1px solid rgba(255,255,255,0.07)', color: '#f1f5f9', fontFamily: 'JetBrains Mono, monospace', borderRadius: 6, height: 34 }}
+                          style={{ width: '100%', background: '#f5f6f8', border: '1px solid rgba(255,255,255,0.07)', color: '#1a1a2e', fontFamily: 'JetBrains Mono, monospace', borderRadius: 6, height: 34 }}
                         />
-                        <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: 12, fontFamily: 'JetBrains Mono, monospace', pointerEvents: 'none' }}>kWh</span>
+                        <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', color: '#8896a6', fontSize: 12, fontFamily: 'JetBrains Mono, monospace', pointerEvents: 'none' }}>kWh</span>
                       </div>
                     </>
                   )}
@@ -165,23 +165,23 @@ function StepSummary({ data, stationData, onSave, saving }: { data: any; station
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* Info */}
-      <div style={{ background: '#162032', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, padding: '16px' }}>
+      <div style={{ background: '#f5f6f8', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, padding: '16px' }}>
         <Row gutter={[16, 12]}>
-          <Col span={12}><Text style={{ fontSize: 11, color: '#64748b' }}>电站名称</Text><div style={{ fontSize: 14, color: '#f1f5f9', fontWeight: 600, marginTop: 2 }}>{stationData.name || '-'}</div></Col>
-          <Col span={12}><Text style={{ fontSize: 11, color: '#64748b' }}>建设地点</Text><div style={{ fontSize: 14, color: '#f1f5f9', marginTop: 2 }}>{stationData.location || '-'}</div></Col>
-          <Col span={12}><Text style={{ fontSize: 11, color: '#64748b' }}>装机容量</Text><div style={{ fontSize: 14, color: '#2dd4bf', fontWeight: 600, marginTop: 2 }}>{stationData.capacity || 0} kW</div></Col>
-          <Col span={12}><Text style={{ fontSize: 11, color: '#64748b' }}>估算投资</Text><div style={{ fontSize: 14, color: '#f59e0b', fontWeight: 600, marginTop: 2 }}>{(investEst / 10000).toFixed(0)}万元</div></Col>
+          <Col span={12}><Text style={{ fontSize: 11, color: '#8896a6' }}>电站名称</Text><div style={{ fontSize: 14, color: '#1a1a2e', fontWeight: 600, marginTop: 2 }}>{stationData.name || '-'}</div></Col>
+          <Col span={12}><Text style={{ fontSize: 11, color: '#8896a6' }}>建设地点</Text><div style={{ fontSize: 14, color: '#1a1a2e', marginTop: 2 }}>{stationData.location || '-'}</div></Col>
+          <Col span={12}><Text style={{ fontSize: 11, color: '#8896a6' }}>装机容量</Text><div style={{ fontSize: 14, color: '#e6342a', fontWeight: 600, marginTop: 2 }}>{stationData.capacity || 0} kW</div></Col>
+          <Col span={12}><Text style={{ fontSize: 11, color: '#8896a6' }}>估算投资</Text><div style={{ fontSize: 14, color: '#d97706', fontWeight: 600, marginTop: 2 }}>{(investEst / 10000).toFixed(0)}万元</div></Col>
         </Row>
       </div>
 
       {/* Equipment list */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <Text style={{ fontSize: 12, color: '#64748b', fontFamily: 'Inter, sans-serif', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em' }}>设备清单</Text>
+        <Text style={{ fontSize: 12, color: '#8896a6', fontFamily: 'Inter, sans-serif', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em' }}>设备清单</Text>
         {data.filter((e: any) => e.count > 0).map((eq: any) => (
-          <div key={eq.type} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: '#162032', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 8 }}>
+          <div key={eq.type} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: '#f5f6f8', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 8 }}>
             <span style={{ fontSize: 20 }}>{eq.icon}</span>
             <div style={{ flex: 1 }}>
-              <Text style={{ fontSize: 13, color: '#f1f5f9', fontFamily: 'Inter, sans-serif' }}>{eq.label}</Text>
+              <Text style={{ fontSize: 13, color: '#1a1a2e', fontFamily: 'Inter, sans-serif' }}>{eq.label}</Text>
             </div>
             <Text style={{ fontSize: 12, color: eq.color, fontFamily: 'JetBrains Mono, monospace', fontWeight: 600 }}>
               {eq.count}台 × {eq.power}{eq.type === 'battery' ? 'kWh' : 'kW'}
@@ -189,7 +189,7 @@ function StepSummary({ data, stationData, onSave, saving }: { data: any; station
           </div>
         ))}
         {data.filter((e: any) => e.count > 0).length === 0 && (
-          <div style={{ padding: 20, textAlign: 'center', color: '#334155', fontFamily: 'Inter, sans-serif', fontSize: 13 }}>
+          <div style={{ padding: 20, textAlign: 'center', color: '#b8c0cc', fontFamily: 'Inter, sans-serif', fontSize: 13 }}>
             暂未配置设备
           </div>
         )}
@@ -205,7 +205,7 @@ function StepSummary({ data, stationData, onSave, saving }: { data: any; station
         style={{
           height: 50, borderRadius: 10,
           fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 15,
-          background: 'linear-gradient(135deg, #0d9488, #2dd4bf)',
+          background: 'linear-gradient(135deg, #e6342a, #e6342a)',
           border: 'none', boxShadow: '0 4px 16px rgba(45,212,191,0.25)',
         }}
       >
@@ -222,9 +222,9 @@ export default function StationBuilder() {
   const [step, setStep] = useState(0);
   const [stationData, setStationData] = useState({ name: '苏州工业园光储示范站', location: '江苏省苏州市工业园区', capacity: 1000, owner: 'Risen' });
   const [equips, setEquips] = useState<ConfiguredEquip[]>([
-    { type: 'pv', label: '光伏组串', icon: '☀️', color: '#f59e0b', count: 10, power: 100 },
-    { type: 'battery', label: '储能电池', icon: '🔋', color: '#2dd4bf', count: 2, power: 500, capacity: 2000 },
-    { type: 'pcs', label: 'PCS变流器', icon: '⚡', color: '#3b82f6', count: 2, power: 500 },
+    { type: 'pv', label: '光伏组串', icon: '☀️', color: '#d97706', count: 10, power: 100 },
+    { type: 'battery', label: '储能电池', icon: '🔋', color: '#e6342a', count: 2, power: 500, capacity: 2000 },
+    { type: 'pcs', label: 'PCS变流器', icon: '⚡', color: '#2563eb', count: 2, power: 500 },
   ]);
   const [saving, setSaving] = useState(false);
   const navigate = useNavigate();
@@ -268,33 +268,33 @@ export default function StationBuilder() {
     <div style={{ maxWidth: 720, margin: '0 auto', padding: '0 0 40px' }}>
       {/* Header */}
       <div style={{ marginBottom: 28 }}>
-        <Title level={3} style={{ margin: 0, color: '#f1f5f9', fontFamily: 'Inter, sans-serif', fontWeight: 700 }}>
+        <Title level={3} style={{ margin: 0, color: '#1a1a2e', fontFamily: 'Inter, sans-serif', fontWeight: 700 }}>
           🏗️ 可视化建站
         </Title>
-        <Text style={{ fontSize: 13, color: '#64748b', fontFamily: 'Inter, sans-serif', marginTop: 4, display: 'block' }}>
+        <Text style={{ fontSize: 13, color: '#8896a6', fontFamily: 'Inter, sans-serif', marginTop: 4, display: 'block' }}>
           一步一步配置你的光储电站
         </Text>
       </div>
 
       {/* Step indicator */}
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 28, background: '#111827', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '16px 20px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 28, background: '#ffffff', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '16px 20px' }}>
         {STEPS.map((s, i) => (
           <div key={s} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{
               width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: i <= step ? '#2dd4bf' : '#162032',
-              color: i <= step ? '#000' : '#64748b',
+              background: i <= step ? '#e6342a' : '#f5f6f8',
+              color: i <= step ? '#000' : '#8896a6',
               fontFamily: 'Inter, sans-serif', fontSize: 12, fontWeight: 700, flexShrink: 0,
-              border: i < step ? '2px solid #2dd4bf' : 'none',
+              border: i < step ? '2px solid #e6342a' : 'none',
               boxShadow: i <= step ? '0 0 12px rgba(45,212,191,0.3)' : 'none',
             }}>
               {i < step ? <CheckCircleOutlined style={{ fontSize: 14 }} /> : i + 1}
             </div>
-            <Text style={{ fontSize: 13, color: i <= step ? '#f1f5f9' : '#64748b', fontFamily: 'Inter, sans-serif', fontWeight: i === step ? 600 : 400 }}>
+            <Text style={{ fontSize: 13, color: i <= step ? '#1a1a2e' : '#8896a6', fontFamily: 'Inter, sans-serif', fontWeight: i === step ? 600 : 400 }}>
               {s}
             </Text>
             {i < STEPS.length - 1 && (
-              <div style={{ flex: 1, height: 2, background: i < step ? '#2dd4bf' : '#1a2438', borderRadius: 1, margin: '0 8px', minWidth: 20 }} />
+              <div style={{ flex: 1, height: 2, background: i < step ? '#e6342a' : '#f5f6f8', borderRadius: 1, margin: '0 8px', minWidth: 20 }} />
             )}
           </div>
         ))}
@@ -302,7 +302,7 @@ export default function StationBuilder() {
 
       {/* Step content */}
       <Card
-        style={{ background: '#111827', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 16 }}
+        style={{ background: '#ffffff', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 16 }}
         bodyStyle={{ padding: '28px 24px' }}
       >
         {step === 0 && <StepStationInfo data={stationData} onChange={setStationData} />}
@@ -316,7 +316,7 @@ export default function StationBuilder() {
           <Button
             onClick={() => setStep(s => Math.max(0, s - 1))}
             disabled={step === 0}
-            style={{ background: '#162032', border: '1px solid rgba(255,255,255,0.07)', color: '#94a3b8', fontFamily: 'Inter, sans-serif', borderRadius: 8, height: 40, padding: '0 20px' }}
+            style={{ background: '#f5f6f8', border: '1px solid rgba(255,255,255,0.07)', color: '#4a5568', fontFamily: 'Inter, sans-serif', borderRadius: 8, height: 40, padding: '0 20px' }}
           >
             上一步
           </Button>
@@ -324,7 +324,7 @@ export default function StationBuilder() {
             <Button
               type="primary"
               onClick={() => setStep(s => Math.min(2, s + 1))}
-              style={{ background: '#2dd4bf', border: 'none', color: '#000', fontFamily: 'Inter, sans-serif', fontWeight: 600, borderRadius: 8, height: 40, padding: '0 28px', boxShadow: '0 2px 8px rgba(45,212,191,0.3)' }}
+              style={{ background: '#e6342a', border: 'none', color: '#000', fontFamily: 'Inter, sans-serif', fontWeight: 600, borderRadius: 8, height: 40, padding: '0 28px', boxShadow: '0 2px 8px rgba(45,212,191,0.3)' }}
             >
               下一步 →
             </Button>
@@ -334,7 +334,7 @@ export default function StationBuilder() {
               icon={<SaveOutlined />}
               loading={saving}
               onClick={handleSave}
-              style={{ background: 'linear-gradient(135deg, #0d9488, #2dd4bf)', border: 'none', color: '#000', fontFamily: 'Inter, sans-serif', fontWeight: 700, borderRadius: 8, height: 40, boxShadow: '0 2px 8px rgba(45,212,191,0.3)' }}
+              style={{ background: 'linear-gradient(135deg, #e6342a, #e6342a)', border: 'none', color: '#000', fontFamily: 'Inter, sans-serif', fontWeight: 700, borderRadius: 8, height: 40, boxShadow: '0 2px 8px rgba(45,212,191,0.3)' }}
             >
               保存电站
             </Button>
