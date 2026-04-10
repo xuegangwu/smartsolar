@@ -1,548 +1,329 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
-import { Card, Form, Input, InputNumber, Select, Button, Space, Tag, Typography, Divider, message, Row, Col, Switch } from 'antd';
-import { PlusOutlined, DeleteOutlined, SaveOutlined, ThunderboltOutlined, SyncOutlined, ApiOutlined } from '@ant-design/icons';
+import { useState, useRef } from 'react';
+import { Card, Form, Input, InputNumber, Button, Space, Tag, Typography, Divider, message, Row, Col, Stepper } from 'antd';
+import { useNavigate } from 'react-router-dom';
+import { SaveOutlined, ThunderboltOutlined, BatteryOutlined, ApiOutlined, CarOutlined, NodeIndexOutlined, CheckCircleOutlined } from '@ant-design/icons';
 
 const { Text, Title } = Typography;
-const GRID = 30;
 
-// ─── Equipment Types ────────────────────────────────────────────────────────
-type EquipType = 'pv' | 'battery' | 'pcs' | 'transformer' | 'grid' | 'ev' | 'meter';
-
-interface EquipDef {
-  type: EquipType;
-  label: string;
-  icon: string;
-  color: string;
-  defaultPower?: number;  // kW for pv/pcs/ev
-  defaultCapacity?: number; // kWh for battery
-  hasCapacity?: boolean;
-  hasPower?: boolean;
-  maxCount?: number;
+// ─── Equipment catalog ────────────────────────────────────────────────────────
+interface EquipItem {
+  type: string; label: string; icon: any; color: string; unit: string;
+  powerLabel: string; capacityLabel?: string;
 }
 
-const EQUIP_CATALOG: EquipDef[] = [
-  { type: 'pv', label: '光伏组串', icon: '☀️', color: '#f59e0b', hasPower: true, defaultPower: 100, maxCount: 20 },
-  { type: 'battery', label: '储能电池', icon: '🔋', color: '#00e5c0', hasCapacity: true, hasPower: true, defaultPower: 50, defaultCapacity: 200, maxCount: 10 },
-  { type: 'pcs', label: 'PCS变流器', icon: '⚡', color: '#3b82f6', hasPower: true, defaultPower: 100, maxCount: 6 },
-  { type: 'transformer', label: '变压器', icon: '🔌', color: '#8b5cf6', hasPower: true, defaultPower: 500, maxCount: 4 },
-  { type: 'grid', label: '电网接入', icon: '🏭', color: '#6366f1', hasPower: true, defaultPower: 1000, maxCount: 1 },
-  { type: 'ev', label: '充电桩', icon: '🚗', color: '#f97316', hasPower: true, defaultPower: 120, maxCount: 8 },
-  { type: 'meter', label: '电能表', icon: '📊', color: '#10b981', maxCount: 4 },
+const EQUIP_LIST: EquipItem[] = [
+  { type: 'pv', label: '光伏组串', icon: '☀️', color: '#f59e0b', unit: 'kW', powerLabel: '单串功率', capacityLabel: '' },
+  { type: 'battery', label: '储能电池', icon: '🔋', color: '#2dd4bf', unit: 'kWh', powerLabel: '放电功率', capacityLabel: '储能容量' },
+  { type: 'pcs', label: 'PCS变流器', icon: '⚡', color: '#3b82f6', unit: 'kW', powerLabel: '额定功率' },
+  { type: 'transformer', label: '变压器', icon: '🔌', color: '#8b5cf6', unit: 'kVA', powerLabel: '额定容量' },
+  { type: 'grid', label: '电网接入', icon: '🏭', color: '#6366f1', unit: 'kW', powerLabel: '并网容量' },
+  { type: 'ev', label: '充电桩', icon: '🚗', color: '#f97316', unit: 'kW', powerLabel: '充电功率' },
 ];
 
-const CONNECTIONS: Record<string, string[]> = {
-  pv: ['pcs', 'meter'],
-  battery: ['pcs'],
-  pcs: ['transformer', 'ev', 'meter'],
-  transformer: ['grid'],
-  grid: [],
-  ev: [],
-  meter: [],
-};
-
-// ─── Equipment Block ────────────────────────────────────────────────────────
-function EquipBlock({ equip, selected, onSelect, onDelete, count, maxCount }: {
-  equip: EquipDef; selected: boolean; onSelect: () => void; onDelete: () => void; count: number; maxCount: number;
-}) {
-  return (
-    <div
-      onClick={onSelect}
-      style={{
-        padding: '10px 12px', borderRadius: 8, cursor: 'pointer',
-        border: `2px solid ${selected ? equip.color : '#2a3a52'}`,
-        background: selected ? equip.color + '18' : '#141c2e',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-        transition: 'all 0.15s', userSelect: 'none',
-        boxShadow: selected ? `0 0 16px ${equip.color}40` : 'none',
-        minWidth: 80, flexShrink: 0,
-      }}
-    >
-      <div style={{ fontSize: 28 }}>{equip.icon}</div>
-      <Text style={{ fontSize: 11, color: selected ? equip.color : '#8899aa', fontFamily: 'JetBrains Mono, monospace', textAlign: 'center' }}>
-        {equip.label}
-      </Text>
-      <Text style={{ fontSize: 9, color: '#3a4a5a', fontFamily: 'JetBrains Mono, monospace' }}>
-        {count}/{maxCount}
-      </Text>
-    </div>
-  );
+interface ConfiguredEquip {
+  type: string; label: string; icon: any; color: string;
+  count: number; power: number; capacity?: number;
 }
 
-// ─── Canvas Node ────────────────────────────────────────────────────────────
-interface NodeData {
-  id: string; type: EquipType; x: number; y: number;
-  name: string; power?: number; capacity?: number; efficiency?: number;
-}
-
-function CanvasNode({ node, catalog, onMove, onSelect, selected }: {
-  node: NodeData; catalog: EquipDef[]; onMove: (id: string, x: number, y: number) => void;
-  onSelect: (id: string) => void; selected: boolean;
-}) {
-  const def = catalog.find(c => c.type === node.type)!;
-  const ref = useRef<HTMLDivElement>(null);
-  const dragging = useRef(false);
-  const offset = useRef({ x: 0, y: 0 });
-
-  function onMouseDown(e: React.MouseEvent) {
-    if ((e.target as HTMLElement).closest('.delete-btn')) return;
-    dragging.current = true;
-    offset.current = { x: e.clientX - node.x, y: e.clientY - node.y };
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
-    onSelect(node.id);
-    e.stopPropagation();
-  }
-
-  function onMouseMove(e: MouseEvent) {
-    if (!dragging.current) return;
-    const nx = Math.round((e.clientX - offset.current.x) / GRID) * GRID;
-    const ny = Math.round((e.clientY - offset.current.y) / GRID) * GRID;
-    onMove(node.id, nx, ny);
-  }
-
-  function onMouseUp() {
-    dragging.current = false;
-    document.removeEventListener('mousemove', onMouseMove);
-    document.removeEventListener('mouseup', onMouseUp);
-  }
-
-  const w = 100, h = 70;
+// ─── Step 1: Choose station type ──────────────────────────────────────────────
+function StepStationInfo({ data, onChange }: { data: any; onChange: (d: any) => void }) {
   return (
-    <div
-      ref={ref}
-      onMouseDown={onMouseDown}
-      style={{
-        position: 'absolute', left: node.x - w / 2, top: node.y - h / 2,
-        width: w, height: h,
-        background: '#141c2e',
-        border: `2px solid ${selected ? def.color : '#2a3a52'}`,
-        borderRadius: 8,
-        cursor: dragging.current ? 'grabbing' : 'grab',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2,
-        boxShadow: selected ? `0 0 20px ${def.color}50` : `0 4px 12px rgba(0,0,0,0.4)`,
-        transition: dragging.current ? 'none' : 'box-shadow 0.15s',
-        zIndex: selected ? 10 : 1,
-      }}
-    >
-      {/* Delete */}
-      <button
-        className="delete-btn"
-        onClick={e => { e.stopPropagation(); onDelete(); }}
-        style={{
-          position: 'absolute', top: -8, right: -8,
-          width: 18, height: 18, borderRadius: '50%',
-          background: '#ff5252', border: 'none', cursor: 'pointer',
-          color: '#fff', fontSize: 10, lineHeight: 1,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 11,
-        }}
-      >
-        ✕
-      </button>
-
-      <div style={{ fontSize: 22 }}>{def.icon}</div>
-      <Text style={{ fontSize: 9, color: def.color, fontFamily: 'JetBrains Mono, monospace', textAlign: 'center', fontWeight: 600 }}>
-        {node.name}
-      </Text>
-      <div style={{ fontSize: 9, color: '#5a6a7a', fontFamily: 'JetBrains Mono, monospace' }}>
-        {node.power ? `${node.power}kW` : ''}
-        {node.capacity ? ` ${node.capacity}kWh` : ''}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div>
+        <Text style={{ fontSize: 12, color: '#94a3b8', fontFamily: 'Inter, sans-serif', display: 'block', marginBottom: 8 }}>电站名称</Text>
+        <Input
+          value={data.name || ''}
+          onChange={e => onChange({ ...data, name: e.target.value })}
+          placeholder="例如：苏州工业园光储示范站"
+          size="large"
+          style={{ background: '#162032', border: '1px solid rgba(255,255,255,0.07)', color: '#f1f5f9', fontFamily: 'Inter, sans-serif', borderRadius: 10 }}
+        />
+      </div>
+      <div>
+        <Text style={{ fontSize: 12, color: '#94a3b8', fontFamily: 'Inter, sans-serif', display: 'block', marginBottom: 8 }}>建设地点</Text>
+        <Input
+          value={data.location || ''}
+          onChange={e => onChange({ ...data, location: e.target.value })}
+          placeholder="例如：江苏省苏州市工业园区"
+          size="large"
+          style={{ background: '#162032', border: '1px solid rgba(255,255,255,0.07)', color: '#f1f5f9', fontFamily: 'Inter, sans-serif', borderRadius: 10 }}
+        />
+      </div>
+      <div>
+        <Text style={{ fontSize: 12, color: '#94a3b8', fontFamily: 'Inter, sans-serif', display: 'block', marginBottom: 8 }}>电站规模</Text>
+        <Row gutter={12}>
+          <Col span={12}>
+            <InputNumber
+              value={data.capacity}
+              onChange={v => onChange({ ...data, capacity: v || 0 })}
+              placeholder="装机容量"
+              suffix="kW"
+              min={0}
+              size="large"
+              style={{ width: '100%', background: '#162032', border: '1px solid rgba(255,255,255,0.07)', color: '#f1f5f9', fontFamily: 'Inter, sans-serif', borderRadius: 10 }}
+            />
+          </Col>
+          <Col span={12}>
+            <Input
+              value={data.owner || ''}
+              onChange={e => onChange({ ...data, owner: e.target.value })}
+              placeholder="业主单位"
+              size="large"
+              style={{ background: '#162032', border: '1px solid rgba(255,255,255,0.07)', color: '#f1f5f9', fontFamily: 'Inter, sans-serif', borderRadius: 10 }}
+            />
+          </Col>
+        </Row>
       </div>
     </div>
   );
 }
 
-// ─── Connection Lines ────────────────────────────────────────────────────────
-function ConnectionLines({ nodes, catalog }: { nodes: NodeData[]; catalog: EquipDef[] }) {
-  const lines: JSX.Element[] = [];
-  nodes.forEach(n => {
-    const def = n;
-    const conns = CONNECTIONS[n.type] || [];
-    nodes.forEach(m => {
-      if (n.id === m.id) return;
-      if (conns.includes(m.type)) {
-        lines.push(
-          <line
-            key={`${n.id}-${m.id}`}
-            x1={n.x} y1={n.y} x2={m.x} y2={m.y}
-            stroke="#2a3a52" strokeWidth={2}
-            strokeDasharray="6 3"
-            opacity={0.6}
-          />
+// ─── Step 2: Configure equipment ──────────────────────────────────────────────
+function StepEquipConfig({ equips, onChange }: { equips: ConfiguredEquip[]; onChange: (e: ConfiguredEquip[]) => void }) {
+  function update(index: number, field: string, value: number) {
+    const next = [...equips];
+    (next[index] as any)[field] = value;
+    onChange(next);
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {EQUIP_LIST.map(eq => {
+        const configured = equips.find(e => e.type === eq.type);
+        const count = configured?.count || 0;
+        return (
+          <div key={eq.type} style={{
+            padding: '14px 16px',
+            background: count > 0 ? `${eq.color}0a` : '#162032',
+            border: `1px solid ${count > 0 ? eq.color + '40' : 'rgba(255,255,255,0.06)'}`,
+            borderRadius: 10,
+            display: 'flex', alignItems: 'center', gap: 12,
+          }}>
+            <div style={{ fontSize: 28, flexShrink: 0 }}>{eq.icon}</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                <Text style={{ fontSize: 14, color: '#f1f5f9', fontFamily: 'Inter, sans-serif', fontWeight: 600 }}>{eq.label}</Text>
+                {count > 0 && <Tag style={{ background: eq.color + '20', border: 'none', color: eq.color, fontSize: 10, borderRadius: 20 }}>{count}台</Tag>}
+              </div>
+              {count > 0 && (
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <InputNumber
+                    min={0} max={999} value={count}
+                    onChange={v => {
+                      const arr = [...equips.filter(e => e.type !== eq.type)];
+                      if (v && v > 0) arr.push({ type: eq.type, label: eq.label, icon: eq.icon, color: eq.color, count: v, power: configured?.power || 100, capacity: configured?.capacity });
+                      onChange(arr);
+                    }}
+                    style={{ width: 70, background: '#0c1220', border: '1px solid ' + eq.color + '40', color: eq.color, fontFamily: 'JetBrains Mono, monospace', borderRadius: 6 }}
+                  />
+                  <InputNumber
+                    min={0} value={configured?.power || 0}
+                    onChange={v => update(equips.findIndex(e => e.type === eq.type), 'power', v || 0)}
+                    addonAfter={eq.unit}
+                    style={{ flex: 1, background: '#0c1220', border: '1px solid rgba(255,255,255,0.07)', color: '#f1f5f9', fontFamily: 'JetBrains Mono, monospace', borderRadius: 6 }}
+                  />
+                </div>
+              )}
+            </div>
+            {count === 0 && (
+              <Button size="small"
+                onClick={() => onChange([...equips, { type: eq.type, label: eq.label, icon: eq.icon, color: eq.color, count: 1, power: 100 }])}
+                style={{ borderColor: eq.color + '60', color: eq.color, fontSize: 12, borderRadius: 6, background: 'transparent' }}>
+                + 添加
+              </Button>
+            )}
+          </div>
         );
-      }
-    });
-  });
-  return <>{lines}</>;
+      })}
+    </div>
+  );
 }
 
-// ─── Main Builder ────────────────────────────────────────────────────────────
+// ─── Step 3: Summary & save ──────────────────────────────────────────────────
+function StepSummary({ data, stationData, onSave, saving }: { data: any; stationData: any; onSave: () => void; saving: boolean }) {
+  const totalPV = (data.find((e: any) => e.type === 'pv')?.power || 0) * (data.find((e: any) => e.type === 'pv')?.count || 0);
+  const totalBattery = (data.find((e: any) => e.type === 'battery')?.power || 0) * (data.find((e: any) => e.type === 'battery')?.count || 0);
+  const totalPCS = (data.find((e: any) => e.type === 'pcs')?.power || 0) * (data.find((e: any) => e.type === 'pcs')?.count || 0);
+  const totalEV = (data.find((e: any) => e.type === 'ev')?.power || 0) * (data.find((e: any) => e.type === 'ev')?.count || 0);
+  const investEst = totalPV * 4000 + totalBattery * 1500 + totalPCS * 800 + totalEV * 300;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Info */}
+      <div style={{ background: '#162032', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, padding: '16px' }}>
+        <Row gutter={[16, 12]}>
+          <Col span={12}><Text style={{ fontSize: 11, color: '#64748b' }}>电站名称</Text><div style={{ fontSize: 14, color: '#f1f5f9', fontWeight: 600, marginTop: 2 }}>{stationData.name || '-'}</div></Col>
+          <Col span={12}><Text style={{ fontSize: 11, color: '#64748b' }}>建设地点</Text><div style={{ fontSize: 14, color: '#f1f5f9', marginTop: 2 }}>{stationData.location || '-'}</div></Col>
+          <Col span={12}><Text style={{ fontSize: 11, color: '#64748b' }}>装机容量</Text><div style={{ fontSize: 14, color: '#2dd4bf', fontWeight: 600, marginTop: 2 }}>{stationData.capacity || 0} kW</div></Col>
+          <Col span={12}><Text style={{ fontSize: 11, color: '#64748b' }}>估算投资</Text><div style={{ fontSize: 14, color: '#f59e0b', fontWeight: 600, marginTop: 2 }}>{(investEst / 10000).toFixed(0)}万元</div></Col>
+        </Row>
+      </div>
+
+      {/* Equipment list */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <Text style={{ fontSize: 12, color: '#64748b', fontFamily: 'Inter, sans-serif', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em' }}>设备清单</Text>
+        {data.filter((e: any) => e.count > 0).map((eq: any) => (
+          <div key={eq.type} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: '#162032', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 8 }}>
+            <span style={{ fontSize: 20 }}>{eq.icon}</span>
+            <div style={{ flex: 1 }}>
+              <Text style={{ fontSize: 13, color: '#f1f5f9', fontFamily: 'Inter, sans-serif' }}>{eq.label}</Text>
+            </div>
+            <Text style={{ fontSize: 12, color: eq.color, fontFamily: 'JetBrains Mono, monospace', fontWeight: 600 }}>
+              {eq.count}台 × {eq.power}{eq.type === 'battery' ? 'kWh' : 'kW'}
+            </Text>
+          </div>
+        ))}
+        {data.filter((e: any) => e.count > 0).length === 0 && (
+          <div style={{ padding: 20, textAlign: 'center', color: '#334155', fontFamily: 'Inter, sans-serif', fontSize: 13 }}>
+            暂未配置设备
+          </div>
+        )}
+      </div>
+
+      <Button
+        type="primary"
+        icon={<SaveOutlined />}
+        loading={saving}
+        onClick={onSave}
+        block
+        size="large"
+        style={{
+          height: 50, borderRadius: 10,
+          fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 15,
+          background: 'linear-gradient(135deg, #0d9488, #2dd4bf)',
+          border: 'none', boxShadow: '0 4px 16px rgba(45,212,191,0.25)',
+        }}
+      >
+        创建电站
+      </Button>
+    </div>
+  );
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────────
+const STEPS = ['基本信息', '设备配置', '确认保存'];
+
 export default function StationBuilder() {
-  const [nodes, setNodes] = useState<NodeData[]>([]);
-  const [selected, setSelected] = useState<string | null>(null);
-  const [equipCounts, setEquipCounts] = useState<Record<string, number>>({});
-  const [form] = Form.useForm();
-  const canvasRef = useRef<HTMLDivElement>(null);
-  const [canvasSize, setCanvasSize] = useState({ w: 800, h: 500 });
-  const [stationName, setStationName] = useState('苏州光储示范站');
-  const [stationLocation, setStationLocation] = useState('江苏省苏州市工业园区');
+  const [step, setStep] = useState(0);
+  const [stationData, setStationData] = useState({ name: '苏州工业园光储示范站', location: '江苏省苏州市工业园区', capacity: 1000, owner: 'Risen' });
+  const [equips, setEquips] = useState<ConfiguredEquip[]>([
+    { type: 'pv', label: '光伏组串', icon: '☀️', color: '#f59e0b', count: 10, power: 100 },
+    { type: 'battery', label: '储能电池', icon: '🔋', color: '#2dd4bf', count: 2, power: 500, capacity: 2000 },
+    { type: 'pcs', label: 'PCS变流器', icon: '⚡', color: '#3b82f6', count: 2, power: 500 },
+  ]);
   const [saving, setSaving] = useState(false);
-
-  const selectedNode = nodes.find(n => n.id === selected);
-
-  useEffect(() => {
-    function update() {
-      if (canvasRef.current) {
-        const r = canvasRef.current.getBoundingClientRect();
-        setCanvasSize({ w: r.width, h: r.height });
-      }
-    }
-    update();
-    window.addEventListener('resize', update);
-    return () => window.removeEventListener('resize', update);
-  }, []);
-
-  function addEquip(def: EquipDef) {
-    const count = equipCounts[def.type] || 0;
-    if (def.maxCount && count >= def.maxCount) {
-      message.warning(`${def.label} 最多配置 ${def.maxCount} 个`);
-      return;
-    }
-    const id = `${def.type}_${Date.now()}`;
-    const cx = canvasSize.w / 2;
-    const cy = canvasSize.h / 2;
-    // Spread in a grid
-    const sameCount = nodes.filter(n => n.type === def.type).length;
-    const angle = (sameCount / (def.maxCount || 8)) * 2 * Math.PI;
-    const radius = Math.min(canvasSize.w, canvasSize.h) * 0.28;
-    const nx = cx + Math.cos(angle) * radius;
-    const ny = cy + Math.sin(angle) * radius;
-    const newNode: NodeData = {
-      id, type: def.type,
-      x: Math.round(nx / GRID) * GRID,
-      y: Math.round(ny / GRID) * GRID,
-      name: `${def.label}${sameCount + 1}`,
-      power: def.defaultPower,
-      capacity: def.defaultCapacity,
-      efficiency: 98,
-    };
-    setNodes(n => [...n, newNode]);
-    setEquipCounts(c => ({ ...c, [def.type]: count + 1 }));
-    setSelected(id);
-    message.success(`已添加 ${def.label}`);
-  }
-
-  function deleteNode(id: string) {
-    const node = nodes.find(n => n.id === id);
-    if (!node) return;
-    setNodes(n => n.filter(x => x.id !== id));
-    setEquipCounts(c => ({ ...c, [node.type]: Math.max(0, (c[node.type] || 1) - 1) }));
-    if (selected === id) setSelected(null);
-  }
-
-  function moveNode(id: string, x: number, y: number) {
-    const pad = 60;
-    const nx = Math.max(pad, Math.min(canvasSize.w - pad, x));
-    const ny = Math.max(pad, Math.min(canvasSize.h - pad, y));
-    setNodes(n => n.map(no => no.id === id ? { ...no, x: nx, y: ny } : no));
-  }
-
-  function updateSelectedNode(updates: Partial<NodeData>) {
-    if (!selected) return;
-    setNodes(n => n.map(no => no.id === selected ? { ...no, ...updates } : no));
-  }
-
-  // Summary stats
-  const totalPV = nodes.filter(n => n.type === 'pv').reduce((s, n) => s + (n.power || 0), 0);
-  const totalBattery = nodes.filter(n => n.type === 'battery').reduce((s, n) => s + (n.capacity || 0), 0);
-  const totalPCS = nodes.filter(n => n.type === 'pcs').reduce((s, n) => s + (n.power || 0), 0);
-  const totalEV = nodes.filter(n => n.type === 'ev').reduce((s, n) => s + (n.power || 0), 0);
-  const gridPower = nodes.filter(n => n.type === 'grid').reduce((s, n) => s + (n.power || 0), 0);
-  const investEst = (totalPV * 4000 + totalBattery * 1500 + totalPCS * 800 + totalEV * 300 + gridPower * 2000) / 10000;
+  const navigate = useNavigate();
 
   async function handleSave() {
-    if (!stationName.trim()) { message.warning('请输入电站名称'); return; }
-    if (nodes.length === 0) { message.warning('请至少添加一个设备'); return; }
+    if (!stationData.name.trim()) { message.warning('请填写电站名称'); return; }
     setSaving(true);
-    const stationData = {
-      name: stationName,
-      location: stationLocation,
-      capacity: totalPV,
+    const totalPV = (equips.find(e => e.type === 'pv')?.power || 0) * (equips.find(e => e.type === 'pv')?.count || 0);
+    const payload = {
+      name: stationData.name,
+      location: stationData.location,
+      capacity: totalPV / 1000,
       installedCapacity: totalPV,
       peakPower: totalPV,
       type: 'solar_storage',
       status: 'planning',
-      equipment: nodes.map(n => ({ type: n.type, name: n.name, power: n.power, capacity: n.capacity })),
-      gridConnectionDate: new Date().toISOString().slice(0, 10),
-      owner: 'Risen',
+      owner: stationData.owner,
       contact: 'admin@risen.com',
+      gridConnectionDate: new Date().toISOString().slice(0, 10),
+      equipment: equips.filter(e => e.count > 0).map(e => ({ type: e.type, name: e.label, count: e.count, power: e.power, capacity: e.capacity })),
     };
     try {
       const r = await fetch('/api/stations', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(stationData),
+        body: JSON.stringify(payload),
       });
       const d = await r.json();
       if (r.ok && d.success) {
-        message.success(`✅ 电站"${stationName}"已创建！可前往电站管理页面查看`);
+        message.success(`✅ 电站"${stationData.name}"已创建！`);
+        setTimeout(() => navigate('/stations'), 1200);
       } else {
-        throw new Error(d.error || '保存失败');
+        throw new Error(d.error || '创建失败');
       }
     } catch (err: any) {
-      message.error(`保存失败: ${err.message}`);
+      message.error(`创建失败: ${err.message}`);
     }
     setSaving(false);
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14, height: 'calc(100vh - 140px)' }}>
+    <div style={{ maxWidth: 720, margin: '0 auto', padding: '0 0 40px' }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <SyncOutlined style={{ fontSize: 20, color: '#00e5c0' }} />
-          <Title level={4} style={{ margin: 0, color: '#f0f4f8', fontFamily: 'JetBrains Mono, monospace' }}>
-            可视化建站
-          </Title>
-        </div>
-        <Tag style={{ background: 'rgba(0,229,192,0.1)', border: '1px solid rgba(0,229,192,0.3)', color: '#00e5c0', fontFamily: 'JetBrains Mono, monospace', fontSize: 11 }}>
-          规划中
-        </Tag>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
-          <Button
-            icon={<SaveOutlined />}
-            loading={saving}
-            onClick={handleSave}
-            style={{ background: '#00e5c0', border: 'none', color: '#000', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, borderRadius: 6, height: 36 }}
-          >
-            保存电站
-          </Button>
-        </div>
+      <div style={{ marginBottom: 28 }}>
+        <Title level={3} style={{ margin: 0, color: '#f1f5f9', fontFamily: 'Inter, sans-serif', fontWeight: 700 }}>
+          🏗️ 可视化建站
+        </Title>
+        <Text style={{ fontSize: 13, color: '#64748b', fontFamily: 'Inter, sans-serif', marginTop: 4, display: 'block' }}>
+          一步一步配置你的光储电站
+        </Text>
       </div>
 
-      <div style={{ display: 'flex', gap: 14, flex: 1, overflow: 'hidden' }}>
-        {/* Left: Equipment Palette */}
-        <Card
-          title={
-            <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: '#8899aa', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              设备库
-            </span>
-          }
-          style={{ width: 160, background: '#141c2e', border: '1px solid #2a3a52', borderRadius: 10, flexShrink: 0 }}
-          bodyStyle={{ padding: 10, display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto' }}
-        >
-          {EQUIP_CATALOG.map(def => {
-            const count = equipCounts[def.type] || 0;
-            return (
-              <EquipBlock
-                key={def.type}
-                equip={def}
-                selected={false}
-                count={count}
-                maxCount={def.maxCount || 99}
-                onSelect={() => addEquip(def)}
-                onDelete={() => {}}
-              />
-            );
-          })}
-
-          <Divider style={{ borderColor: '#2a3a52', margin: '4px 0' }} />
-
-          <Text style={{ fontSize: 10, color: '#3a4a5a', fontFamily: 'JetBrains Mono, monospace', textAlign: 'center' }}>
-            点击添加设备到画布
-          </Text>
-        </Card>
-
-        {/* Center: Canvas */}
-        <Card
-          style={{ flex: 1, background: '#0f1623', border: '1px solid #2a3a52', borderRadius: 10, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
-          bodyStyle={{ flex: 1, padding: 0, position: 'relative', overflow: 'hidden' }}
-        >
-          {/* Station info bar */}
-          <div style={{
-            padding: '8px 16px', background: '#141c2e',
-            borderBottom: '1px solid #2a3a52', display: 'flex', alignItems: 'center', gap: 12,
-          }}>
-            <Input
-              value={stationName}
-              onChange={e => setStationName(e.target.value)}
-              placeholder="电站名称"
-              size="small"
-              style={{ width: 160, fontFamily: 'JetBrains Mono, monospace', background: '#1e2a3d', border: '1px solid #2a3a52', color: '#f0f4f8' }}
-            />
-            <Input
-              value={stationLocation}
-              onChange={e => setStationLocation(e.target.value)}
-              placeholder="建设地点"
-              size="small"
-              style={{ width: 200, fontFamily: 'JetBrains Mono, monospace', background: '#1e2a3d', border: '1px solid #2a3a52', color: '#f0f4f8' }}
-            />
-            <Text style={{ fontSize: 11, color: '#3a4a5a', marginLeft: 'auto', fontFamily: 'JetBrains Mono, monospace' }}>
-              共 {nodes.length} 个设备 · {canvasSize.w}×{canvasSize.h}
+      {/* Step indicator */}
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 28, background: '#111827', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '16px 20px' }}>
+        {STEPS.map((s, i) => (
+          <div key={s} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{
+              width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: i <= step ? '#2dd4bf' : '#162032',
+              color: i <= step ? '#000' : '#64748b',
+              fontFamily: 'Inter, sans-serif', fontSize: 12, fontWeight: 700, flexShrink: 0,
+              border: i < step ? '2px solid #2dd4bf' : 'none',
+              boxShadow: i <= step ? '0 0 12px rgba(45,212,191,0.3)' : 'none',
+            }}>
+              {i < step ? <CheckCircleOutlined style={{ fontSize: 14 }} /> : i + 1}
+            </div>
+            <Text style={{ fontSize: 13, color: i <= step ? '#f1f5f9' : '#64748b', fontFamily: 'Inter, sans-serif', fontWeight: i === step ? 600 : 400 }}>
+              {s}
             </Text>
-          </div>
-
-          {/* Grid Canvas */}
-          <div
-            ref={canvasRef}
-            onClick={() => setSelected(null)}
-            style={{
-              flex: 1, position: 'relative', overflow: 'hidden', cursor: 'crosshair',
-              backgroundImage: `
-                linear-gradient(rgba(42,58,82,0.4) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(42,58,82,0.4) 1px, transparent 1px)
-              `,
-              backgroundSize: `${GRID}px ${GRID}px`,
-              backgroundPosition: '0 0',
-            }}
-          >
-            {/* Connection lines (SVG layer) */}
-            <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', overflow: 'visible' }}>
-              <ConnectionLines nodes={nodes} catalog={EQUIP_CATALOG} />
-            </svg>
-
-            {/* Nodes */}
-            {nodes.map(node => (
-              <CanvasNode
-                key={node.id}
-                node={node}
-                catalog={EQUIP_CATALOG}
-                onMove={moveNode}
-                onSelect={setSelected}
-                selected={selected === node.id}
-                onDelete={() => deleteNode(node.id)}
-              />
-            ))}
-
-            {/* Empty state */}
-            {nodes.length === 0 && (
-              <div style={{
-                position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
-                alignItems: 'center', justifyContent: 'center', gap: 12, pointerEvents: 'none',
-              }}>
-                <div style={{ fontSize: 48, opacity: 0.3 }}>⚙️</div>
-                <Text style={{ color: '#3a4a5a', fontFamily: 'JetBrains Mono, monospace', fontSize: 13 }}>
-                  从左侧设备库点击添加组件
-                </Text>
-                <Text style={{ color: '#2a3a52', fontFamily: 'JetBrains Mono, monospace', fontSize: 11 }}>
-                  拖拽设备可调整位置
-                </Text>
-              </div>
+            {i < STEPS.length - 1 && (
+              <div style={{ flex: 1, height: 2, background: i < step ? '#2dd4bf' : '#1a2438', borderRadius: 1, margin: '0 8px', minWidth: 20 }} />
             )}
           </div>
-        </Card>
-
-        {/* Right: Properties */}
-        <Card
-          title={
-            <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: '#8899aa', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              属性配置
-            </span>
-          }
-          style={{ width: 240, background: '#141c2e', border: '1px solid #2a3a52', borderRadius: 10, flexShrink: 0 }}
-          bodyStyle={{ padding: 14, overflowY: 'auto' }}
-        >
-          {selectedNode ? (() => {
-            const def = EQUIP_CATALOG.find(c => c.type === selectedNode.type)!;
-            return (
-              <Form
-                form={form}
-                layout="vertical"
-                initialValues={selectedNode}
-                onValuesChange={(_, v) => updateSelectedNode(v)}
-              >
-                <div style={{ textAlign: 'center', marginBottom: 14 }}>
-                  <div style={{ fontSize: 40 }}>{def.icon}</div>
-                  <div style={{ fontSize: 13, color: def.color, fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, marginTop: 4 }}>
-                    {def.label}
-                  </div>
-                </div>
-
-                <Divider style={{ borderColor: '#2a3a52' }} />
-
-                <Form.Item name="name" label={
-                  <span style={{ color: '#8899aa', fontFamily: 'JetBrains Mono, monospace', fontSize: 10 }}>名称</span>
-                }>
-                  <Input style={{ background: '#1e2a3d', border: '1px solid #2a3a52', color: '#f0f4f8', fontFamily: 'JetBrains Mono, monospace', borderRadius: 6 }} />
-                </Form.Item>
-
-                {def.hasPower && (
-                  <Form.Item name="power" label={
-                    <span style={{ color: '#8899aa', fontFamily: 'JetBrains Mono, monospace', fontSize: 10 }}>功率 (kW)</span>
-                  }>
-                    <InputNumber min={1} max={10000} step={10}
-                      style={{ width: '100%', background: '#1e2a3d', border: '1px solid #2a3a52', color: '#f0f4f8', fontFamily: 'JetBrains Mono, monospace', borderRadius: 6 }} />
-                  </Form.Item>
-                )}
-
-                {def.hasCapacity && (
-                  <Form.Item name="capacity" label={
-                    <span style={{ color: '#8899aa', fontFamily: 'JetBrains Mono, monospace', fontSize: 10 }}>容量 (kWh)</span>
-                  }>
-                    <InputNumber min={1} max={100000} step={50}
-                      style={{ width: '100%', background: '#1e2a3d', border: '1px solid #2a3a52', color: '#f0f4f8', fontFamily: 'JetBrains Mono, monospace', borderRadius: 6 }} />
-                  </Form.Item>
-                )}
-
-                <Form.Item name="efficiency" label={
-                  <span style={{ color: '#8899aa', fontFamily: 'JetBrains Mono, monospace', fontSize: 10 }}>效率 (%)</span>
-                }>
-                  <InputNumber min={60} max={100} step={0.5}
-                    style={{ width: '100%', background: '#1e2a3d', border: '1px solid #2a3a52', color: '#f0f4f8', fontFamily: 'JetBrains Mono, monospace', borderRadius: 6 }} />
-                </Form.Item>
-
-                <Button danger block icon={<DeleteOutlined />}
-                  onClick={() => deleteNode(selectedNode.id)}
-                  style={{ marginTop: 8, borderRadius: 6, fontFamily: 'JetBrains Mono, monospace' }}>
-                  移除设备
-                </Button>
-              </Form>
-            );
-          })() : (
-            <div style={{ padding: 20, textAlign: 'center', color: '#3a4a5a', fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }}>
-              选择画布上的设备以编辑属性
-            </div>
-          )}
-        </Card>
+        ))}
       </div>
 
-      {/* Bottom: Summary Bar */}
+      {/* Step content */}
       <Card
-        style={{ background: '#0f1623', border: '1px solid #2a3a52', borderRadius: 10 }}
-        bodyStyle={{ padding: '10px 20px' }}
+        style={{ background: '#111827', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 16 }}
+        bodyStyle={{ padding: '28px 24px' }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap', fontFamily: 'JetBrains Mono, monospace' }}>
-          <Text style={{ fontSize: 11, color: '#5a6a7a', textTransform: 'uppercase' }}>装机概览</Text>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 14, color: '#f59e0b' }}>☀️</span>
-            <Text style={{ fontSize: 13, color: '#f59e0b', fontWeight: 600 }}>{totalPV}kW</Text>
-            <Text style={{ fontSize: 11, color: '#3a4a5a' }}>光伏</Text>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 14, color: '#00e5c0' }}>🔋</span>
-            <Text style={{ fontSize: 13, color: '#00e5c0', fontWeight: 600 }}>{totalBattery}kWh</Text>
-            <Text style={{ fontSize: 11, color: '#3a4a5a' }}>储能</Text>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 14, color: '#3b82f6' }}>⚡</span>
-            <Text style={{ fontSize: 13, color: '#3b82f6', fontWeight: 600 }}>{totalPCS}kW</Text>
-            <Text style={{ fontSize: 11, color: '#3a4a5a' }}>PCS</Text>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 14, color: '#f97316' }}>🚗</span>
-            <Text style={{ fontSize: 13, color: '#f97316', fontWeight: 600 }}>{totalEV}kW</Text>
-            <Text style={{ fontSize: 11, color: '#3a4a5a' }}>充电桩</Text>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 14, color: '#6366f1' }}>🏭</span>
-            <Text style={{ fontSize: 13, color: '#6366f1', fontWeight: 600 }}>{gridPower}kW</Text>
-            <Text style={{ fontSize: 11, color: '#3a4a5a' }}>电网</Text>
-          </div>
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Text style={{ fontSize: 11, color: '#5a6a7a', textTransform: 'uppercase' }}>估算投资</Text>
-            <Text style={{ fontSize: 18, fontWeight: 700, color: '#00e5c0' }}>
-              {investEst >= 1 ? `~${investEst.toFixed(0)}万` : `~${(investEst * 10000).toFixed(0)}元`}
-            </Text>
-          </div>
+        {step === 0 && <StepStationInfo data={stationData} onChange={setStationData} />}
+        {step === 1 && <StepEquipConfig equips={equips} onChange={setEquips} />}
+        {step === 2 && <StepSummary data={equips} stationData={stationData} onSave={handleSave} saving={saving} />}
+
+        <Divider style={{ borderColor: 'rgba(255,255,255,0.05)', margin: '24px 0' }} />
+
+        {/* Navigation */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Button
+            onClick={() => setStep(s => Math.max(0, s - 1))}
+            disabled={step === 0}
+            style={{ background: '#162032', border: '1px solid rgba(255,255,255,0.07)', color: '#94a3b8', fontFamily: 'Inter, sans-serif', borderRadius: 8, height: 40, padding: '0 20px' }}
+          >
+            上一步
+          </Button>
+          {step < 2 ? (
+            <Button
+              type="primary"
+              onClick={() => setStep(s => Math.min(2, s + 1))}
+              style={{ background: '#2dd4bf', border: 'none', color: '#000', fontFamily: 'Inter, sans-serif', fontWeight: 600, borderRadius: 8, height: 40, padding: '0 28px', boxShadow: '0 2px 8px rgba(45,212,191,0.3)' }}
+            >
+              下一步 →
+            </Button>
+          ) : (
+            <Button
+              type="primary"
+              icon={<SaveOutlined />}
+              loading={saving}
+              onClick={handleSave}
+              style={{ background: 'linear-gradient(135deg, #0d9488, #2dd4bf)', border: 'none', color: '#000', fontFamily: 'Inter, sans-serif', fontWeight: 700, borderRadius: 8, height: 40, boxShadow: '0 2px 8px rgba(45,212,191,0.3)' }}
+            >
+              保存电站
+            </Button>
+          )}
         </div>
       </Card>
     </div>
