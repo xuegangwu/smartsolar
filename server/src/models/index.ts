@@ -77,6 +77,9 @@ const workOrderSchema = new mongoose.Schema({
     at: { type: Date, default: Date.now },
     note: { type: String },
   }],
+  // AI预测相关
+  relatedAlertId: { type: mongoose.Schema.Types.ObjectId },
+  tags: [String],
   // 时间戳
   assignedAt: Date,
   acceptedAt: Date,

@@ -19,6 +19,7 @@ import Reports from './pages/Reports';
 import StationTopology from './pages/StationTopology';
 import StationBuilder from './pages/StationBuilder';
 import HealthDashboard from './pages/HealthDashboard';
+import AICopilot from './pages/AICopilot';
 import Login from './pages/Login';
 import { Spin } from 'antd';
 import { LoadingOutlined } from '@ant-design/icons';
@@ -60,6 +61,7 @@ export default function App() {
                   <Route path="stations/:id/topology" element={<StationTopology />} />
                   <Route path="ems-simulator" element={<EmsSimulator />} />
                   <Route path="health" element={<HealthDashboard />} />
+                  <Route path="ai" element={<AICopilot />} />
                 </Route>
               </Routes>
             </BrowserRouter>

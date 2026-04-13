@@ -15,6 +15,8 @@ import notificationRoutes from './routes/notificationRoutes.js';
 import { personnelRoutes } from './routes/personnelRoutes.js';
 import { inspectionTemplateRoutes } from './routes/inspectionTemplateRoutes.js';
 import { healthScoreRoutes } from './routes/healthScoreRoutes.js';
+import { aiRoutes } from './routes/aiRoutes.js';
+import { startDailyHealthJob } from './jobs/dailyHealthJob.js';
 
 dotenv.config();
 
@@ -37,6 +39,7 @@ app.use('/api/ems-sync', alertSyncRoutes);  // EMS → SmartSolar 告警同步
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/spare-parts', sparePartRoutes);  // 备件仓库
 app.use('/api/personnel', personnelRoutes);      // 人员档案
+app.use('/api', aiRoutes);                    // AI 运维助手
 app.use('/api', healthScoreRoutes);           // 健康分 + 预测告警
 app.use('/api', stationRoutes);  // Catch-all, MUST be LAST
 
@@ -64,6 +67,7 @@ async function start() {
 
   app.listen(PORT, () => {
     console.log(`🚀 SmartSolar server running on http://localhost:${PORT}`);
+    startDailyHealthJob();
   });
 }
 
