@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, ReactNode } from 'react';
 
 interface User {
   id: string;
@@ -12,35 +12,50 @@ interface AuthContextValue {
   token: string | null;
   login: (username: string, password: string) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
-  loading: boolean;
+  can: (permission: string) => boolean;
+}
+
+// Permission matrix
+const PERMISSIONS: Record<string, string[]> = {
+  'work-orders:create': ['admin', 'operator', 'manager'],
+  'work-orders:delete': ['admin', 'manager'],
+  'stations:create': ['admin', 'manager'],
+  'stations:delete': ['admin', 'manager'],
+  'spare-parts:create': ['admin', 'manager'],
+  'spare-parts:delete': ['admin', 'manager'],
+  'inspection:delete': ['admin', 'manager'],
+  'personnel:create': ['admin', 'manager'],
+  'personnel:delete': ['admin', 'manager'],
+  'admin:access': ['admin', 'manager'],
+};
+
+// Initialize synchronously from localStorage
+const savedToken = localStorage.getItem('smartsolar_token');
+const savedUser = localStorage.getItem('smartsolar_user');
+let initialUser: User | null = null;
+let initialToken: string | null = null;
+
+try {
+  if (savedToken && savedUser) {
+    initialUser = JSON.parse(savedUser);
+    initialToken = savedToken;
+  }
+} catch {
+  localStorage.removeItem('smartsolar_token');
+  localStorage.removeItem('smartsolar_user');
 }
 
 const AuthContext = createContext<AuthContextValue>({
-  user: null, token: null,
+  user: initialUser,
+  token: initialToken,
   login: async () => ({ success: false }),
   logout: () => {},
-  loading: true,
+  can: () => false,
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const savedToken = localStorage.getItem('smartsolar_token');
-    const savedUser = localStorage.getItem('smartsolar_user');
-    if (savedToken && savedUser) {
-      try {
-        setToken(savedToken);
-        setUser(JSON.parse(savedUser));
-      } catch {
-        localStorage.removeItem('smartsolar_token');
-        localStorage.removeItem('smartsolar_user');
-      }
-    }
-    setLoading(false);
-  }, []);
+  const [user, setUser] = useState<User | null>(initialUser);
+  const [token, setToken] = useState<string | null>(initialToken);
 
   async function login(username: string, password: string) {
     try {
@@ -58,7 +73,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { success: true };
       }
       return { success: false, message: data.message || '登录失败' };
-    } catch {
+    } catch (e) {
+      console.error('[Auth] Login error:', e);
       return { success: false, message: '网络错误' };
     }
   }
@@ -70,8 +86,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('smartsolar_user');
   }
 
+  function can(permission: string): boolean {
+    if (!user) return false;
+    const allowed = PERMISSIONS[permission];
+    if (!allowed) return false;
+    return allowed.includes(user.role);
+  }
+
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, token, login, logout, can }}>
       {children}
     </AuthContext.Provider>
   );

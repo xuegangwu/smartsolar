@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Card, Form, Input, InputNumber, Button, Space, Tag, Typography, Divider, message, Row, Col, Spin } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { SaveOutlined, ThunderboltOutlined, BatteryOutlined, ApiOutlined, CarOutlined, NodeIndexOutlined, CheckCircleOutlined, EnvironmentOutlined, AimOutlined } from '@ant-design/icons';
+import { stationApi } from '../services/api';
 
 const { Text, Title } = Typography;
 
@@ -417,12 +418,8 @@ export default function StationBuilder() {
       equipment: equips.filter(e => e.count > 0).map(e => ({ type: e.type, name: e.label, count: e.count, power: e.power, capacity: e.capacity })),
     };
     try {
-      const r = await fetch('/api/stations', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const d = await r.json();
-      if (r.ok && d.success) {
+      const d = await stationApi.create(payload);
+      if (d.success) {
         message.success(`✅ 电站"${stationData.name}"已创建！`);
         setTimeout(() => navigate('/stations'), 1200);
       } else {

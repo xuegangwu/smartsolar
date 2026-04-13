@@ -9,6 +9,7 @@ import {
   CalendarOutlined, FileTextOutlined, TeamOutlined, ToolOutlined, PlusCircleOutlined, DeleteOutlined,
 } from '@ant-design/icons';
 import { templateApi } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 import dayjs from 'dayjs';
 
 const { Text, Title } = Typography;
@@ -240,46 +241,63 @@ function RecordModal({ open, plans, onClose, onOk }: {
 
 // ─── Main ───────────────────────────────────────────────────────────────────
 export default function Inspection() {
+  const { can } = useAuth();
   const [plans, setPlans] = useState<any[]>([]);
-  const [records, setRecords] = useState<any[]>([]);
-  const [stations, setStations] = useState<any[]>([]);
   const [stats, setStats] = useState({ totalPlans: 0, enabledPlans: 0, totalRecords: 0, recentRecords: 0 });
   const [loading, setLoading] = useState(false);
   const [planModal, setPlanModal] = useState(false);
   const [editingPlan, setEditingPlan] = useState<any>(null);
   const [recordModal, setRecordModal] = useState(false);
   const [filterPeriod, setFilterPeriod] = useState<string>('');
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [templateModal, setTemplateModal] = useState(false);
+  const [records, setRecords] = useState<any[]>([]);
+  const [stations, setStations] = useState<any[]>([]);
 
   useEffect(() => { loadStations(); loadStats(); loadPlans(); loadRecords(); loadTemplates(); }, []);
   async function loadTemplates() {
-    const res = await templateApi.getAll();
-    if (res.success) setTemplates(res.data);
+    try {
+      const res = await templateApi.getAll();
+      if (res.success) setTemplates(res.data);
+    } catch (e) { console.error('loadTemplates error', e); }
   }
 
   async function loadStations() {
-    const res = await fetch('/api/stations');
-    const data = await res.json();
-    if (data.success) setStations(data.data);
+    try {
+      const res = await fetch('/api/stations');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (data.success) setStations(data.data);
+    } catch (e) { console.error('loadStations error', e); }
   }
 
   async function loadStats() {
-    const res = await fetch('/api/inspection/stats');
-    const data = await res.json();
-    if (data.success) setStats(data.data);
+    try {
+      const res = await fetch('/api/inspection/stats');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (data.success) setStats(data.data);
+    } catch (e) { console.error('loadStats error', e); }
   }
 
   async function loadPlans() {
-    const params = new URLSearchParams();
-    if (filterPeriod) params.set('period', filterPeriod);
-    const res = await fetch(`/api/inspection/plans?${params}`);
-    const data = await res.json();
-    if (data.success) setPlans(data.data);
+    try {
+      const params = new URLSearchParams();
+      if (filterPeriod) params.set('period', filterPeriod);
+      const res = await fetch(`/api/inspection/plans?${params}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (data.success) setPlans(data.data);
+    } catch (e) { console.error('loadPlans error', e); }
   }
 
   async function loadRecords() {
-    const res = await fetch('/api/inspection/records?limit=20');
-    const data = await res.json();
-    if (data.success) setRecords(data.data);
+    try {
+      const res = await fetch('/api/inspection/records?limit=20');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (data.success) setRecords(data.data);
+    } catch (e) { console.error('loadRecords error', e); }
   }
 
   async function handleDeletePlan(id: string) {
@@ -372,9 +390,11 @@ export default function Inspection() {
           <Button size="small" onClick={() => handleDispatchPlan(r)} style={{ background: '#f0f5ff', color: '#2563eb', borderColor: '#bfdbfe' }}>派发工单</Button>
           <Button size="small" onClick={() => { setEditingPlan(r); setPlanModal(true); }}>编辑</Button>
           <Button size="small" onClick={() => handleTogglePlan(r)}>{r.enabled ? '停用' : '启用'}</Button>
-          <Popconfirm title="删除计划？" onConfirm={() => handleDeletePlan(r._id)}>
-            <Button size="small" danger>删除</Button>
-          </Popconfirm>
+          {can('inspection:delete') && (
+            <Popconfirm title="删除计划？" onConfirm={() => handleDeletePlan(r._id)}>
+              <Button size="small" danger>删除</Button>
+            </Popconfirm>
+          )}
         </Space>
       ),
     },
@@ -418,7 +438,9 @@ export default function Inspection() {
               <Space>
                 <Select value={filterPeriod} onChange={v => { setFilterPeriod(v); loadPlans(); }} placeholder="周期筛选" allowClear style={{ width: 100 }}
                   options={Object.entries(PERIOD_MAP).map(([k, v]) => ({ value: k, label: v.text }))} />
-                <Button icon={<PlusOutlined />} onClick={() => { setEditingPlan(null); setPlanModal(true); }}>新建计划</Button>
+                {can('inspection:delete') && (
+                  <Button icon={<PlusOutlined />} onClick={() => { setEditingPlan(null); setPlanModal(true); }}>新建计划</Button>
+                )}
               </Space>
             }
           >
@@ -469,7 +491,7 @@ export default function Inspection() {
       />
       <TemplateModal
         open={templateModal} templates={templates} onClose={() => setTemplateModal(false)}
-        onSave={() => { loadTemplates(); }}
+        onSave={() => { loadTemplates(); }} can={can}
       />
       <RecordModal
         open={recordModal} plans={plans}
@@ -480,8 +502,8 @@ export default function Inspection() {
 }
 
 // ─── 巡检模板管理 Modal ───────────────────────────────────────────────────────
-function TemplateModal({ open, templates, onClose, onSave }: {
-  open: boolean; templates: any[]; onClose: () => void; onSave: () => void;
+function TemplateModal({ open, templates, onClose, onSave, can }: {
+  open: boolean; templates: any[]; onClose: () => void; onSave: () => void; can: (p: string) => boolean;
 }) {
   const [form] = Form.useForm();
   const [editing, setEditing] = useState<any>(null);
@@ -538,7 +560,9 @@ function TemplateModal({ open, templates, onClose, onSave }: {
     <Modal open={open} title="巡检模板管理" onCancel={onClose} footer={null} width={700}>
       <div style={{ marginBottom: 16 }}>
         <Space style={{ marginBottom: 12 }}>
-          <Button size="small" type="primary" icon={<PlusOutlined />} onClick={openAdd}>新建模板</Button>
+          {can('admin:access') && (
+            <Button size="small" type="primary" icon={<PlusOutlined />} onClick={openAdd}>新建模板</Button>
+          )}
         </Space>
         <Table
           dataSource={templates}
@@ -554,9 +578,11 @@ function TemplateModal({ open, templates, onClose, onSave }: {
               render: (_, r) => (
                 <Space size="small">
                   <Button size="small" onClick={() => openEdit(r)}>编辑</Button>
-                  <Popconfirm title="确认删除？" onConfirm={() => handleDelete(r._id)}>
-                    <Button size="small" danger>删除</Button>
-                  </Popconfirm>
+                  {can('admin:access') && (
+                    <Popconfirm title="确认删除？" onConfirm={() => handleDelete(r._id)}>
+                      <Button size="small" danger>删除</Button>
+                    </Popconfirm>
+                  )}
                 </Space>
               ),
             },

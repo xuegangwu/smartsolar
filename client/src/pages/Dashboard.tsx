@@ -120,16 +120,20 @@ export default function Dashboard() {
   }, []);
 
   async function loadData() {
-    const [alertRes, orderRes, stationRes] = await Promise.all([
-      alertApi.getStats(),
-      workOrderApi.getAll({ status: 'created' }),
-      stationApi.getAll(),
-    ]);
-    if (alertRes.success) setAlertStats(alertRes.data);
-    if (orderRes.success) setRecentOrders(orderRes.data.slice(0, 5));
-    if (stationRes.success) setStationCount(stationRes.data.length);
-    const alerts = await alertApi.getAll({ limit: 10 });
-    if (alerts.success) setRecentAlerts(alerts.data);
+    try {
+      const [alertRes, orderRes, stationRes] = await Promise.all([
+        alertApi.getStats(),
+        workOrderApi.getAll({ status: 'created' }),
+        stationApi.getAll(),
+      ]);
+      if (alertRes.success) setAlertStats(alertRes.data);
+      if (orderRes.success) setRecentOrders(orderRes.data.slice(0, 5));
+      if (stationRes.success) setStationCount(stationRes.data.length);
+      const alerts = await alertApi.getAll({ limit: 10 });
+      if (alerts.success) setRecentAlerts(alerts.data);
+    } catch (err) {
+      console.error('[Dashboard] loadData error:', err);
+    }
   }
 
   return (

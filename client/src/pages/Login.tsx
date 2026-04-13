@@ -14,12 +14,15 @@ export default function Login() {
     setLoading(true);
     const result = await login(values.username, values.password);
     setLoading(false);
-    if (result.success) {
-      message.success('登录成功！');
-      navigate('/dashboard');
-    } else {
-      message.error(result.message || '用户名或密码错误');
+    if (!result.success) {
+      message.error(result.message || '登录失败');
+      return;
     }
+    message.success('登录成功');
+    // Force a full page reload to ensure fresh state
+    setTimeout(() => {
+      window.location.href = '/dashboard';
+    }, 300);
   }
 
   return (
@@ -73,12 +76,12 @@ export default function Login() {
           </div>
           <Title level={3} style={{
             color: '#1a1a2e', margin: 0,
-            fontFamily: 'Inter, sans-serif', fontWeight: 800,
+            fontWeight: 800,
             letterSpacing: '-0.03em',
           }}>
             Smart<span style={{ color: '#e6342a' }}>Solar</span>
           </Title>
-          <Text style={{ color: '#8896a6', fontFamily: 'Inter, sans-serif', fontSize: 13, display: 'block', marginTop: 6 }}>
+          <Text style={{ color: '#8896a6', fontSize: 13, display: 'block', marginTop: 6 }}>
             光储电站运维管理平台
           </Text>
         </div>
@@ -87,7 +90,7 @@ export default function Login() {
 
         <Form layout="vertical" onFinish={handleLogin}>
           <Form.Item name="username" label={
-            <span style={{ color: '#4a5568', fontFamily: 'Inter, sans-serif', fontSize: 12, fontWeight: 500 }}>
+            <span style={{ color: '#4a5568', fontSize: 12, fontWeight: 500 }}>
               用户名
             </span>
           } rules={[{ required: true }]}>
@@ -96,13 +99,13 @@ export default function Login() {
               size="large"
               style={{
                 background: '#fafbfc', border: '1px solid #e8eaed',
-                color: '#1a1a2e', fontFamily: 'Inter, sans-serif',
+                color: '#1a1a2e',
                 borderRadius: 10, height: 46,
               }}
             />
           </Form.Item>
           <Form.Item name="password" label={
-            <span style={{ color: '#4a5568', fontFamily: 'Inter, sans-serif', fontSize: 12, fontWeight: 500 }}>
+            <span style={{ color: '#4a5568', fontSize: 12, fontWeight: 500 }}>
               密码
             </span>
           } rules={[{ required: true }]}>
@@ -111,7 +114,7 @@ export default function Login() {
               size="large"
               style={{
                 background: '#fafbfc', border: '1px solid #e8eaed',
-                color: '#1a1a2e', fontFamily: 'Inter, sans-serif',
+                color: '#1a1a2e',
                 borderRadius: 10, height: 46,
               }}
             />
@@ -124,7 +127,7 @@ export default function Login() {
             size="large"
             style={{
               height: 48, borderRadius: 10,
-              fontFamily: 'Inter, sans-serif',
+              
               fontWeight: 600, fontSize: 15,
               background: '#e6342a', border: 'none',
               boxShadow: '0 4px 16px rgba(230,52,42,0.25)',
@@ -136,7 +139,7 @@ export default function Login() {
         </Form>
 
         <div style={{ marginTop: 20, textAlign: 'center' }}>
-          <Text style={{ color: '#b8c0cc', fontFamily: 'Inter, sans-serif', fontSize: 12 }}>
+          <Text style={{ color: '#b8c0cc', fontSize: 12 }}>
             演示账号 · admin / admin
           </Text>
         </div>
