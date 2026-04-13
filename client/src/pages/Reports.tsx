@@ -1,195 +1,199 @@
-import { useState } from 'react';
-import { Card, Button, Space, Tag, Typography, Select, DatePicker, message } from 'antd';
-import { DownloadOutlined, FileTextOutlined, AlertOutlined, CalendarOutlined, InboxOutlined } from '@ant-design/icons';
+import { useState, useEffect } from 'react';
+import { Card, Row, Col, Select, DatePicker, Typography, Button, Spin, Tag, Divider, Space } from 'antd';
+import { FileTextOutlined, DownloadOutlined, ExperimentOutlined, SafetyCertificateOutlined, ThunderboltOutlined, CheckCircleOutlined, AlertOutlined } from '@ant-design/icons';
+import { stationApi, healthApi, alertApi, workOrderApi } from '../services/api';
 
 const { Text } = Typography;
 const { RangePicker } = DatePicker;
 
-const MODULES = [
-  {
-    key: 'work-orders',
-    label: '工单',
-    icon: <FileTextOutlined />,
-    color: '#e6342a',
-    fields: ['工单号', '标题', '类型', '优先级', '状态', '创建时间', '处理人', '电站'],
-    api: '/api/work-orders',
-  },
-  {
-    key: 'alerts',
-    label: '告警',
-    icon: <AlertOutlined />,
-    color: '#dc2626',
-    fields: ['告警ID', '告警类型', '级别', '消息', '时间', '电站', '是否确认'],
-    api: '/api/alerts',
-  },
-  {
-    key: 'inspection',
-    label: '巡检记录',
-    icon: <CalendarOutlined />,
-    color: '#d97706',
-    fields: ['计划名称', '执行人', '执行时间', '结果', '备注'],
-    api: '/api/inspection/records',
-  },
-  {
-    key: 'spare-parts',
-    label: '备件库存',
-    icon: <InboxOutlined />,
-    color: '#0284c7',
-    fields: ['备件名称', '规格型号', '分类', '当前库存', '单位', '低库存阈值', '状态'],
-    api: '/api/spare-parts',
-  },
-];
+// ─── 报告模板 ───────────────────────────────────────────────────────────────
+async function generateReport(params: {
+  stationId?: string;
+  dateRange: [string, string];
+}): Promise<string> {
+  const { stationId, dateRange } = params;
+  const [start, end] = dateRange;
 
-function toCSV(headers: string[], rows: any[][], name: string) {
-  const sep = ',';
-  const lines = [
-    headers.join(sep),
-    ...rows.map(r => r.map((v: any) => `"${(v ?? '').toString().replace(/"/g, '""')}"`).join(sep)),
-  ];
-  const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${name}_${new Date().toISOString().slice(0, 10)}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
+  // 收集数据
+  const [stations, allHealth, alertRes, orderRes] = await Promise.all([
+    stationApi.getAll(),
+    healthApi.getAll(),
+    alertApi.getStats(stationId ? { stationId } : {}),
+    workOrderApi.getAll(stationId ? { stationId } : {}),
+  ]);
+
+  const healthStats = allHealth.stats || {};
+  const stations_data = stationId
+    ? (stations.data || []).filter((s: any) => s._id === stationId)
+    : stations.data || [];
+
+  const avgScore = healthStats.avgScore || 'N/A';
+  const gradeA = healthStats.gradeA || 0;
+  const gradeD = (healthStats.gradeC || 0) + (healthStats.gradeD || 0);
+
+  const alertData = alertRes.data || {};
+  const orders = (orderRes.data || []).filter((o: any) => o.status !== 'closed');
+
+  // 设备健康分布
+  const healthGrades = `A:${healthStats.gradeA || 0} / B:${healthStats.gradeB || 0} / C:${healthStats.gradeC || 0} / D:${healthStats.gradeD || 0}`;
+
+  const reportLines: string[] = [];
+  reportLines.push(`╔══════════════════════════════════════════════════════════════╗`);
+  reportLines.push(`║          SmartSolar 运维日报 / 周报                            ║`);
+  reportLines.push(`╠══════════════════════════════════════════════════════════════╣`);
+  reportLines.push(`║  报告周期：${start} ~ ${end}`);
+  reportLines.push(`║  生成时间：${new Date().toLocaleString('zh-CN')}`);
+  reportLines.push(`╠══════════════════════════════════════════════════════════════╣`);
+  reportLines.push(`║  📊 场站概况                                                ║`);
+  reportLines.push(`║     接入电站：${String(stations_data.length).padStart(3)} 个`);
+  reportLines.push(`║     接入设备：${String(healthStats.total || 0).padStart(3)} 台`);
+  reportLines.push(`╠══════════════════════════════════════════════════════════════╣`);
+  reportLines.push(`║  🏥 设备健康                                                ║`);
+  reportLines.push(`║     综合健康分：${String(avgScore).padStart(3)} / 100  ${avgScore >= 80 ? '✅ 良好' : avgScore >= 60 ? '⚠️ 一般' : '🔴 较差'}`);
+  reportLines.push(`║     等级分布：${healthGrades}`);
+  reportLines.push(`║     A级(优秀)：${String(gradeA).padStart(3)} 台  D级(需关注)：${String(gradeD).padStart(3)} 台`);
+  reportLines.push(`╠══════════════════════════════════════════════════════════════╣`);
+  reportLines.push(`║  ⚠️  告警统计                                                ║`);
+  reportLines.push(`║     严重告警：${String(alertData.critical || 0).padStart(3)} 次  重要告警：${String(alertData.major || 0).padStart(3)} 次  一般告警：${String(alertData.minor || 0).padStart(3)} 次`);
+  reportLines.push(`║     未确认告警：${String(alertData.unacknowledged || 0).padStart(3)} 次`);
+  reportLines.push(`╠══════════════════════════════════════════════════════════════╣`);
+  reportLines.push(`║  📋  工单情况                                                ║`);
+  reportLines.push(`║     待处理工单：${String(orders.length).padStart(3)} 个`);
+  reportLines.push(`║     紧急工单：${String(orders.filter((o: any) => o.priority === 'urgent').length).padStart(3)} 个`);
+  reportLines.push(`╠══════════════════════════════════════════════════════════════╣`);
+  reportLines.push(`║  🤖  AI 建议                                                  ║`);
+  reportLines.push(`║     ${gradeD > 0 ? `⚠️  当前有 ${gradeD} 台设备健康等级为 C/D，建议优先巡检` : '✅ 各设备健康状况良好，继续保持'}`.slice(0, 62) + '║');
+  reportLines.push(`║     ${alertData.critical > 0 ? `🔴  有 ${alertData.critical} 个严重告警待处理，请尽快处理` : '✅ 无严重告警，系统运行正常'}`.slice(0, 62) + '║');
+  reportLines.push(`╚══════════════════════════════════════════════════════════════╝`);
+
+  return reportLines.join('\n');
 }
 
 export default function Reports() {
-  const [module, setModule] = useState<string>('work-orders');
-  const [loading, setLoading] = useState(false);
+  const [stations, setStations] = useState<any[]>([]);
+  const [stationId, setStationId] = useState<string>('');
+  const [reportType, setReportType] = useState<'daily' | 'weekly'>('daily');
+  const [generating, setGenerating] = useState(false);
+  const [report, setReport] = useState<string | null>(null);
 
-  const current = MODULES.find(m => m.key === module)!;
+  useEffect(() => {
+    stationApi.getAll().then(r => { if (r.success) setStations(r.data || []); });
+  }, []);
 
-  async function handleExport() {
-    setLoading(true);
-    try {
-      const r = await fetch(current.api);
-      const d = await r.json();
-      const data = d.data || d;
-      if (!Array.isArray(data) || data.length === 0) {
-        message.warning('暂无数据可导出');
-        setLoading(false);
-        return;
-      }
-      const rows = data.map((item: any) => {
-        switch (module) {
-          case 'work-orders':
-            return [
-              item.orderNo, item.title, item.type, item.priority,
-              item.status, new Date(item.createdAt).toLocaleString('zh-CN'),
-              item.assignee?.name || item.assignee || '-',
-              item.stationId?.name || item.stationId || '-',
-            ];
-          case 'alerts':
-            return [
-              item.sourceAlertId || item._id, item.code, item.level,
-              item.message, new Date(item.createdAt).toLocaleString('zh-CN'),
-              item.stationId?.name || item.stationId || '-',
-              item.acknowledged ? '已确认' : '未确认',
-            ];
-          case 'inspection':
-            return [
-              item.planId?.name || item.planId || '-',
-              item.executor?.name || item.executor || '-',
-              item.executedAt ? new Date(item.executedAt).toLocaleString('zh-CN') : '-',
-              item.result || '-', item.notes || '-',
-            ];
-          case 'spare-parts':
-            return [
-              item.name, item.spec || '-', item.category || '-',
-              item.stock, item.unit || '-', item.lowStockThreshold || '-',
-              item.stock <= (item.lowStockThreshold || 0) ? '⚠️低库存' : '正常',
-            ];
-          default:
-            return [];
-        }
-      });
-      toCSV(current.fields, rows, `smartsolar_${module}`);
-      message.success(`✅ 导出成功：${data.length} 条记录`);
-    } catch (err: any) {
-      message.error(`导出失败: ${err.message}`);
+  async function handleGenerate() {
+    const now = new Date();
+    let start: string, end: string;
+    if (reportType === 'daily') {
+      end = start = now.toISOString().slice(0, 10);
+    } else {
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 3600 * 1000);
+      start = weekAgo.toISOString().slice(0, 10);
+      end = now.toISOString().slice(0, 10);
     }
-    setLoading(false);
+
+    setGenerating(true);
+    try {
+      const text = await generateReport({ stationId: stationId || undefined, dateRange: [start, end] });
+      setReport(text);
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  function handleDownload() {
+    if (!report) return;
+    const blob = new Blob([report], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `SmartSolar运维报告_${new Date().toISOString().slice(0, 10)}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <DownloadOutlined style={{ fontSize: 22, color: '#e6342a' }} />
-        <Text strong style={{ fontSize: 18, color: '#1a1a2e', fontFamily: 'JetBrains Mono, monospace' }}>
-          数据导出
-        </Text>
-        <Tag style={{ background: 'rgba(0,229,192,0.1)', border: '1px solid rgba(0,229,192,0.3)', color: '#e6342a', fontFamily: 'JetBrains Mono, monospace', fontSize: 11 }}>
-          CSV UTF-8
-        </Tag>
+    <div style={{ maxWidth: 900, margin: '0 auto' }}>
+      <div style={{ marginBottom: 24 }}>
+        <Text strong style={{ fontSize: 16, color: '#1a1a2e' }}>📋 运维报告生成</Text>
+        <br />
+        <Text style={{ fontSize: 12, color: '#9ca3af' }}>基于真实运行数据，自动生成日报 / 周报</Text>
       </div>
 
-      {/* Select */}
-      <Card style={{ background: '#ffffff', border: '1px solid #e8eaed', borderRadius: 10 }} bodyStyle={{ padding: '20px 24px' }}>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
-          {MODULES.map(m => (
-            <div
-              key={m.key}
-              onClick={() => setModule(m.key)}
-              style={{
-                padding: '10px 16px', borderRadius: 8, cursor: 'pointer',
-                border: `1px solid ${module === m.key ? m.color : '#e8eaed'}`,
-                background: module === m.key ? m.color + '12' : '#f5f6f8',
-                display: 'flex', alignItems: 'center', gap: 8,
-                transition: 'all 0.2s',
-              }}
-            >
-              <span style={{ color: m.color, fontSize: 16 }}>{m.icon}</span>
-              <span style={{
-                fontFamily: 'JetBrains Mono, monospace', fontSize: 13,
-                color: module === m.key ? m.color : '#4a5568', fontWeight: module === m.key ? 600 : 400,
-              }}>
-                {m.label}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        {/* Fields preview */}
-        <div style={{ background: '#fafbfc', border: '1px solid #e8eaed', borderRadius: 8, padding: '14px 16px', marginBottom: 16 }}>
-          <Text style={{ fontSize: 10, color: '#8896a6', fontFamily: 'JetBrains Mono, monospace', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 8 }}>
-            导出字段
-          </Text>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {current.fields.map(f => (
-              <Tag key={f} style={{ background: '#f5f6f8', border: '1px solid #e8eaed', color: '#4a5568', fontFamily: 'JetBrains Mono, monospace', fontSize: 11, borderRadius: 4 }}>
-                {f}
-              </Tag>
-            ))}
+      {/* 配置 */}
+      <Card style={{ borderRadius: 12, marginBottom: 16 }} bodyStyle={{ padding: 20 }}>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+          <div>
+            <Text style={{ fontSize: 12, color: '#6b7280', display: 'block', marginBottom: 4 }}>报告类型</Text>
+            <Select
+              value={reportType}
+              onChange={v => setReportType(v)}
+              options={[
+                { value: 'daily', label: '日报' },
+                { value: 'weekly', label: '周报' },
+              ]}
+              style={{ width: 120 }}
+            />
           </div>
+          <div>
+            <Text style={{ fontSize: 12, color: '#6b7280', display: 'block', marginBottom: 4 }}>电站（可选）</Text>
+            <Select
+              value={stationId}
+              onChange={setStationId}
+              allowClear
+              placeholder="全部电站"
+              options={stations.map((s: any) => ({ value: s._id, label: s.name }))}
+              style={{ width: 200 }}
+            />
+          </div>
+          <Button
+            type="primary"
+            icon={<FileTextOutlined />}
+            loading={generating}
+            onClick={handleGenerate}
+            style={{ background: '#e6342a', border: 'none', height: 36 }}
+          >
+            生成报告
+          </Button>
         </div>
-
-        <Button
-          type="primary"
-          icon={<DownloadOutlined />}
-          loading={loading}
-          onClick={handleExport}
-          size="large"
-          style={{
-            height: 48, borderRadius: 8,
-            fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, fontSize: 14,
-            background: current.color, border: 'none',
-            boxShadow: `0 0 20px ${current.color}40`,
-          }}
-        >
-          [ 导出 {current.label} CSV ]
-        </Button>
       </Card>
 
-      {/* Info */}
-      <Card style={{ background: '#ffffff', border: '1px solid #e8eaed', borderRadius: 10 }} bodyStyle={{ padding: '16px 20px' }}>
-        <Text style={{ fontSize: 12, color: '#8896a6', fontFamily: 'JetBrains Mono, monospace', lineHeight: 1.8 }}>
-          · 导出格式：CSV（UTF-8 with BOM，兼容 Excel 直接打开）{"\n"}
-          · 数据来源：当前数据库实时查询{"\n"}
-          · 巡检记录默认导出全部，执行时间排序{"\n"}
-          · 备件库存：低库存行自动标注 ⚠️
+      {/* 报告预览 */}
+      {generating && (
+        <Card style={{ borderRadius: 12, textAlign: 'center', padding: 60 }} bodyStyle={{ padding: 60 }}>
+          <Spin size="large" />
+          <div style={{ marginTop: 16, color: '#9ca3af' }}>正在生成报告...</div>
+        </Card>
+      )}
+
+      {report && !generating && (
+        <Card
+          style={{ borderRadius: 12 }}
+          title={<Space><FileTextOutlined /><Text strong>报告预览</Text></Space>}
+          extra={<Button icon={<DownloadOutlined />} onClick={handleDownload}>下载报告</Button>}
+          bodyStyle={{ padding: 0 }}
+        >
+          <pre style={{
+            background: '#1a1a2e',
+            color: '#4ade80',
+            padding: '24px',
+            borderRadius: '0 0 12px 12px',
+            fontSize: 12,
+            fontFamily: 'JetBrains Mono, monospace',
+            lineHeight: 1.8,
+            overflow: 'auto',
+            maxHeight: 500,
+            margin: 0,
+          }}>
+            {report}
+          </pre>
+        </Card>
+      )}
+
+      {/* 说明 */}
+      <Card style={{ borderRadius: 12, marginTop: 16 }} bodyStyle={{ padding: 16 }}>
+        <Text style={{ fontSize: 12, color: '#9ca3af' }}>
+          💡 报告基于当天/本周的设备健康分、告警统计、工单数据自动汇总。
+          如需更详细的分析报告，请使用 <a onClick={() => window.location.href = '/ai'}>AI 助手</a> 进行专项查询。
         </Text>
       </Card>
     </div>

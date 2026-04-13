@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Card, Row, Col, Statistic, Tag, Typography, Space } from 'antd';
-import { AlertOutlined, ToolOutlined, FileTextOutlined, RightOutlined, ThunderboltOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { Card, Row, Col, Statistic, Tag, Typography, Space, Spin, Button } from 'antd';
+import { AlertOutlined, ToolOutlined, FileTextOutlined, RightOutlined, ThunderboltOutlined, CheckCircleOutlined, ExperimentOutlined, RiseOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { alertApi, workOrderApi, stationApi } from '../services/api';
+import { alertApi, workOrderApi, stationApi, healthApi } from '../services/api';
 
 const { Text } = Typography;
 
@@ -111,6 +111,9 @@ export default function Dashboard() {
   const [recentAlerts, setRecentAlerts] = useState<any[]>([]);
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const [stationCount, setStationCount] = useState(0);
+  const [healthStats, setHealthStats] = useState<any>(null);
+  const [predictiveAlerts, setPredictiveAlerts] = useState<any[]>([]);
+  const [loadingAI, setLoadingAI] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -121,14 +124,20 @@ export default function Dashboard() {
 
   async function loadData() {
     try {
-      const [alertRes, orderRes, stationRes] = await Promise.all([
+      const [alertRes, orderRes, stationRes, healthRes, predRes] = await Promise.all([
         alertApi.getStats(),
         workOrderApi.getAll({ status: 'created' }),
         stationApi.getAll(),
+        healthApi.getAll().catch(() => ({ success: false })),
+        fetch('/api/predictive-alerts?status=active', {
+          headers: { Authorization: `Bearer ${localStorage.getItem('smartsolar_token')}` },
+        }).then(r => r.json()).catch(() => ({ success: false })),
       ]);
       if (alertRes.success) setAlertStats(alertRes.data);
       if (orderRes.success) setRecentOrders(orderRes.data.slice(0, 5));
       if (stationRes.success) setStationCount(stationRes.data.length);
+      if (healthRes.success) setHealthStats(healthRes.stats);
+      if (predRes.success) setPredictiveAlerts((predRes.data || []).slice(0, 3));
       const alerts = await alertApi.getAll({ limit: 10 });
       if (alerts.success) setRecentAlerts(alerts.data);
     } catch (err) {
@@ -138,6 +147,73 @@ export default function Dashboard() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* AI 健康摘要 — AI Native 区域 */}
+      {healthStats && (
+        <Card
+          style={{ background: 'linear-gradient(135deg, #1a1a2e 0%, #2d2d44 100%)', border: 'none', borderRadius: 12 }}
+          bodyStyle={{ padding: '20px 24px' }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <Space>
+              <ExperimentOutlined style={{ color: '#60a5fa', fontSize: 16 }} />
+              <span style={{ color: '#fff', fontWeight: 700, fontSize: 14 }}>🏥 AI 健康摘要</span>
+            </Space>
+            <Space>
+              <Button size="small" icon={<RiseOutlined />} onClick={() => navigate('/health')} style={{ background: '#ffffff20', border: 'none', color: '#fff' }}>
+                健康看板
+              </Button>
+              <Button size="small" icon={<ExperimentOutlined />} onClick={() => navigate('/ai')} style={{ background: '#e6342a', border: 'none', color: '#fff' }}>
+                AI 助手
+              </Button>
+            </Space>
+          </div>
+          <Row gutter={16}>
+            <Col span={6}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 36, fontWeight: 800, color: healthStats.avgScore >= 80 ? '#4ade80' : healthStats.avgScore >= 60 ? '#fbbf24' : '#f87171', fontFamily: 'JetBrains Mono, monospace', lineHeight: 1 }}>
+                  {healthStats.avgScore || '—'}
+                </div>
+                <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>综合健康分</div>
+              </div>
+            </Col>
+            <Col span={6}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 36, fontWeight: 800, color: '#4ade80', fontFamily: 'JetBrains Mono, monospace', lineHeight: 1 }}>{healthStats.gradeA || 0}</div>
+                <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>A级（优秀）</div>
+              </div>
+            </Col>
+            <Col span={6}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 36, fontWeight: 800, color: '#fbbf24', fontFamily: 'JetBrains Mono, monospace', lineHeight: 1 }}>{(healthStats.gradeC || 0) + (healthStats.gradeD || 0)}</div>
+                <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>C/D级（需关注）</div>
+              </div>
+            </Col>
+            <Col span={6}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 36, fontWeight: 800, color: predictiveAlerts.length > 0 ? '#f87171' : '#4ade80', fontFamily: 'JetBrains Mono, monospace', lineHeight: 1 }}>{predictiveAlerts.length}</div>
+                <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>活跃预测预警</div>
+              </div>
+            </Col>
+          </Row>
+
+          {/* 预测告警快速展示 */}
+          {predictiveAlerts.length > 0 && (
+            <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid #ffffff20' }}>
+              <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 8 }}>⚠️ 活跃预警</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {predictiveAlerts.map((a: any) => (
+                  <div key={a._id} style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#ffffff10', borderRadius: 8, padding: '6px 10px' }}>
+                    <span style={{ fontSize: 12 }}>{a.alertLevel === 'critical' ? '🔴' : a.alertLevel === 'major' ? '🟠' : '🟡'}</span>
+                    <span style={{ color: '#fff', fontSize: 12, flex: 1 }}>{a.alertCode.replace(/_/g, ' ')}</span>
+                    <span style={{ color: '#9ca3af', fontSize: 11 }}>{(a.failureProbability * 100).toFixed(0)}% 故障概率</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </Card>
+      )}
+
       {/* Stat Cards */}
       <Row gutter={[12, 12]}>
         <Col xs={12} sm={6}>
