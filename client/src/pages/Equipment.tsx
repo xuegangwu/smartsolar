@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useStation } from '../contexts/StationContext';
 import {
   Card, Table, Tag, Button, Space, Input, Modal, Form, Select, message,
-  Row, Col, Statistic, Typography, Tree, Drawer, Descriptions, Timeline, Popconfirm,
+  Row, Col, Statistic, Typography, Tree, Drawer, Descriptions, Timeline, Popconfirm, Tabs, Progress, Spin,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { DataNode } from 'antd/es/tree';
@@ -10,7 +10,7 @@ import {
   PlusOutlined, SearchOutlined, EditOutlined, DeleteOutlined,
   AppstoreOutlined, FolderOutlined, ToolOutlined, ExclamationCircleOutlined,
 } from '@ant-design/icons';
-import { equipmentApi, type Station, type Equipment, type EquipmentCategory } from '../services/api';
+import { equipmentApi, healthApi, type Station, type Equipment, type EquipmentCategory } from '../services/api';
 
 const { Text, Title } = Typography;
 const { confirm } = Modal;
@@ -189,6 +189,112 @@ function EquipmentModal({
         </Row>
       </Form>
     </Modal>
+  );
+}
+
+// ─── Equipment Health Tab ───────────────────────────────────────────────────
+function EquipHealthTab({ equipmentId }: { equipmentId: string }) {
+  const [score, setScore] = useState<any>(null);
+  const [history, setHistory] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!equipmentId) return;
+    Promise.all([
+      healthApi.getByEquipment(equipmentId),
+      healthApi.getHistory(equipmentId, 14),
+    ]).then(([s, h]) => {
+      setScore(s.data);
+      setHistory(h.data || []);
+    }).catch(() => null).finally(() => setLoading(false));
+  }, [equipmentId]);
+
+  if (loading) return <div style={{ padding: 40, textAlign: 'center' }}><Spin /></div>;
+  if (!score) return <div style={{ padding: 20, color: '#9ca3af', textAlign: 'center' }}>暂无健康分数据</div>;
+
+  const GRADE_COLOR: Record<string, string> = { A: '#16a34a', B: '#2563eb', C: '#d97706', D: '#dc2626' };
+  const SEVERITY_COLOR: Record<string, string> = { critical: '#dc2626', major: '#ea580c', warning: '#d97706', info: '#6b7280' };
+  const SEVERITY_ICON: Record<string, string> = { critical: '🔴', major: '🟠', warning: '🟡', info: 'ℹ️' };
+  const factors = score.factors || {};
+  const gc = GRADE_COLOR[score.grade] || '#6b7280';
+
+  return (
+    <div style={{ padding: '8px 0' }}>
+      {/* 综合评分 */}
+      <div style={{ textAlign: 'center', marginBottom: 20 }}>
+        <Progress
+          type="circle"
+          percent={score.score}
+          size={90}
+          strokeColor={gc}
+          format={p => <span style={{ fontSize: 20, fontWeight: 800, color: gc }}>{p}</span>}
+        />
+        <div style={{ marginTop: 8 }}>
+          <span style={{ color: gc, fontWeight: 700, fontSize: 14 }}>{score.grade}级</span>
+          <span style={{ color: '#9ca3af', marginLeft: 8, fontSize: 12 }}>
+            {score.trend === 'rising' ? '↑ 上升' : score.trend === 'declining' ? '↓ 下降' : '→ 稳定'}
+            {score.comparedToLastWeek != null && score.comparedToLastWeek !== 0
+              ? ` (${score.comparedToLastWeek > 0 ? '+' : ''}${score.comparedToLastWeek}分)`
+              : ''}
+          </span>
+        </div>
+      </div>
+
+      {/* 分项得分 */}
+      <div style={{ marginBottom: 16 }}>
+        {[
+          { label: '功率', key: 'powerScore', color: '#d97706' },
+          { label: '效率', key: 'efficiencyScore', color: '#2563eb' },
+          { label: '温度', key: 'tempScore', color: '#16a34a' },
+          { label: '稳定性', key: 'stabilityScore', color: '#7c3aed' },
+        ].map(f => (
+          <div key={f.key} style={{ marginBottom: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+              <span style={{ fontSize: 12, color: '#6b7280' }}>{f.label}</span>
+              <span style={{ fontSize: 12, fontWeight: 600, color: f.color }}>{factors[f.key] || 0}分</span>
+            </div>
+            <div style={{ height: 5, background: '#f3f4f6', borderRadius: 3 }}>
+              <div style={{ height: '100%', width: `${factors[f.key] || 0}%`, background: f.color, borderRadius: 3 }} />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* 问题列表 */}
+      {score.issues?.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <Text strong style={{ fontSize: 12, color: '#374151', display: 'block', marginBottom: 8 }}>⚠️ 当前问题</Text>
+          {score.issues.map((issue: any, i: number) => (
+            <div key={i} style={{ padding: '8px 10px', background: '#fef2f2', borderRadius: 8, marginBottom: 6, borderLeft: `3px solid ${SEVERITY_COLOR[issue.severity]}` }}>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 2 }}>
+                <span>{SEVERITY_ICON[issue.severity]}</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: SEVERITY_COLOR[issue.severity] }}>{issue.code}</span>
+              </div>
+              <div style={{ fontSize: 11, color: '#374151', marginBottom: 2 }}>{issue.description}</div>
+              {issue.suggestion && <div style={{ fontSize: 11, color: '#16a34a' }}>💡 {issue.suggestion}</div>}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* 14日趋势 */}
+      {history.length > 0 && (
+        <div>
+          <Text strong style={{ fontSize: 12, color: '#374151', display: 'block', marginBottom: 8 }}>📈 14日趋势</Text>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 50 }}>
+            {history.map((h: any, i: number) => {
+              const barH = Math.max(3, (h.score / 100) * 50);
+              const hc = GRADE_COLOR[h.grade] || '#6b7280';
+              return (
+                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', height: '100%' }}>
+                  <div title={`${h.score}分`} style={{ width: '100%', height: barH, background: hc, borderRadius: '2px 2px 0 0', minWidth: 3 }} />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -376,44 +482,60 @@ export default function Equipment() {
       />
 
       {/* Equipment Detail Drawer */}
-      <Drawer title="设备详情" open={detailOpen} onClose={() => setDetailOpen(false)} width={520}>
+      <Drawer title="设备详情" open={detailOpen} onClose={() => setDetailOpen(false)} width={560}>
         {detailEq && (
-          <div>
-            <Descriptions column={1} bordered size="small">
-              <Descriptions.Item label="设备名称"><b>{detailEq.name}</b></Descriptions.Item>
-              <Descriptions.Item label="类型">{EQ_TYPE_MAP[detailEq.type] || detailEq.type}</Descriptions.Item>
-              <Descriptions.Item label="品牌">{detailEq.brand || '-'}</Descriptions.Item>
-              <Descriptions.Item label="型号">{detailEq.model || '-'}</Descriptions.Item>
-              <Descriptions.Item label="序列号"><Text code>{detailEq.serialNumber || '-'}</Text></Descriptions.Item>
-              <Descriptions.Item label="额定功率">{detailEq.ratedPower ? `${detailEq.ratedPower} kW` : '-'}</Descriptions.Item>
-              <Descriptions.Item label="状态">
-                <Tag color={STATUS_MAP[detailEq.status]?.color}>{STATUS_MAP[detailEq.status]?.text}</Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="投产日期">{detailEq.installationDate ? new Date(detailEq.installationDate).toLocaleDateString('zh-CN') : '-'}</Descriptions.Item>
-              <Descriptions.Item label="保修到期">{detailEq.warrantyExpire ? new Date(detailEq.warrantyExpire).toLocaleDateString('zh-CN') : '-'}</Descriptions.Item>
-            </Descriptions>
+          <Tabs
+            defaultActiveKey="info"
+            items={[
+              {
+                key: 'info',
+                label: '基本信息',
+                children: (
+                  <>
+                    <Descriptions column={1} bordered size="small">
+                      <Descriptions.Item label="设备名称"><b>{detailEq.name}</b></Descriptions.Item>
+                      <Descriptions.Item label="类型">{EQ_TYPE_MAP[detailEq.type] || detailEq.type}</Descriptions.Item>
+                      <Descriptions.Item label="品牌">{detailEq.brand || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="型号">{detailEq.model || '-'}</Descriptions.Item>
+                      <Descriptions.Item label="序列号"><Text code>{detailEq.serialNumber || '-'}</Text></Descriptions.Item>
+                      <Descriptions.Item label="额定功率">{detailEq.ratedPower ? `${detailEq.ratedPower} kW` : '-'}</Descriptions.Item>
+                      <Descriptions.Item label="状态">
+                        <Tag color={STATUS_MAP[detailEq.status]?.color}>{STATUS_MAP[detailEq.status]?.text}</Tag>
+                      </Descriptions.Item>
+                      <Descriptions.Item label="投产日期">{detailEq.installationDate ? new Date(detailEq.installationDate).toLocaleDateString('zh-CN') : '-'}</Descriptions.Item>
+                      <Descriptions.Item label="保修到期">{detailEq.warrantyExpire ? new Date(detailEq.warrantyExpire).toLocaleDateString('zh-CN') : '-'}</Descriptions.Item>
+                    </Descriptions>
 
-            <div style={{ marginTop: 24 }}>
-              <Title level={5}>处理进度</Title>
-              <Timeline
-                items={[
-                  { color: 'green', children: '设备登记入库' },
-                  { color: STATUS_MAP[detailEq.status]?.color === 'green' ? 'green' : 'gray', children: `当前状态: ${STATUS_MAP[detailEq.status]?.text}` },
-                  ...(detailEq.warrantyExpire ? [{ color: 'blue', children: `保修至: ${new Date(detailEq.warrantyExpire).toLocaleDateString('zh-CN')}` }] : []),
-                ]}
-              />
-            </div>
+                    <div style={{ marginTop: 24 }}>
+                      <Title level={5}>处理进度</Title>
+                      <Timeline
+                        items={[
+                          { color: 'green', children: '设备登记入库' },
+                          { color: STATUS_MAP[detailEq.status]?.color === 'green' ? 'green' : 'gray', children: `当前状态: ${STATUS_MAP[detailEq.status]?.text}` },
+                          ...(detailEq.warrantyExpire ? [{ color: 'blue', children: `保修至: ${new Date(detailEq.warrantyExpire).toLocaleDateString('zh-CN')}` }] : []),
+                        ]}
+                      />
+                    </div>
 
-            <Space style={{ marginTop: 24 }}>
-              <Button icon={<EditOutlined />} onClick={() => { setEditingEq(detailEq); setDetailOpen(false); setEqModal(true); }}>编辑</Button>
-              <Popconfirm title="删除设备？" onConfirm={async () => {
-                await handleDeleteEquipment(detailEq._id);
-                setDetailOpen(false);
-              }}>
-                <Button danger>删除</Button>
-              </Popconfirm>
-            </Space>
-          </div>
+                    <Space style={{ marginTop: 24 }}>
+                      <Button icon={<EditOutlined />} onClick={() => { setEditingEq(detailEq); setDetailOpen(false); setEqModal(true); }}>编辑</Button>
+                      <Popconfirm title="删除设备？" onConfirm={async () => {
+                        await handleDeleteEquipment(detailEq._id);
+                        setDetailOpen(false);
+                      }}>
+                        <Button danger>删除</Button>
+                      </Popconfirm>
+                    </Space>
+                  </>
+                ),
+              },
+              {
+                key: 'health',
+                label: '🏥 健康分析',
+                children: <EquipHealthTab equipmentId={detailEq._id} />,
+              },
+            ]}
+          />
         )}
       </Drawer>
     </div>
