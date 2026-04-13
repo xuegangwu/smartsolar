@@ -157,3 +157,22 @@ export const templateApi = {
   update: (id: string, data: any) => api.put(`/inspection/templates/${id}`, data).then(r => r.data),
   delete: (id: string) => api.delete(`/inspection/templates/${id}`).then(r => r.data),
 };
+
+// ─── Health Score ─────────────────────────────────────────────────────────────
+export const healthApi = {
+  getAll: (params?: any) => api.get<any, any>('/health-scores', { params }).then(r => r.data),
+  getByEquipment: (equipmentId: string) =>
+    api.get<any, any>(`/health-scores/${equipmentId}`).then(r => r.data),
+  getHistory: (equipmentId: string, days = 30) =>
+    api.get<any, any>(`/health-scores/${equipmentId}/history`, { params: { days } }).then(r => r.data),
+  calculateAll: () => api.post<any, any>('/health-scores/calculate').then(r => r.data),
+  getTelemetry: (equipmentId: string, hours = 24) =>
+    api.get<any, any>(`/equipment/${equipmentId}/telemetry`, { params: { hours } }).then(r => r.data),
+};
+
+// ─── Predictive Alerts ─────────────────────────────────────────────────────────
+export const alertPredictiveApi = {
+  getAll: (params?: any) => api.get<any, any>('/predictive-alerts', { params }).then(r => r.data),
+  updateStatus: (id: string, status: string) =>
+    api.patch<any, any>(`/predictive-alerts/${id}`, { status }).then(r => r.data),
+};

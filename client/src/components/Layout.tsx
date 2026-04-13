@@ -5,7 +5,7 @@ import {
   DashboardOutlined, HomeOutlined, ToolOutlined, FileTextOutlined,
   BellOutlined, CalendarOutlined, UserOutlined, LogoutOutlined,
   InboxOutlined, RiseOutlined, ApiOutlined, DownloadOutlined, PlusSquareOutlined,
-  EnvironmentOutlined, TeamOutlined, MoreOutlined,
+  EnvironmentOutlined, TeamOutlined, MoreOutlined, ExperimentOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
@@ -21,6 +21,7 @@ const NAV_ITEMS = [
   { key: '/alerts', icon: <BellOutlined />, label: '告警' },
   { key: '/inspection', icon: <CalendarOutlined />, label: '巡检' },
   { key: '/spare-parts', icon: <InboxOutlined />, label: '备件' },
+  { key: '/health', icon: <ExperimentOutlined />, label: '健康分' },
   { key: '/kpi', icon: <RiseOutlined />, label: 'KPI' },
   { key: '/personnel', icon: <TeamOutlined />, label: '人员管理' },
   { key: '/reports', icon: <DownloadOutlined />, label: '导出' },
@@ -113,16 +114,25 @@ export default function Layout() {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [mobile, setMobile] = useState(false);
+  const [userManuallyToggled, setUserManuallyToggled] = useState(false);
   const [sysStatus, setSysStatus] = useState({ mongo: 'checking', alerts: 0 });
   const { user, logout } = useAuth();
   const { notifications, unreadCount, markAllRead, deleteNotification } = useNotification();
 
   useEffect(() => {
-    const check = () => setMobile(window.innerWidth < 768);
+    const check = () => {
+      const w = window.innerWidth;
+      setMobile(w < 768);
+      // Auto-collapse sidebar between 768px and 1199px only on first load
+      if (!userManuallyToggled) {
+        if (w >= 768 && w < 1200) setCollapsed(true);
+        else if (w >= 1200) setCollapsed(false);
+      }
+    };
     check();
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
-  }, []);
+  }, [userManuallyToggled]);
 
   useEffect(() => {
     async function loadStatus() {
@@ -153,7 +163,7 @@ export default function Layout() {
     return (
       <AntLayout style={{ minHeight: '100vh' }}>
         <Sider
-          collapsible collapsed={collapsed} onCollapse={setCollapsed}
+          collapsible collapsed={collapsed} onCollapse={(v) => { setCollapsed(v); setUserManuallyToggled(true); }}
           style={{
             background: '#ffffff',
             borderRight: '1px solid #e8eaed',
@@ -192,6 +202,7 @@ export default function Layout() {
           <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, paddingBottom: 8 }}>
             <Menu
               mode="inline"
+              inlineCollapsed={collapsed}
               selectedKeys={[location.pathname]}
               items={NAV_ITEMS}
               onClick={({ key }) => navigate(key)}
