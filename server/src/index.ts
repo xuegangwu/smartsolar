@@ -17,6 +17,8 @@ import { inspectionTemplateRoutes } from './routes/inspectionTemplateRoutes.js';
 import { healthScoreRoutes } from './routes/healthScoreRoutes.js';
 import { aiRoutes } from './routes/aiRoutes.js';
 import { startDailyHealthJob } from './jobs/dailyHealthJob.js';
+import { startTelemetryCollector } from './services/telemetryCollector.js';
+import { seedAllTelemetry } from './seed/seedTelemetry.js';
 
 dotenv.config();
 
@@ -65,8 +67,19 @@ async function start() {
   await mongoose.connect(mongoUri!);
   console.log(`✅ MongoDB connected: ${USE_MEMORY ? 'memory' : MONGO_URI}`);
 
-  app.listen(PORT, () => {
+  app.listen(PORT, async () => {
     console.log(`🚀 SmartSolar server running on http://localhost:${PORT}`);
+
+    // 如果没有遥测数据，先填充7天历史数据
+    const { Telemetry } = await import('./models/healthScore.js');
+    const count = await Telemetry.countDocuments();
+    if (count === 0) {
+      console.log('[Init] No telemetry data found, seeding 7-day history...');
+      await seedAllTelemetry();
+      console.log('[Init] Historical telemetry seeded.');
+    }
+
+    startTelemetryCollector();
     startDailyHealthJob();
   });
 }
