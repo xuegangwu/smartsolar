@@ -123,15 +123,16 @@ export default function Dashboard() {
   }, []);
 
   async function loadData() {
+    console.log('[Dashboard] loadData start, token:', localStorage.getItem('smartsolar_token')?.slice(0, 20) + '...');
     try {
       const [alertRes, orderRes, stationRes, healthRes, predRes] = await Promise.all([
-        alertApi.getStats(),
-        workOrderApi.getAll({ status: 'created' }),
-        stationApi.getAll(),
-        healthApi.getAll().catch(() => ({ success: false })),
+        alertApi.getStats().then(r => { console.log('[Dashboard] alertRes:', r.success); return r; }),
+        workOrderApi.getAll({ status: 'created' }).then(r => { console.log('[Dashboard] orderRes:', r.success); return r; }),
+        stationApi.getAll().then(r => { console.log('[Dashboard] stationRes:', r.success); return r; }),
+        healthApi.getAll().then(r => { console.log('[Dashboard] healthRes:', r.success); return r; }).catch(e => { console.log('[Dashboard] healthRes error:', e.message); return { success: false }; }),
         fetch('/api/predictive-alerts?status=active', {
           headers: { Authorization: `Bearer ${localStorage.getItem('smartsolar_token')}` },
-        }).then(r => r.json()).catch(() => ({ success: false })),
+        }).then(async r => { console.log('[Dashboard] predRes status:', r.status); return r.json(); }).catch(e => { console.log('[Dashboard] predRes error:', e.message); return { success: false }; }),
       ]);
       if (alertRes.success) setAlertStats(alertRes.data);
       if (orderRes.success) setRecentOrders(orderRes.data.slice(0, 5));

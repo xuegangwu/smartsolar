@@ -17,9 +17,11 @@ api.interceptors.response.use(
   res => res,
   err => {
     if (err.response?.status === 401) {
+      console.error('[API 401] Redirecting to login. Path:', err.config?.url, '| Status:', err.response?.status);
       localStorage.removeItem('smartsolar_token');
       localStorage.removeItem('smartsolar_user');
       if (!window.location.pathname.includes('/login')) {
+        console.error('[API 401] Triggering redirect to /login');
         window.location.href = '/login';
       }
     }
