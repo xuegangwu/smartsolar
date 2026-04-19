@@ -19,9 +19,9 @@ export default function Login() {
       return;
     }
     message.success('登录成功');
-    // Force a full page reload to ensure fresh state
+    // Use React Router navigate for client-side transition (no full reload)
     setTimeout(() => {
-      window.location.href = '/dashboard';
+      navigate('/dashboard', { replace: true });
     }, 300);
   }
 
