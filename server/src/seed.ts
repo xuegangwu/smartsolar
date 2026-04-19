@@ -7,10 +7,21 @@ import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 
 async function seed() {
-  const memServer = await MongoMemoryServer.create();
-  const uri = memServer.getUri();
+  // Reuse existing Memory Server if available (for dev with running server)
+  const existingUri = process.env.MONGO_URI || process.env.MONGO_MEMORY_SERVER_URI;
+  let memServer: MongoMemoryServer | null = null;
+  let uri: string;
+
+  if (existingUri) {
+    uri = existingUri;
+    console.log('📦 Connecting to existing MongoDB:', uri.slice(0, 50), '\n');
+  } else {
+    memServer = await MongoMemoryServer.create();
+    uri = memServer.getUri();
+    console.log('📦 Created new memory MongoDB:', uri.slice(0, 50), '\n');
+  }
+
   await mongoose.connect(uri);
-  console.log('📦 Connected to memory MongoDB\n');
 
   // ── 清空所有集合 ──────────────────────────────────────────────────────────────
   const models = [
@@ -197,7 +208,7 @@ async function seed() {
   console.log('   访问地址: http://localhost:3004 (admin / admin)\n');
 
   await mongoose.disconnect();
-  await memServer.stop();
+  if (memServer) await memServer.stop();
   process.exit(0);
 }
 

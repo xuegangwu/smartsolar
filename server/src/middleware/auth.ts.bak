@@ -17,9 +17,7 @@ export interface AuthRequest extends Request {
 // Verify JWT token
 export function auth(req: AuthRequest, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
-  console.error('[AUTH DEBUG] path:', req.path, '| authHeader:', authHeader ? authHeader.slice(0, 50) + '...' : 'NONE');
   if (!authHeader?.startsWith('Bearer ')) {
-    console.error('[AUTH DEBUG] → 401 No Bearer header');
     return res.status(401).json({ success: false, message: '未登录' });
   }
   
@@ -27,10 +25,8 @@ export function auth(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as AuthUser;
     req.user = decoded;
-    console.error('[AUTH DEBUG] → OK, user:', decoded.username, 'role:', decoded.role);
     next();
-  } catch (err: any) {
-    console.error('[AUTH DEBUG] → 401 Token invalid:', err.message, 'JWT_SECRET:', JWT_SECRET);
+  } catch {
     return res.status(401).json({ success: false, message: 'Token 无效' });
   }
 }

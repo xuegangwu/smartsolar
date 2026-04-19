@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
+import { writeFileSync } from 'fs';
 import { stationRoutes } from './routes/stationRoutes.js';
 import { workOrderRoutes } from './routes/workOrderRoutes.js';
 import { alertRoutes } from './routes/alertRoutes.js';
@@ -23,6 +24,21 @@ import { seedAllTelemetry } from './seed/seedTelemetry.js';
 dotenv.config();
 
 const app = express();
+
+// Shared MongoDB Memory Server instance (for dev mode)
+let _memServer: MongoMemoryServer | null = null;
+const MEM_SERVER_FILE = '/tmp/smartsolar-mongo-uri.txt';
+
+async function getMongoUri(): Promise<string> {
+  if (MONGO_URI) return MONGO_URI;
+  if (!_memServer) {
+    _memServer = await MongoMemoryServer.create();
+  }
+  const uri = _memServer.getUri();
+  // Write URI to temp file so seed script can reuse the same instance
+  writeFileSync(MEM_SERVER_FILE, uri);
+  return uri;
+}
 const PORT = process.env.PORT || 3003;
 const MONGO_URI = process.env.MONGO_URI;
 const USE_MEMORY = process.env.MONGO_MEMORY === 'true' || !MONGO_URI;
@@ -55,16 +71,13 @@ app.get('/api/health', (req, res) => {
 });
 
 async function start() {
-  let mongoUri = MONGO_URI;
-
+  const mongoUri = await getMongoUri();
   if (USE_MEMORY) {
     console.log('📦 Starting MongoDB Memory Server...');
-    const memServer = await MongoMemoryServer.create();
-    mongoUri = memServer.getUri();
     console.log(`   Memory server ready: ${mongoUri.slice(0, 40)}...`);
   }
 
-  await mongoose.connect(mongoUri!);
+  await mongoose.connect(mongoUri);
   console.log(`✅ MongoDB connected: ${USE_MEMORY ? 'memory' : MONGO_URI}`);
 
   app.listen(PORT, async () => {
