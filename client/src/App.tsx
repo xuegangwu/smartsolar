@@ -1,32 +1,43 @@
+import { lazy, Suspense, type ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ConfigProvider, App as AntApp } from 'antd';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { StationProvider } from './contexts/StationContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import Layout from './components/Layout';
-import Dashboard from './pages/Dashboard';
-import Stations from './pages/Stations';
-import StationMap from './pages/StationMap';
-import Equipment from './pages/Equipment';
-import WorkOrders from './pages/WorkOrders';
-import Alerts from './pages/Alerts';
-import Inspection from './pages/Inspection';
-import Personnel from './pages/Personnel';
-import SpareParts from './pages/SpareParts';
-import KPI from './pages/KPI';
-import EmsSimulator from './pages/EmsSimulator';
-import Reports from './pages/Reports';
-import StationTopology from './pages/StationTopology';
-import StationBuilder from './pages/StationBuilder';
-import HealthDashboard from './pages/HealthDashboard';
-import AICopilot from './pages/AICopilot';
-import Login from './pages/Login';
 import Home from './pages/Home';
-import PartnerLogin from './pages/PartnerLogin';
-import PartnerDashboard from './pages/PartnerDashboard';
-import PartnerTransactions from './pages/PartnerTransactions';
-import PartnerMall from './pages/PartnerMall';
-import PartnerAdmin from './pages/PartnerAdmin';
+import { Spin } from 'antd';
+import { LoadingOutlined } from '@ant-design/icons';
+
+// 路由级懒加载
+const Login = lazy(() => import('./pages/Login'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Stations = lazy(() => import('./pages/Stations'));
+const StationMap = lazy(() => import('./pages/StationMap'));
+const Equipment = lazy(() => import('./pages/Equipment'));
+const WorkOrders = lazy(() => import('./pages/WorkOrders'));
+const Alerts = lazy(() => import('./pages/Alerts'));
+const Inspection = lazy(() => import('./pages/Inspection'));
+const Personnel = lazy(() => import('./pages/Personnel'));
+const SpareParts = lazy(() => import('./pages/SpareParts'));
+const KPI = lazy(() => import('./pages/KPI'));
+const EmsSimulator = lazy(() => import('./pages/EmsSimulator'));
+const Reports = lazy(() => import('./pages/Reports'));
+const StationTopology = lazy(() => import('./pages/StationTopology'));
+const StationBuilder = lazy(() => import('./pages/StationBuilder'));
+const HealthDashboard = lazy(() => import('./pages/HealthDashboard'));
+const AICopilot = lazy(() => import('./pages/AICopilot'));
+const PartnerLogin = lazy(() => import('./pages/PartnerLogin'));
+const PartnerDashboard = lazy(() => import('./pages/PartnerDashboard'));
+const PartnerTransactions = lazy(() => import('./pages/PartnerTransactions'));
+const PartnerMall = lazy(() => import('./pages/PartnerMall'));
+const PartnerAdmin = lazy(() => import('./pages/PartnerAdmin'));
+
+const PageLoader = ({ children }: { children: ReactNode }) => (
+  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+    <Spin indicator={<LoadingOutlined spin />} size="large" />
+  </div>
+);
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -48,6 +59,7 @@ export default function App() {
           <StationProvider>
             <NotificationProvider>
             <BrowserRouter>
+              <Suspense fallback={<PageLoader />}>
               <Routes>
                 {/* ── 公开入口（无需认证）── */}
                 <Route path="/" element={<Home />} />
@@ -86,6 +98,7 @@ export default function App() {
                   <Route index element={<Navigate to="/dashboard" replace />} />
                 </Route>
               </Routes>
+              </Suspense>
             </BrowserRouter>
             </NotificationProvider>
           </StationProvider>

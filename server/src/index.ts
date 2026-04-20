@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import { writeFileSync } from 'fs';
+import http from 'http';
 import { stationRoutes } from './routes/stationRoutes.js';
 import { workOrderRoutes } from './routes/workOrderRoutes.js';
 import { alertRoutes } from './routes/alertRoutes.js';
@@ -83,7 +84,18 @@ async function start() {
   await mongoose.connect(mongoUri);
   console.log(`✅ MongoDB connected: ${USE_MEMORY ? 'memory' : MONGO_URI}`);
 
-  app.listen(PORT, async () => {
+  // HTTP server（支持 WebSocket）
+  const httpServer = http.createServer(app);
+
+  // 启动 WebSocket
+  try {
+    const { setupWebSocket } = await import('./services/websocketService.js');
+    setupWebSocket(httpServer);
+  } catch (e) {
+    console.warn('[WS] WebSocket setup failed:', e);
+  }
+
+  httpServer.listen(PORT, async () => {
     console.log(`🚀 SmartSolar server running on http://localhost:${PORT}`);
 
     // 如果没有遥测数据，先填充7天历史数据

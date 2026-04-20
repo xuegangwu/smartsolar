@@ -47,6 +47,13 @@ export const workOrderController = {
     }];
     const workOrder = new WorkOrder(data);
     await workOrder.save();
+
+    // WebSocket 实时推送
+    try {
+      const { broadcast } = await import('../services/websocketService.js');
+      broadcast({ tag: 'workorder', data: { _id: workOrder._id, orderNo: workOrder.orderNo, title: workOrder.title, priority: workOrder.priority, status: workOrder.status } });
+    } catch {}
+
     const populated = await WorkOrder.findById(workOrder._id)
       .populate('stationId', 'name')
       .populate('assigneeId', 'name');

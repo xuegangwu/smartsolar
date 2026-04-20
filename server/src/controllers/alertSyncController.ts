@@ -93,6 +93,13 @@ export const alertSyncController = {
             acknowledged: false,
           });
           await alert.save();
+
+          // WebSocket 实时推送新告警
+          try {
+            const { broadcast } = await import('../services/websocketService.js');
+            broadcast({ tag: 'alert', data: { _id: alert._id, stationId: item.stationId, level: item.level, message: item.message, code: item.code, createdAt: alert.createdAt } });
+          } catch {}
+
           results.push({ ...alert.toObject(), synced: true });
         } catch (e: any) {
           results.push({ error: e.message, item });

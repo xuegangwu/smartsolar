@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { useWebSocket } from '../hooks/useWebSocket';
 
 interface Notification {
   _id: string;
@@ -69,6 +70,22 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     setNotifications(prev => prev.map(n => ids?.includes(n._id) ? { ...n, read: true } : ids ? { ...n } : { ...n, read: true }));
     setUnreadCount(prev => ids ? Math.max(0, prev - ids.length) : 0);
   }, []);
+
+  // WebSocket 实时推送
+  const token = localStorage.getItem('smartsolar_token');
+  useWebSocket({
+    token: token || undefined,
+    onConnect: () => console.log('[WS] Notification context connected'),
+    onMessage: (msg) => {
+      if (msg.tag === 'notification' || msg.tag === 'alert' || msg.tag === 'workorder') {
+        // 收到实时推送，插入通知列表
+        setNotifications(prev => [msg.data as Notification, ...prev].slice(0, 50));
+        if (!(msg.data as Notification).read) {
+          setUnreadCount(c => c + 1);
+        }
+      }
+    },
+  });
 
   const markAllRead = useCallback(async () => {
     const token = localStorage.getItem('smartsolar_token');
