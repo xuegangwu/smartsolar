@@ -13,17 +13,23 @@ api.interceptors.request.use(config => {
 });
 
 // Handle 401 globally
+let isRedirecting = false;
 api.interceptors.response.use(
   res => res,
   err => {
-    if (err.response?.status === 401) {
-      console.error('[API 401] Redirecting to login. Path:', err.config?.url, '| Status:', err.response?.status);
+    if (err.response?.status === 401 && !isRedirecting) {
+      const currentPath = window.location.pathname;
+      // Don't redirect if already on login page or already logging in
+      if (currentPath.includes('/login') || currentPath === '/') {
+        return Promise.reject(err);
+      }
+      isRedirecting = true;
+      console.error('[API 401] Redirecting to login. Path:', err.config?.url);
       localStorage.removeItem('smartsolar_token');
       localStorage.removeItem('smartsolar_user');
-      if (!window.location.pathname.includes('/login')) {
-        console.error('[API 401] Triggering redirect to /login');
-        window.location.href = '/login';
-      }
+      window.location.href = '/login';
+      // Reset flag after navigation
+      setTimeout(() => { isRedirecting = false; }, 1000);
     }
     return Promise.reject(err);
   }

@@ -19,10 +19,7 @@ export default function Login() {
       return;
     }
     message.success('登录成功');
-    // Use React Router navigate for client-side transition (no full reload)
-    setTimeout(() => {
-      navigate('/dashboard', { replace: true });
-    }, 300);
+    navigate('/dashboard', { replace: true });
   }
 
   return (
