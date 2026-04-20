@@ -245,7 +245,7 @@ export const InspectionTemplate = mongoose.model('InspectionTemplate', inspectio
 
 // ─── Partner（渠道商）────────────────────────────────────────────────────────
 const PARTNER_LEVELS = {
-  BRONZE: 'bronze', SILVER: 'silver', GOLD: 'gold', DIAMOND: 'diamond',
+  bronze: 'bronze', silver: 'silver', gold: 'gold', diamond: 'diamond',
 } as const;
 const LEVEL_THRESHOLDS: Record<string, number> = {
   bronze: 0, silver: 5000, gold: 20000, diamond: 50000,
@@ -253,6 +253,22 @@ const LEVEL_THRESHOLDS: Record<string, number> = {
 const LEVEL_MULTIPLIERS: Record<string, number> = {
   bronze: 1.0, silver: 1.2, gold: 1.5, diamond: 2.0,
 };
+
+// ─── 安装商业绩跟踪（每个安装商的安装量统计）──────────────────────────────────────
+const installerStatsSchema = new mongoose.Schema({
+  installerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Partner', required: true },
+  month: { type: String, required: true },           // YYYY-MM
+  totalInstallations: { type: Number, default: 0 },  // 累计安装量
+  totalCapacity: { type: Number, default: 0 },        // 累计装机容量 (kW)
+  residentialCount: { type: Number, default: 0 },    // 家用安装数
+  commercialCount: { type: Number, default: 0 },     // 商用安装数
+  industrialCount: { type: Number, default: 0 },     // 工商业安装数
+  workOrderCount: { type: Number, default: 0 },       // 完工工单数
+  qualityScore: { type: Number, default: 5.0 },      // 质量评分 (1-5)
+  complaintCount: { type: Number, default: 0 },     // 投诉次数
+}, { timestamps: true });
+installerStatsSchema.index({ installerId: 1, month: 1 }, { unique: true });
+export const InstallerStats = mongoose.model('InstallerStats', installerStatsSchema);
 
 const partnerSchema = new mongoose.Schema({
   name: { type: String, required: true },
@@ -264,6 +280,28 @@ const partnerSchema = new mongoose.Schema({
   phone: String, address: String, contactPerson: String,
   status: { type: String, enum: ['active', 'suspended'], default: 'active' },
   region: String, description: String,
+
+  // ── 安装商专属字段 ──────────────────────────────────────────────────────────
+  businessLicense: { type: String, label: '统一社会信用代码' },
+  establishmentDate: { type: Date, label: '成立时间' },
+  staffCount: { type: Number, label: '员工数量' },
+  serviceRegions: [{ type: String, label: '服务区域' }],          // 多选：省/市
+  specializedTypes: [{ type: String, enum: ['residential', 'commercial', 'industrial'], label: '擅长类型' }],
+  qualifications: [{
+    name: String,        // 证书名称
+    number: String,      // 证书编号
+    expireDate: Date,    // 过期时间
+    fileUrl: String,     // 证书扫描件
+  }],
+  totalInstallations: { type: Number, default: 0 },   // 历史累计安装量
+  totalCapacity: { type: Number, default: 0 },         // 历史累计装机容量 (kW)
+  rating: { type: Number, default: 5.0, min: 1, max: 5 },  // 客户评分
+  bankAccount: {
+    bankName: String,
+    accountName: String,
+    accountNumber: String,
+  },
+  taxId: String,
 }, { timestamps: true });
 partnerSchema.methods.calcLevel = function() {
   if (this.totalPoints >= LEVEL_THRESHOLDS.diamond) return 'diamond';

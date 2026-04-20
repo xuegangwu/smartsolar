@@ -5,7 +5,7 @@ import {
   DashboardOutlined, HomeOutlined, ToolOutlined, FileTextOutlined,
   BellOutlined, CalendarOutlined, UserOutlined, LogoutOutlined,
   InboxOutlined, RiseOutlined, ApiOutlined, DownloadOutlined, PlusSquareOutlined,
-  EnvironmentOutlined, TeamOutlined, MoreOutlined, ExperimentOutlined, RobotOutlined,
+  EnvironmentOutlined, TeamOutlined, MoreOutlined, ExperimentOutlined, RobotOutlined, ToolOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
@@ -29,6 +29,7 @@ const NAV_ITEMS = [
   { key: '/ems-simulator', icon: <ApiOutlined />, label: 'EMS模拟' },
   { key: '/ai', icon: <RobotOutlined />, label: 'AI助手' },
   { key: '/partner-admin', icon: <TeamOutlined />, label: '渠道管理' },
+  { key: '/installers', icon: <ToolOutlined />, label: '安装商' },
 ];
 
 // ─── Mobile Bottom Tab Bar ─────────────────────────────────────────────────────
