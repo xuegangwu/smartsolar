@@ -105,6 +105,36 @@ function OrderItem({ item, onClick }: { item: any; onClick?: () => void }) {
   );
 }
 
+// ─── Weather helpers ───────────────────────────────────────────────────────
+// wttr.in weather code → solar generation factor (0-1)
+function calcSolarFactor(code: string | undefined): number {
+  if (!code) return 0.5;
+  const clear = ['0', '1', '2'];         // 晴/少云/多云
+  const cloudy = ['3'];                   // 阴天
+  const rainy = ['61','63','65','80','81','82','95','96','99']; // 雨雪
+  if (clear.includes(code)) return 0.9;
+  if (cloudy.includes(code)) return 0.5;
+  if (rainy.includes(code)) return 0.15;
+  return 0.6;
+}
+
+const WEATHER_ICON: Record<string, string> = {
+  '0': '☀️', '1': '🌤️', '2': '⛅', '3': '☁️',
+  '61': '🌧️', '63': '🌧️', '65': '🌧️',
+  '80': '🌦️', '81': '🌧️', '82': '🌧️',
+  '95': '⛈️', '96': '⛈️', '99': '⛈️',
+};
+const WEATHER_TEXT: Record<string, string> = {
+  '0': '晴', '1': '晴', '2': '多云', '3': '阴',
+  '61': '小雨', '63': '中雨', '65': '大雨',
+  '80': '阵雨', '81': '雨', '82': '暴雨',
+  '95': '雷暴', '96': '雷暴', '99': '雷暴',
+};
+
+function estimateSolar(kwh: number, factor: number): string {
+  return (kwh * factor).toFixed(1);
+}
+
 // ─── Main ────────────────────────────────────────────────────────────────
 export default function Dashboard() {
   const [alertStats, setAlertStats] = useState({ total: 0, critical: 0, major: 0, minor: 0, unacknowledged: 0 });
@@ -114,6 +144,7 @@ export default function Dashboard() {
   const [healthStats, setHealthStats] = useState<any>(null);
   const [predictiveAlerts, setPredictiveAlerts] = useState<any[]>([]);
   const [loadingAI, setLoadingAI] = useState(false);
+  const [weather, setWeather] = useState<any[]>([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -139,6 +170,23 @@ export default function Dashboard() {
       if (stationRes.success) setStationCount(stationRes.data.length);
       if (healthRes.success) setHealthStats(healthRes.stats);
       if (predRes.success) setPredictiveAlerts((predRes.data || []).slice(0, 3));
+
+      // 天气数据（wttr.in）
+      try {
+        const wRes = await fetch('https://wttr.in/Shanghai,Shanghai+IP?format=j1');
+        if (wRes.ok) {
+          const wData = await wRes.json();
+          const tomorrow = wData.weather?.[1]?.hourly?.[4];
+          const dayAfter = wData.weather?.[2]?.hourly?.[4];
+          const today = wData.weather?.[0];
+          setWeather([
+            { day: '今天', code: today?.hourly?.[4]?.weatherCode, temp: today?.hourly?.[4]?.tempC, solar: calcSolarFactor(ttoday?.hourly?.[4]?.weatherCode), uv: today?.uvMax },
+            { day: '明天', code: tomorrow?.weatherCode, temp: tomorrow?.tempC, solar: calcSolarFactor(tomorrow?.weatherCode), uv: wData.weather?.[1]?.uvMax },
+            { day: '后天', code: dayAfter?.weatherCode, temp: dayAfter?.tempC, solar: calcSolarFactor(dayAfter?.weatherCode), uv: wData.weather?.[2]?.uvMax },
+          ]);
+        }
+      } catch {}
+
       const alerts = await alertApi.getAll({ limit: 10 });
       if (alerts.success) setRecentAlerts(alerts.data);
     } catch (err) {
@@ -212,6 +260,39 @@ export default function Dashboard() {
               </div>
             </div>
           )}
+        </Card>
+      )}
+
+      {/* 天气预报卡片 */}
+      {weather.length > 0 && (
+        <Card
+          style={{ background: 'linear-gradient(135deg, #1a3a5c 0%, #0f2744 100%)', border: 'none', borderRadius: 12 }}
+          bodyStyle={{ padding: '16px 24px' }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <Space>
+              <span style={{ fontSize: 16 }}>🌤️</span>
+              <span style={{ color: '#fff', fontWeight: 700, fontSize: 14 }}>☀️ 光伏发电预测（上海）</span>
+            </Space>
+            <Text style={{ color: '#9ca3af', fontSize: 11 }}>基于天气预报 · 实际发电量受设备效率影响</Text>
+          </div>
+          <Row gutter={16}>
+            {weather.map((w: any, i: number) => (
+              <Col key={i} span={8}>
+                <div style={{ textAlign: 'center', background: '#ffffff10', borderRadius: 10, padding: '12px 8px' }}>
+                  <div style={{ fontSize: 12, color: '#9ca3af', marginBottom: 6 }}>{w.day}</div>
+                  <div style={{ fontSize: 28, marginBottom: 4 }}>{WEATHER_ICON[w.code] || '🌤️'}</div>
+                  <div style={{ fontSize: 11, color: '#e5e7eb', marginBottom: 6 }}>{w.temp}°C · {WEATHER_TEXT[w.code] || '—'}</div>
+                  <div style={{ background: '#22c55e20', borderRadius: 6, padding: '4px 8px' }}>
+                    <div style={{ fontSize: 10, color: '#9ca3af' }}>预计发电</div>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: '#4ade80', fontFamily: 'JetBrains Mono, monospace' }}>
+                      {(w.solar * (i === 0 ? 380 : 360)).toFixed(0)} kWh
+                    </div>
+                  </div>
+                </div>
+              </Col>
+            ))}
+          </Row>
         </Card>
       )}
 
