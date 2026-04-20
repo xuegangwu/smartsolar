@@ -361,4 +361,16 @@ const pointRedemptionSchema = new mongoose.Schema({
 }, { timestamps: true });
 export const PointRedemption = mongoose.model('PointRedemption', pointRedemptionSchema);
 
+// ─── PartnerTransfer（安装商归属变更记录）─────────────────────────────────────
+const partnerTransferSchema = new mongoose.Schema({
+  installerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Partner', required: true },
+  fromDistributorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Partner', default: null },
+  toDistributorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Partner', default: null },
+  reason: { type: String, default: '' },
+  operatorId: { type: mongoose.Schema.Types.ObjectId, ref: 'PartnerUser' },
+  operatorName: { type: String },
+}, { timestamps: true });
+partnerTransferSchema.index({ installerId: 1, createdAt: -1 });
+export const PartnerTransfer = mongoose.model('PartnerTransfer', partnerTransferSchema);
+
 export { LEVEL_THRESHOLDS, LEVEL_MULTIPLIERS, PARTNER_LEVELS as PARTNER_LEVEL };

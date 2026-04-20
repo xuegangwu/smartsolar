@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { Partner, PartnerUser, PointTransaction, PointRedemption, PointRule, WorkOrder, LEVEL_THRESHOLDS, LEVEL_MULTIPLIERS } from '../models/index.js';
+import { Partner, PartnerUser, PointTransaction, PointRedemption, PointRule, WorkOrder, PartnerTransfer, LEVEL_THRESHOLDS, LEVEL_MULTIPLIERS } from '../models/index.js';
 
 const router = Router();
 const PARTNER_JWT_SECRET = process.env.PARTNER_JWT_SECRET || 'smartsolar_partner_secret';
@@ -202,42 +202,64 @@ router.post('/', async (req, res) => {
   }
 });
 
-// 获取单个渠道商
-router.get('/:id', async (req, res) => {
+
+// ─── 安装商归属分配（放在 /:id 之前，避免被误匹配）──────────────────────────────
+router.put('/:id/assign', async (req, res) => {
   try {
-    const partner = await Partner.findById(req.params.id).lean();
-    if (!partner) return res.status(404).json({ success: false, message: '不存在' });
-    const users = await PartnerUser.find({ partnerId: partner._id }).select('-password').lean();
-    const stats = await PointTransaction.aggregate([
-      { $match: { partnerId: partner._id } },
-      { $group: { _id: '$type', total: { $sum: '$amount' } } },
-    ]);
-    res.json({ success: true, data: { ...partner, users, pointStats: stats } });
+    const { parentId, reason } = req.body;
+    const installer = await Partner.findById(req.params.id);
+    if (!installer) return res.status(404).json({ success: false, message: '安装商不存在' });
+    if (installer.type !== 'installer') return res.status(400).json({ success: false, message: '只有安装商可以分配归属' });
+    if (parentId) {
+      const dist = await Partner.findById(parentId);
+      if (!dist) return res.status(404).json({ success: false, message: '分销商不存在' });
+      if (dist.type !== 'distributor') return res.status(400).json({ success: false, message: '归属对象必须是分销商' });
+      if (dist.status !== 'active') return res.status(400).json({ success: false, message: '分销商状态已禁用' });
+    }
+    const fromDistributorId = installer.parentId;
+    await PartnerTransfer.create({
+      installerId: installer._id,
+      fromDistributorId: fromDistributorId || undefined,
+      toDistributorId: parentId || undefined,
+      reason: reason || '',
+    });
+    installer.parentId = parentId || null;
+    await installer.save();
+    res.json({ success: true, data: installer });
   } catch (err: any) {
     res.status(500).json({ success: false, message: err.message });
   }
 });
 
-// 更新渠道商
-router.put('/:id', async (req, res) => {
+router.get('/installers/:distributorId', async (req, res) => {
   try {
-    const { name, phone, address, contactPerson, region, description, status, level } = req.body;
-    const update: any = {};
-    if (name) update.name = name;
-    if (phone) update.phone = phone;
-    if (address) update.address = address;
-    if (contactPerson) update.contactPerson = contactPerson;
-    if (region) update.region = region;
-    if (description) update.description = description;
-    if (status) update.status = status;
-    if (level) update.level = level;
-
-    const partner = await Partner.findByIdAndUpdate(req.params.id, update, { new: true });
-    res.json({ success: true, data: partner });
+    const installers = await Partner.find({ parentId: req.params.distributorId, type: 'installer' })
+      .sort({ createdAt: -1 }).lean();
+    res.json({ success: true, data: installers });
   } catch (err: any) {
     res.status(500).json({ success: false, message: err.message });
   }
 });
+
+router.get('/transfers', async (req, res) => {
+  try {
+    const { installerId } = req.query;
+    const filter: any = {};
+    if (installerId) filter.installerId = installerId;
+    const transfers = await PartnerTransfer.find(filter)
+      .populate('installerId', 'name')
+      .populate('fromDistributorId', 'name')
+      .populate('toDistributorId', 'name')
+      .sort({ createdAt: -1 })
+      .limit(100)
+      .lean();
+    res.json({ success: true, data: transfers });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+
 
 // ─── 积分规则 ─────────────────────────────────────────────────────────────────
 
@@ -438,5 +460,44 @@ router.patch('/admin/redemptions/:id', async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 });
+
+
+// 获取单个渠道商
+router.get('/:id', async (req, res) => {
+  try {
+    const partner = await Partner.findById(req.params.id).lean();
+    if (!partner) return res.status(404).json({ success: false, message: '不存在' });
+    const users = await PartnerUser.find({ partnerId: partner._id }).select('-password').lean();
+    const stats = await PointTransaction.aggregate([
+      { $match: { partnerId: partner._id } },
+      { $group: { _id: '$type', total: { $sum: '$amount' } } },
+    ]);
+    res.json({ success: true, data: { ...partner, users, pointStats: stats } });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// 更新渠道商
+router.put('/:id', async (req, res) => {
+  try {
+    const { name, phone, address, contactPerson, region, description, status, level } = req.body;
+    const update: any = {};
+    if (name) update.name = name;
+    if (phone) update.phone = phone;
+    if (address) update.address = address;
+    if (contactPerson) update.contactPerson = contactPerson;
+    if (region) update.region = region;
+    if (description) update.description = description;
+    if (status) update.status = status;
+    if (level) update.level = level;
+
+    const partner = await Partner.findByIdAndUpdate(req.params.id, update, { new: true });
+    res.json({ success: true, data: partner });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 
 export default router;
