@@ -30,6 +30,7 @@ const NAV_ITEMS = [
   { key: '/ai', icon: <RobotOutlined />, label: 'AI助手' },
   { key: '/partner-admin', icon: <TeamOutlined />, label: '渠道管理' },
   { key: '/installers', icon: <ToolOutlined />, label: '安装商' },
+  { key: '/installer-stats', icon: <RiseOutlined />, label: '安装商统计' },
 ];
 
 // ─── Mobile Bottom Tab Bar ─────────────────────────────────────────────────────

@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { WorkOrder, SparePart, SparePartConsume, Notification, Alert, Personnel } from '../models/index.js';
+import { WorkOrder, SparePart, SparePartConsume, Notification, Alert, Personnel, InstallerStats, Partner, Equipment } from '../models/index.js';
 
 // 生成工单号
 function generateOrderNo(): string {
@@ -166,6 +166,33 @@ export const workOrderController = {
                 multiplier,
               });
               console.log(`[Points] Partner ${partner.name} earned ${actualPoints} points for WO ${workOrder.orderNo}`);
+
+              // ── 更新安装商业绩统计 ─────────────────────────────────────────────────────
+              try {
+                const now = new Date();
+                const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                const equip = workOrder.equipmentId ? await Equipment.findById(workOrder.equipmentId).lean() : null;
+                const capacity = equip?.ratedPower || 0;
+
+                await InstallerStats.findOneAndUpdate(
+                  { installerId: partner._id, month },
+                  {
+                    $inc: {
+                      totalInstallations: 1,
+                      totalCapacity: capacity,
+                      workOrderCount: 1,
+                    },
+                  },
+                  { upsert: true, new: true },
+                );
+
+                // 同步更新 Partner 上的累计字段
+                partner.totalInstallations = (partner.totalInstallations || 0) + 1;
+                partner.totalCapacity = (partner.totalCapacity || 0) + capacity;
+                await partner.save();
+              } catch (statsErr) {
+                console.error('[Stats] Failed to update installer stats:', statsErr);
+              }
             }
           }
         } catch (e) {

@@ -33,6 +33,7 @@ const PartnerTransactions = lazy(() => import('./pages/PartnerTransactions'));
 const PartnerMall = lazy(() => import('./pages/PartnerMall'));
 const PartnerAdmin = lazy(() => import('./pages/PartnerAdmin'));
 const Installers = lazy(() => import('./pages/Installers'));
+const InstallerStats = lazy(() => import('./pages/InstallerStats'));
 
 const PageLoader = ({ children }: { children: ReactNode }) => (
   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
@@ -96,6 +97,7 @@ export default function App() {
                   <Route path="/ai" element={<AICopilot />} />
                   <Route path="/partner-admin" element={<PartnerAdmin />} />
                   <Route path="/installers" element={<Installers />} />
+                  <Route path="/installer-stats" element={<InstallerStats />} />
                   {/* 首页重定向到 dashboard */}
                   <Route index element={<Navigate to="/dashboard" replace />} />
                 </Route>
