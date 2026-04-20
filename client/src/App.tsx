@@ -34,6 +34,7 @@ const PartnerMall = lazy(() => import('./pages/PartnerMall'));
 const PartnerAdmin = lazy(() => import('./pages/PartnerAdmin'));
 const Installers = lazy(() => import('./pages/Installers'));
 const InstallerStats = lazy(() => import('./pages/InstallerStats'));
+const InstallerPortal = lazy(() => import('./pages/InstallerPortal'));
 
 const PageLoader = ({ children }: { children: ReactNode }) => (
   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
@@ -67,6 +68,7 @@ export default function App() {
                 <Route path="/" element={<Home />} />
                 <Route path="/login" element={<AuthRoute><Login /></AuthRoute>} />
                 <Route path="/partner-login" element={<PartnerLogin />} />
+                <Route path="/installer-portal" element={<InstallerPortal />} />
 
                 {/* ── 渠道商 Portal ── */}
                 <Route path="/partner-dashboard" element={<PartnerDashboard />} />

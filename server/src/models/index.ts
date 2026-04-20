@@ -16,6 +16,7 @@ const stationSchema = new mongoose.Schema({
   contact: String,
   status: { type: String, enum: ['online', 'offline', 'maintenance'], default: 'online' },
   gridConnectionDate: String,
+  installerPartnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Partner', label: '安装商' },
 }, { timestamps: true });
 
 export const Station = mongoose.model('Station', stationSchema);

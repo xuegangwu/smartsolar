@@ -25,7 +25,12 @@ export default function PartnerLogin() {
       localStorage.setItem('partner_token', data.token);
       localStorage.setItem('partner_user', JSON.stringify(data.user));
       message.success('登录成功');
-      navigate('/partner-dashboard', { replace: true });
+      // 安装商跳转专属工作台
+      if (data.partner?.type === 'installer') {
+        navigate('/installer-portal', { replace: true });
+      } else {
+        navigate('/partner-dashboard', { replace: true });
+      }
     } catch {
       message.error('网络错误');
     }
@@ -73,6 +78,12 @@ export default function PartnerLogin() {
           <Text style={{ color: '#b8c0cc', fontSize: 12 }}>
             演示账号 · dist_admin / partner123
           </Text>
+        </div>
+
+        <div style={{ marginTop: 16, textAlign: 'center' }}>
+          <Link to="/installer-portal" style={{ color: '#3b82f6', fontSize: 13 }}>
+            🔧 我是安装商，安装商工作台 →
+          </Link>
         </div>
       </Card>
     </div>

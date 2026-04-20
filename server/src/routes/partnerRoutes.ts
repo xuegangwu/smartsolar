@@ -203,6 +203,106 @@ router.post('/', async (req, res) => {
 });
 
 
+// ─── 安装商专属 API ─────────────────────────────────────────────────────────
+// GET /api/partners/installer/stations  - 获取安装商名下的电站
+router.get('/installer/stations', partnerAuth, async (req: any, res) => {
+  try {
+    const partnerId = req.partnerUser.partnerId;
+    const stations = await (await import('../models/index.js')).Station
+      .find({ installerPartnerId: partnerId })
+      .lean();
+    res.json({ success: true, data: stations });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// GET /api/partners/installer/work-orders  - 获取安装商的工单
+router.get('/installer/work-orders', partnerAuth, async (req: any, res) => {
+  try {
+    const partnerId = req.partnerUser.partnerId;
+    const { status } = req.query;
+    const filter: any = { partnerId };
+    if (status) filter.status = status;
+
+    const workOrders = await (await import('../models/index.js')).WorkOrder
+      .find(filter)
+      .populate('stationId', 'name location')
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .lean();
+    res.json({ success: true, data: workOrders });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// GET /api/partners/installer/dashboard  - 安装商工作台
+router.get('/installer/dashboard', partnerAuth, async (req: any, res) => {
+  try {
+    const partnerId = req.partnerUser.partnerId;
+    const partner = await (await import('../models/index.js')).Partner.findById(partnerId).lean();
+    if (!partner) return res.status(404).json({ success: false, message: '安装商不存在' });
+
+    // 电站数量
+    const stations = await (await import('../models/index.js')).Station.find({ installerPartnerId: partnerId }).lean();
+
+    // 工单统计
+    const totalWorkOrders = await (await import('../models/index.js')).WorkOrder.countDocuments({ partnerId });
+    const openWorkOrders = await (await import('../models/index.js')).WorkOrder.countDocuments({ partnerId, status: { $nin: ['closed'] } });
+    const myWorkOrders = await (await import('../models/index.js')).WorkOrder
+      .find({ partnerId })
+      .populate('stationId', 'name')
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .lean();
+
+    // 积分
+    const transactions = await (await import('../models/index.js')).PointTransaction
+      .find({ partnerId })
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .lean();
+
+    res.json({
+      success: true,
+      data: {
+        partner: {
+          id: partner._id, name: partner.name, type: partner.type,
+          level: partner.level, totalPoints: partner.totalPoints,
+          availablePoints: partner.availablePoints,
+          totalInstallations: partner.totalInstallations || 0,
+          totalCapacity: partner.totalCapacity || 0,
+          region: partner.region, status: partner.status,
+        },
+        stats: {
+          totalStations: stations.length,
+          totalWorkOrders,
+          openWorkOrders,
+        },
+        recentWorkOrders: myWorkOrders,
+        recentTransactions: transactions.slice(0, 10),
+      },
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// PUT /api/partners/installer/stations/:id  - 安装商认领/更新电站
+router.put('/installer/stations/:id', partnerAuth, async (req: any, res) => {
+  try {
+    const partnerId = req.partnerUser.partnerId;
+    const station = await (await import('../models/index.js')).Station.findById(req.params.id);
+    if (!station) return res.status(404).json({ success: false, message: '电站不存在' });
+    station.installerPartnerId = partnerId;
+    await station.save();
+    res.json({ success: true, data: station });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // ─── 安装商归属分配（放在 /:id 之前，避免被误匹配）──────────────────────────────
 router.put('/:id/assign', async (req, res) => {
   try {
