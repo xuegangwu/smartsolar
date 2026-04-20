@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { Card, Typography, Space, Divider } from 'antd';
-import { ThunderboltOutlined, TeamOutlined } from '@ant-design/icons';
+import { ThunderboltOutlined, TeamOutlined, ToolOutlined } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
 
@@ -77,6 +77,40 @@ export default function Home() {
           <div style={{
             marginTop: 20, padding: '8px 20px', borderRadius: 20,
             background: '#e6342a', color: '#fff', fontSize: 13,
+            display: 'inline-block', fontWeight: 600,
+          }}>
+            进入 →
+          </div>
+        </Card>
+
+        {/* 安装商平台 */}
+        <Card
+          onClick={() => navigate('/installer-portal')}
+          style={{
+            flex: '1 1 280px', maxWidth: 320, borderRadius: 20,
+            background: 'linear-gradient(135deg, #059669, #10b981)',
+            border: 'none', cursor: 'pointer',
+            boxShadow: '0 8px 32px rgba(5,150,105,0.4)',
+            color: 'white', textAlign: 'center',
+          }}
+          bodyStyle={{ padding: '36px 28px' }}
+        >
+          <div style={{
+            width: 64, height: 64, borderRadius: 16,
+            background: 'rgba(255,255,255,0.15)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 28, margin: '0 auto 20px',
+          }}>
+            <ToolOutlined style={{ color: '#fff' }} />
+          </div>
+          <Title level={4} style={{ color: '#fff', marginBottom: 8 }}>安装商平台</Title>
+          <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>
+            我的电站 · 完工工单 · 安装统计<br />
+            专属工作台 · 业绩排行
+          </Text>
+          <div style={{
+            marginTop: 20, padding: '8px 20px', borderRadius: 20,
+            background: '#059669', color: '#fff', fontSize: 13,
             display: 'inline-block', fontWeight: 600,
           }}>
             进入 →
