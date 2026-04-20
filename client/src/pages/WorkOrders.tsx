@@ -8,7 +8,7 @@ import {
   PlusOutlined, EditOutlined, CheckCircleOutlined, ClockCircleOutlined,
   UserOutlined, ToolOutlined, FileTextOutlined, ExclamationCircleOutlined,
 } from '@ant-design/icons';
-import { workOrderApi, stationApi, sparePartApi, personnelApi, equipmentApi } from '../services/api';
+import { workOrderApi, stationApi, sparePartApi, personnelApi, equipmentApi, partnerApi } from '../services/api';
 
 const { Text, Title } = Typography;
 const { TextArea } = Input;
@@ -75,10 +75,11 @@ export default function WorkOrders() {
   const [filterPriority, setFilterPriority] = useState<string>('');
   const [spareParts, setSpareParts] = useState<any[]>([]);
   const [personnel, setPersonnel] = useState<any[]>([]);
+  const [partners, setPartners] = useState<any[]>([]);
   const [equipmentList, setEquipmentList] = useState<any[]>([]);
   const [form] = Form.useForm();
 
-  useEffect(() => { loadOrders(); loadStations(); loadPersonnel(); }, []);
+  useEffect(() => { loadOrders(); loadStations(); loadPersonnel(); loadPartners(); }, []);
   useEffect(() => { loadOrders(); }, [filterStatus, filterPriority]);
 
   async function loadOrders() {
@@ -100,6 +101,12 @@ export default function WorkOrders() {
     // 只加载技术人员（可派工）
     const res = await personnelApi.getAll({ role: 'technician' });
     if (res.success) setPersonnel(res.data);
+  }
+
+  async function loadPartners() {
+    // 只加载安装商（用于工单关联）
+    const res = await partnerApi.getAll({ type: 'installer' });
+    if (res.success) setPartners(res.data);
   }
 
   async function loadEquipment(stationId: string) {
@@ -333,6 +340,17 @@ export default function WorkOrders() {
           </Form.Item>
 
           {/* Spare Parts Selector */}
+          <Row gutter={12}>
+            <Col span={12}>
+              <Form.Item name="partnerId" label="安装商（计积分）">
+                <Select
+                  allowClear
+                  placeholder="选择安装商（工单关闭时给该安装商计积分）"
+                  options={partners.map((p: any) => ({ value: p._id, label: `${p.name} [${p.level}] ${p.totalPoints}分` }))}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
           <Form.Item
             label="备件消耗"
             name="spareParts"

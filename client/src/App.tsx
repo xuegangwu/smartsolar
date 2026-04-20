@@ -21,6 +21,10 @@ import StationBuilder from './pages/StationBuilder';
 import HealthDashboard from './pages/HealthDashboard';
 import AICopilot from './pages/AICopilot';
 import Login from './pages/Login';
+import PartnerLogin from './pages/PartnerLogin';
+import PartnerDashboard from './pages/PartnerDashboard';
+import PartnerTransactions from './pages/PartnerTransactions';
+import PartnerMall from './pages/PartnerMall';
 import { Spin } from 'antd';
 import { LoadingOutlined } from '@ant-design/icons';
 
@@ -40,6 +44,10 @@ export default function App() {
             <BrowserRouter>
               <Routes>
                 <Route path="/login" element={<Login />} />
+                <Route path="/partner-login" element={<PartnerLogin />} />
+                <Route path="/partner-dashboard" element={<PartnerDashboard />} />
+                <Route path="/partner-transactions" element={<PartnerTransactions />} />
+                <Route path="/partner-mall" element={<PartnerMall />} />
                 <Route path="/" element={
                   <ProtectedRoute>
                     <Layout />

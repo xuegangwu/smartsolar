@@ -122,6 +122,49 @@ export const workOrderController = {
     if (status === 'closed') {
       workOrder.closedAt = new Date();
       workOrder.completedAt = new Date();
+
+      // ── 触发积分赚取（安装商）─────────────────────────────────────
+      if ((workOrder as any).partnerId) {
+        try {
+          const { Equipment } = await import('../models/index.js');
+          const equipment = await Equipment.findById(workOrder.equipmentId).lean();
+          const capacity = equipment ? (equipment.ratedPower || 0) : 0;
+          const { Partner, PointTransaction, LEVEL_MULTIPLIERS } = await import('../models/index.js');
+          const partner = await Partner.findById((workOrder as any).partnerId);
+          if (partner && partner.status === 'active') {
+            const { PointRule } = await import('../models/index.js');
+            const rule = await PointRule.findOne({ trigger: 'work_order_close', enabled: true }).lean();
+            if (rule) {
+              const basePoints = rule.basePointsPerUnit * (capacity || 1);
+              const multiplier = LEVEL_MULTIPLIERS[partner.level] || 1.0;
+              const actualPoints = Math.floor(basePoints * multiplier);
+              partner.totalPoints += actualPoints;
+              partner.availablePoints += actualPoints;
+              const newLevel = (() => {
+                const LEVEL_THRESHOLDS: Record<string, number> = { bronze: 0, silver: 5000, gold: 20000, diamond: 50000 };
+                if (partner.totalPoints >= LEVEL_THRESHOLDS.diamond) return 'diamond';
+                if (partner.totalPoints >= LEVEL_THRESHOLDS.gold) return 'gold';
+                if (partner.totalPoints >= LEVEL_THRESHOLDS.silver) return 'silver';
+                return 'bronze';
+              })();
+              if (newLevel !== partner.level) partner.level = newLevel;
+              await partner.save();
+              await PointTransaction.create({
+                partnerId: partner._id,
+                type: 'earn',
+                amount: actualPoints,
+                balance: partner.availablePoints,
+                description: `完成工单：${workOrder.title}（${capacity}kW）`,
+                workOrderId: workOrder._id,
+                multiplier,
+              });
+              console.log(`[Points] Partner ${partner.name} earned ${actualPoints} points for WO ${workOrder.orderNo}`);
+            }
+          }
+        } catch (e) {
+          console.error('[Points] Failed to award points:', e);
+        }
+      }
     }
 
     // 如果状态变更，记录操作时间线

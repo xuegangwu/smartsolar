@@ -178,3 +178,13 @@ export const alertPredictiveApi = {
   updateStatus: (id: string, status: string) =>
     api.patch<any, any>(`/predictive-alerts/${id}`, { status }).then(r => r.data),
 };
+
+// ─── Partner (渠道商) ──────────────────────────────────────────────────────────
+export const partnerApi = {
+  getAll: (params?: any) => api.get<any, any>('/partners', { params }).then(r => r.data),
+  getById: (id: string) => api.get<any, any>(`/partners/${id}`).then(r => r.data),
+  create: (data: any) => api.post('/partners', data).then(r => r.data),
+  update: (id: string, data: any) => api.put(`/partners/${id}`, data).then(r => r.data),
+  getRedemptions: () =>
+    fetch('/api/partners/redemptions', { headers: { Authorization: `Bearer ${localStorage.getItem('partner_token') || ''}` } }).then(r => r.json()),
+};
