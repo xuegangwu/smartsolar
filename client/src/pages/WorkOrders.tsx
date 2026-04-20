@@ -7,6 +7,7 @@ import type { ColumnsType } from 'antd/es/table';
 import {
   PlusOutlined, EditOutlined, CheckCircleOutlined, ClockCircleOutlined,
   UserOutlined, ToolOutlined, FileTextOutlined, ExclamationCircleOutlined,
+  RobotOutlined,
 } from '@ant-design/icons';
 import { workOrderApi, stationApi, sparePartApi, personnelApi, equipmentApi, partnerApi } from '../services/api';
 
@@ -69,11 +70,14 @@ export default function WorkOrders() {
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
+  const [aiResult, setAiResult] = useState<string>('');
+  const [aiModalOpen, setAiModalOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [detail, setDetail] = useState<any>(null);
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [filterPriority, setFilterPriority] = useState<string>('');
   const [spareParts, setSpareParts] = useState<any[]>([]);
+  const [aiLoading, setAiLoading] = useState(false);
   const [personnel, setPersonnel] = useState<any[]>([]);
   const [partners, setPartners] = useState<any[]>([]);
   const [equipmentList, setEquipmentList] = useState<any[]>([]);
@@ -107,6 +111,31 @@ export default function WorkOrders() {
     // 只加载安装商（用于工单关联）
     const res = await partnerApi.getAll({ type: 'installer' });
     if (res.success) setPartners(res.data);
+  }
+
+  async function handleAIFaultAnalysis(order: any) {
+    setAiLoading(true);
+    setAiResult('');
+    setAiModalOpen(true);
+    try {
+      const token = localStorage.getItem('smartsolar_token');
+      const equipment = order.equipmentId || {};
+      const station = order.stationId || {};
+      const res = await fetch('/api/ai/fault-analysis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          faultDescription: `${order.title}。${order.description || ''}`,
+          equipmentType: equipment.type || order.type || 'unknown',
+          equipmentBrand: equipment.brand || '',
+          equipmentModel: equipment.model || '',
+          stationName: typeof station === 'object' ? station.name : '',
+        }),
+      });
+      const data = await res.json();
+      setAiResult(data.success ? data.data.reply : data.message || '分析失败');
+    } catch { setAiResult('网络错误，请稍后重试'); }
+    setAiLoading(false);
   }
 
   async function loadEquipment(stationId: string) {
@@ -470,6 +499,9 @@ export default function WorkOrders() {
                 {STATUS_MAP[detail.status]?.step === 5 && (
                   <Tag color="green" icon={<CheckCircleOutlined />}>工单已关闭</Tag>
                 )}
+                <Button icon={<RobotOutlined />} onClick={() => handleAIFaultAnalysis(detail)} loading={aiLoading}>
+                  AI 故障分析
+                </Button>
               </Space>
             </div>
 
@@ -496,6 +528,25 @@ export default function WorkOrders() {
             )}
           </div>
         )}
+      </Modal>
+
+      {/* AI 故障分析结果 Modal */}
+      <Modal
+        title={<Space><RobotOutlined /><span>🤖 AI 故障分析报告</span></Space>}
+        open={aiModalOpen}
+        onCancel={() => setAiModalOpen(false)}
+        footer={null}
+        width={680}
+      >
+        {aiLoading ? (
+          <div style={{ textAlign: 'center', padding: '40px 0' }}>
+            <Spin tip="正在分析故障，请稍候..." size="large" />
+          </div>
+        ) : aiResult ? (
+          <div style={{ fontSize: 13, lineHeight: 1.8, whiteSpace: 'pre-wrap', maxHeight: 500, overflowY: 'auto' }}
+            dangerouslySetInnerHTML={{ __html: aiResult.replace(/\n/g, '<br/>').replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }}
+          />
+        ) : null}
       </Modal>
 
       <style>{`

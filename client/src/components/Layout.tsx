@@ -28,6 +28,7 @@ const NAV_ITEMS = [
   { key: '/stations/new/builder', icon: <PlusSquareOutlined />, label: '建站' },
   { key: '/ems-simulator', icon: <ApiOutlined />, label: 'EMS模拟' },
   { key: '/ai', icon: <RobotOutlined />, label: 'AI助手' },
+  { key: '/partner-admin', icon: <TeamOutlined />, label: '渠道管理' },
 ];
 
 // ─── Mobile Bottom Tab Bar ─────────────────────────────────────────────────────

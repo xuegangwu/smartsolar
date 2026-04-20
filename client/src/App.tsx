@@ -25,6 +25,7 @@ import PartnerLogin from './pages/PartnerLogin';
 import PartnerDashboard from './pages/PartnerDashboard';
 import PartnerTransactions from './pages/PartnerTransactions';
 import PartnerMall from './pages/PartnerMall';
+import PartnerAdmin from './pages/PartnerAdmin';
 import { Spin } from 'antd';
 import { LoadingOutlined } from '@ant-design/icons';
 
@@ -48,6 +49,7 @@ export default function App() {
                 <Route path="/partner-dashboard" element={<PartnerDashboard />} />
                 <Route path="/partner-transactions" element={<PartnerTransactions />} />
                 <Route path="/partner-mall" element={<PartnerMall />} />
+                <Route path="/partner-admin" element={<PartnerAdmin />} />
                 <Route path="/" element={
                   <ProtectedRoute>
                     <Layout />
