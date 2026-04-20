@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import {
   Card, Table, Tag, Button, Space, Modal, Form, Input, Select, message,
   Row, Col, Statistic, Typography, Timeline, Descriptions, Divider, Popconfirm, Steps,
@@ -543,9 +545,9 @@ export default function WorkOrders() {
             <Spin tip="正在分析故障，请稍候..." size="large" />
           </div>
         ) : aiResult ? (
-          <div style={{ fontSize: 13, lineHeight: 1.8, whiteSpace: 'pre-wrap', maxHeight: 500, overflowY: 'auto' }}
-            dangerouslySetInnerHTML={{ __html: aiResult.replace(/\n/g, '<br/>').replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }}
-          />
+          <div style={{ fontSize: 13, lineHeight: 1.8, maxHeight: 500, overflowY: 'auto', padding: '4px 0' }}>
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{aiResult}</ReactMarkdown>
+          </div>
         ) : null}
       </Modal>
 

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Form, Input, Button, Card, message, Typography } from 'antd';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 const { Title, Text } = Typography;
 
@@ -36,9 +36,13 @@ export default function PartnerLogin() {
     <div style={{
       minHeight: '100vh',
       background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px 16px',
     }}>
-      <Card style={{ width: 380, borderRadius: 16, boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }} bodyStyle={{ padding: '36px 32px' }}>
+      {/* Back link */}
+      <div style={{ marginBottom: 16, alignSelf: 'flex-end' }}>
+        <Link to="/login" style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>← 回到主站</Link>
+      </div>
+      <Card style={{ width: '100%', maxWidth: 380, borderRadius: 16, boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }} bodyStyle={{ padding: '36px 32px' }}>
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
           <div style={{
             width: 52, height: 52, borderRadius: 12,

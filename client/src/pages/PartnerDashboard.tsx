@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, Row, Col, Statistic, Progress, Tag, Table, Typography, Space, Button, Spin, List, Badge } from 'antd';
-import { ThunderboltOutlined, GiftOutlined, TeamOutlined, ShopOutlined, LogoutOutlined } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
+import { ThunderboltOutlined, GiftOutlined, TeamOutlined, ShopOutlined, LogoutOutlined, HomeOutlined } from '@ant-design/icons';
+import { useNavigate, Link } from 'react-router-dom';
 
 const { Title, Text } = Typography;
 
@@ -43,12 +43,15 @@ export default function PartnerDashboard() {
   return (
     <div style={{ padding: 24, background: '#f5f6f8', minHeight: '100vh' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 8 }}>
         <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+            <Link to="/partner-login" style={{ color: '#9ca3af', fontSize: 13 }}><HomeOutlined /> 返回主站</Link>
+          </div>
           <Title level={4} style={{ margin: 0 }}>渠道商工作台</Title>
           <Text type="secondary">{partner.name}</Text>
         </div>
-        <Space>
+        <Space wrap>
           <Tag style={{ background: LEVEL_COLOR[partner.level] + '30', border: `1px solid ${LEVEL_COLOR[partner.level]}`, color: LEVEL_COLOR[partner.level], fontWeight: 700 }}>
             {LEVEL_TEXT[partner.level]} {partner.type === 'distributor' ? '分销商' : '安装商'}
           </Tag>
