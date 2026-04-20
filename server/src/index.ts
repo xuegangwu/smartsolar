@@ -17,9 +17,11 @@ import { personnelRoutes } from './routes/personnelRoutes.js';
 import { inspectionTemplateRoutes } from './routes/inspectionTemplateRoutes.js';
 import { healthScoreRoutes } from './routes/healthScoreRoutes.js';
 import { aiRoutes } from './routes/aiRoutes.js';
+import partnerRoutes from './routes/partnerRoutes.js';
 import { startDailyHealthJob } from './jobs/dailyHealthJob.js';
 import { startTelemetryCollector } from './services/telemetryCollector.js';
 import { seedAllTelemetry } from './seed/seedTelemetry.js';
+import { seedPartners } from './seed/seedPartners.js';
 
 dotenv.config();
 
@@ -57,6 +59,7 @@ app.use('/api/ems-sync', alertSyncRoutes);  // EMS → SmartSolar 告警同步
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/spare-parts', sparePartRoutes);  // 备件仓库
 app.use('/api/personnel', personnelRoutes);      // 人员档案
+app.use('/api/partners', partnerRoutes);       // 渠道商 + 积分体系
 app.use('/api', aiRoutes);                    // AI 运维助手
 app.use('/api', healthScoreRoutes);           // 健康分 + 预测告警
 app.use('/api', stationRoutes);  // Catch-all, MUST be LAST
@@ -94,6 +97,9 @@ async function start() {
 
     startTelemetryCollector();
     startDailyHealthJob();
+
+    // 初始化渠道商和积分数据
+    await seedPartners();
   });
 }
 

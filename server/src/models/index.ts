@@ -64,6 +64,8 @@ const workOrderSchema = new mongoose.Schema({
     default: 'created',
   },
   assigneeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Personnel' },
+  // 关联安装商（工单关闭时给该渠道商计积分）
+  partnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Partner' },
   // 备件消耗（工单关闭时自动扣减库存）
   spareParts: [{
     sparePartId: { type: mongoose.Schema.Types.ObjectId, ref: 'SparePart' },
@@ -240,3 +242,85 @@ const inspectionTemplateSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 export const InspectionTemplate = mongoose.model('InspectionTemplate', inspectionTemplateSchema);
+
+// ─── Partner（渠道商）────────────────────────────────────────────────────────
+const PARTNER_LEVELS = {
+  BRONZE: 'bronze', SILVER: 'silver', GOLD: 'gold', DIAMOND: 'diamond',
+} as const;
+const LEVEL_THRESHOLDS: Record<string, number> = {
+  bronze: 0, silver: 5000, gold: 20000, diamond: 50000,
+};
+const LEVEL_MULTIPLIERS: Record<string, number> = {
+  bronze: 1.0, silver: 1.2, gold: 1.5, diamond: 2.0,
+};
+
+const partnerSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  type: { type: String, enum: ['distributor', 'installer'], required: true },
+  parentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Partner', default: null },
+  level: { type: String, enum: Object.values(PARTNER_LEVELS), default: 'bronze' },
+  totalPoints: { type: Number, default: 0 },
+  availablePoints: { type: Number, default: 0 },
+  phone: String, address: String, contactPerson: String,
+  status: { type: String, enum: ['active', 'suspended'], default: 'active' },
+  region: String, description: String,
+}, { timestamps: true });
+partnerSchema.methods.calcLevel = function() {
+  if (this.totalPoints >= LEVEL_THRESHOLDS.diamond) return 'diamond';
+  if (this.totalPoints >= LEVEL_THRESHOLDS.gold) return 'gold';
+  if (this.totalPoints >= LEVEL_THRESHOLDS.silver) return 'silver';
+  return 'bronze';
+};
+export const Partner = mongoose.model('Partner', partnerSchema);
+
+// ─── PartnerUser（渠道商登录账号）───────────────────────────────────────────────
+const partnerUserSchema = new mongoose.Schema({
+  partnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Partner', required: true },
+  username: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  name: { type: String, required: true },
+  phone: String, email: String,
+  role: { type: String, enum: ['owner', 'staff'], default: 'staff' },
+  status: { type: String, enum: ['active', 'disabled'], default: 'active' },
+  lastLoginAt: Date,
+}, { timestamps: true });
+export const PartnerUser = mongoose.model('PartnerUser', partnerUserSchema);
+
+// ─── PointRule（积分规则）─────────────────────────────────────────────────────
+const pointRuleSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  trigger: { type: String, enum: ['work_order_close', 'inspection_pass', 'manual'], required: true },
+  equipmentType: { type: String, default: 'mixed' },
+  basePointsPerUnit: { type: Number, default: 10 },
+  unit: { type: String, enum: ['kWh', 'kW'], default: 'kWh' },
+  enabled: { type: Boolean, default: true },
+  remark: String,
+}, { timestamps: true });
+export const PointRule = mongoose.model('PointRule', pointRuleSchema);
+
+// ─── PointTransaction（积分流水）───────────────────────────────────────────────
+const pointTransactionSchema = new mongoose.Schema({
+  partnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Partner', required: true },
+  type: { type: String, enum: ['earn', 'redeem', 'adjust', 'expire', 'deduct'], required: true },
+  amount: { type: Number, required: true },
+  balance: { type: Number, required: true },
+  description: String,
+  workOrderId: { type: mongoose.Schema.Types.ObjectId, ref: 'WorkOrder' },
+  orderId: String,
+  multiplier: { type: Number, default: 1.0 },
+  operatorId: { type: mongoose.Schema.Types.ObjectId, ref: 'PartnerUser' },
+}, { timestamps: true });
+export const PointTransaction = mongoose.model('PointTransaction', pointTransactionSchema);
+
+// ─── PointRedemption（积分兑换）───────────────────────────────────────────────
+const pointRedemptionSchema = new mongoose.Schema({
+  partnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Partner', required: true },
+  itemName: { type: String, required: true },
+  pointsCost: { type: Number, required: true },
+  status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+  shippingAddress: String, contactPhone: String, remark: String,
+  handledBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Personnel' }, handledAt: Date,
+}, { timestamps: true });
+export const PointRedemption = mongoose.model('PointRedemption', pointRedemptionSchema);
+
+export { LEVEL_THRESHOLDS, LEVEL_MULTIPLIERS, PARTNER_LEVELS as PARTNER_LEVEL };
