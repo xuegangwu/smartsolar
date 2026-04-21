@@ -5,6 +5,7 @@ import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import { writeFileSync } from 'fs';
 import http from 'http';
+import * as Sentry from '@sentry/node';
 import { stationRoutes } from './routes/stationRoutes.js';
 import { workOrderRoutes } from './routes/workOrderRoutes.js';
 import { alertRoutes } from './routes/alertRoutes.js';
@@ -27,6 +28,18 @@ import { seedAllTelemetry } from './seed/seedTelemetry.js';
 import { seedPartners } from './seed/seedPartners.js';
 
 dotenv.config();
+
+// ─── Sentry 错误监控初始化 ────────────────────────────────────────────────
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV || 'development',
+    // 生产环境采样率 10%
+    tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
+  });
+  // Sentry Express 中间件（必须在所有路由之前）
+  app.use(Sentry.Handlers.requestHandler());
+}
 
 const app = express();
 
@@ -68,6 +81,11 @@ app.use('/api/projects', projectRoutes);               // 项目建设管理
 app.use('/api', aiRoutes);                    // AI 运维助手
 app.use('/api', healthScoreRoutes);           // 健康分 + 预测告警
 app.use('/api', stationRoutes);  // Catch-all, MUST be LAST
+
+// ─── Sentry 错误处理中间件 ───────────────────────────────────────────────
+if (process.env.SENTRY_DSN) {
+  app.use(Sentry.Handlers.errorHandler());
+}
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -121,5 +139,9 @@ async function start() {
 
 start().catch((err) => {
   console.error('❌ Server start error:', err);
+  if (process.env.SENTRY_DSN) {
+    Sentry.captureException(err);
+    await Sentry.flush(2000);
+  }
   process.exit(1);
 });
