@@ -11,7 +11,7 @@ function generateOrderNo(): string {
 
 export const workOrderController = {
   getAll: async (req: Request, res: Response) => {
-    const { stationId, equipmentId, status, priority, type, assigneeId } = req.query;
+    const { stationId, equipmentId, status, priority, type, assigneeId, page, limit } = req.query;
     const filter: any = {};
     if (stationId) filter.stationId = stationId;
     if (equipmentId) filter.equipmentId = equipmentId;
@@ -20,12 +20,22 @@ export const workOrderController = {
     if (type) filter.type = type;
     if (assigneeId) filter.assigneeId = assigneeId;
 
-    const workOrders = await WorkOrder.find(filter)
-      .populate('stationId', 'name location')
-      .populate('equipmentId', 'name type brand')
-      .populate('assigneeId', 'name phone role skills workStatus')
-      .sort({ createdAt: -1 });
-    res.json({ success: true, data: workOrders });
+    const pageNum = Math.max(1, parseInt(page as string) || 1);
+    const pageSize = Math.min(200, Math.max(1, parseInt(limit as string) || 20));
+    const skip = (pageNum - 1) * pageSize;
+
+    const [workOrders, total] = await Promise.all([
+      WorkOrder.find(filter)
+        .populate('stationId', 'name location')
+        .populate('equipmentId', 'name type brand')
+        .populate('assigneeId', 'name phone role skills workStatus')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(pageSize)
+        .lean(),
+      WorkOrder.countDocuments(filter),
+    ]);
+    res.json({ success: true, data: workOrders, total, page: pageNum, pageSize });
   },
 
   getById: async (req: Request, res: Response) => {

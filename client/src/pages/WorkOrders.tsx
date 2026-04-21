@@ -68,6 +68,9 @@ function WorkflowSteps({ currentStep, status }: { currentStep: number; status: s
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function WorkOrders() {
   const [orders, setOrders] = useState<any[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [stations, setStations] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -85,18 +88,19 @@ export default function WorkOrders() {
   const [equipmentList, setEquipmentList] = useState<any[]>([]);
   const [form] = Form.useForm();
 
-  useEffect(() => { loadOrders(); loadStations(); loadPersonnel(); loadPartners(); }, []);
-  useEffect(() => { loadOrders(); }, [filterStatus, filterPriority]);
-
   async function loadOrders() {
     setLoading(true);
-    const params: any = {};
+    const params: any = { page, limit: pageSize };
     if (filterStatus) params.status = filterStatus;
     if (filterPriority) params.priority = filterPriority;
     const res = await workOrderApi.getAll(params);
-    if (res.success) setOrders(res.data);
+    if (res.success) { setOrders(res.data); setTotal(res.total || 0); }
     setLoading(false);
   }
+
+  useEffect(() => { loadOrders(); loadStations(); loadPersonnel(); loadPartners(); }, []);
+  useEffect(() => { setPage(1); loadOrders(); }, [filterStatus, filterPriority]);
+  useEffect(() => { loadOrders(); }, [page, pageSize]);
 
   async function loadStations() {
     const res = await stationApi.getAll();
@@ -310,7 +314,16 @@ export default function WorkOrders() {
         }
       >
         <Table className="mobile-card-list" columns={columns} dataSource={orders} rowKey="_id" loading={loading}
-          pagination={{ pageSize: 20 }} scroll={{ x: 1100 }}
+          pagination={{
+            current: page,
+            pageSize,
+            total,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (t) => `共 ${t} 条`,
+            onChange: (p, ps) => { setPage(p); setPageSize(ps || 20); },
+          }}
+          scroll={{ x: 1100 }}
           rowClassName={r => r.priority === 'urgent' ? 'urgent-row' : ''}
         />
       </Card>

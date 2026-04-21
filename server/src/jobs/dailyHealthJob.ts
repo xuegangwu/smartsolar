@@ -11,6 +11,44 @@ function generateOrderNo() {
   return `AI-${datePart}-${random}`;
 }
 
+// ─── 自动从健康分 < 60 创建预防性维护工单 ─────────────────────────────
+async function autoCreateFromLowHealthScore(score: any) {
+  // 只对 D 级（<60分）设备创建工单
+  if (score.score >= 60) return null;
+
+  // 检查是否已有相关未关闭工单（避免重复创建）
+  const existing = await WorkOrder.findOne({
+    equipmentId: score.equipmentId,
+    status: { $nin: ['closed'] },
+    type: 'maintenance',
+  });
+  if (existing) return null;
+
+  const topIssue = score.issues?.[0];
+  const workOrder = new WorkOrder({
+    orderNo: generateOrderNo(),
+    stationId: score.stationId,
+    equipmentId: score.equipmentId,
+    title: `【预防性维护】设备健康分过低（${score.score}分）`,
+    description: `🤖 AI 健康分触发自动工单\n\n📊 健康分：${score.score}分（${score.grade}级）\n📅 计算时间：${new Date(score.calculatedAt).toLocaleString('zh-CN')}\n📉 趋势：${score.trend === 'rising' ? '上升↗' : score.trend === 'declining' ? '下降↘' : '稳定→'}\n\n🔍 关键问题：${topIssue ? `\n• ${topIssue.description}\n  建议：${topIssue.suggestion}` : '暂无详细问题描述'}\n\n⚠️ 请及时安排维护，避免故障发生`,
+    type: 'maintenance',
+    priority: score.score < 40 ? 'urgent' : 'important',
+    status: 'created',
+    tags: ['AI预防', '健康分预警', `Grade_${score.grade}`],
+    relatedAlertId: null,
+    handlingSteps: [{
+      step: 'AI自动创建（健康分预警）',
+      operator: '系统AI',
+      at: new Date(),
+      note: `健康分${score.score}分（${score.grade}级），自动创建预防性维护工单`,
+    }],
+  });
+
+  await workOrder.save();
+  console.log(`[DailyHealthJob] Auto-created maintenance WO for low health score: equipment=${score.equipmentId}, score=${score.score}`);
+  return workOrder;
+}
+
 // ─── 自动从预测告警创建工单 ─────────────────────────────────────────────────
 async function autoCreateWorkOrder(alert: any) {
   // 检查是否已有相关未关闭工单
@@ -40,7 +78,7 @@ async function autoCreateWorkOrder(alert: any) {
   });
 
   await workOrder.save();
-  console.log(`[DailyJob] Auto-created work order for alert: ${alert.alertCode}`);
+  console.log(`[DailyHealthJob] Auto-created work order for alert: ${alert.alertCode}`);
   return workOrder;
 }
 
@@ -54,18 +92,26 @@ async function runDailyHealthJob() {
     const scored = await calculateAllHealthScores();
     console.log(`[DailyHealthJob] Scored ${scored} equipment`);
 
-    // 2. 为每台设备生成预测告警
-    console.log('[DailyHealthJob] Generating predictive alerts...');
+    // 2. 为每台设备生成预测告警 + 低健康分工单
+    console.log('[DailyHealthJob] Generating predictive alerts & checking low health scores...');
+    const { HealthScore } = await import('../models/healthScore.js');
+    const { Equipment } = await import('../models/index.js');
     const equipments = await Equipment.find().lean();
     let alertCount = 0;
     for (const equip of equipments) {
+      // 为该设备生成预测告警（critical + prob>80% 则自动建工单）
       const alerts = await generatePredictiveAlerts(equip._id);
       for (const alert of alerts) {
-        // 自动创建工单（仅 critical 且概率 > 80%）
         if (alert.alertLevel === 'critical' && alert.failureProbability > 0.8) {
           await autoCreateWorkOrder(alert);
         }
         alertCount++;
+      }
+
+      // 检查健康分，<60分自动创建预防性维护工单
+      const latestScore = await HealthScore.findOne({ equipmentId: equip._id }).sort({ calculatedAt: -1 }).lean();
+      if (latestScore && latestScore.score < 60) {
+        await autoCreateFromLowHealthScore(latestScore);
       }
     }
     console.log(`[DailyHealthJob] Generated ${alertCount} alerts`);

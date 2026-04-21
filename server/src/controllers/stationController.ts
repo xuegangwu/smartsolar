@@ -139,18 +139,28 @@ export const categoryController = {
 // ─── Equipment ─────────────────────────────────────────────────────────────────
 export const equipmentController = {
   getAll: async (req: Request, res: Response) => {
-    const { stationId, categoryId, status, keyword } = req.query;
+    const { stationId, categoryId, status, keyword, page, limit } = req.query;
     const filter: any = {};
     if (stationId) filter.stationId = stationId;
     if (categoryId) filter.categoryId = categoryId;
     if (status) filter.status = status;
     if (keyword) filter.name = { $regex: keyword, $options: 'i' };
 
-    const equipments = await Equipment.find(filter)
-      .populate('stationId', 'name')
-      .populate('categoryId', 'name')
-      .sort({ createdAt: -1 });
-    res.json({ success: true, data: equipments });
+    const pageNum = Math.max(1, parseInt(page as string) || 1);
+    const pageSize = Math.min(200, Math.max(1, parseInt(limit as string) || 20));
+    const skip = (pageNum - 1) * pageSize;
+
+    const [equipments, total] = await Promise.all([
+      Equipment.find(filter)
+        .populate('stationId', 'name')
+        .populate('categoryId', 'name')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(pageSize)
+        .lean(),
+      Equipment.countDocuments(filter),
+    ]);
+    res.json({ success: true, data: equipments, total, page: pageNum, pageSize });
   },
 
   getById: async (req: Request, res: Response) => {

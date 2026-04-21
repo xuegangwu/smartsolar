@@ -304,6 +304,9 @@ export default function Equipment() {
   const [selectedStation, setSelectedStation] = useState<string>('');
   const [categories, setCategories] = useState<EquipmentCategory[]>([]);
   const [equipments, setEquipments] = useState<Equipment[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState({ total: 0, online: 0, offline: 0, maintenance: 0 });
 
@@ -327,8 +330,10 @@ export default function Equipment() {
   }, [currentStation]);
 
   useEffect(() => {
-    if (selectedStation) { loadCategories(); loadEquipments(); }
+    if (selectedStation) { setPage(1); loadCategories(); loadEquipments(); }
   }, [selectedStation]);
+
+  useEffect(() => { loadEquipments(); }, [page, pageSize]);
 
   // stations now come from global StationContext — no local load needed
 
@@ -341,10 +346,11 @@ export default function Equipment() {
   async function loadEquipments() {
     setLoading(true);
     try {
-      const res = await equipmentApi.getAll({ stationId: selectedStation });
+      const res = await equipmentApi.getAll({ stationId: selectedStation, page, limit: pageSize });
       if (res.success) {
         setEquipments(res.data);
-        const s = { total: res.data.length, online: 0, offline: 0, maintenance: 0 };
+        setTotal(res.total || 0);
+        const s = { total: res.total || 0, online: 0, offline: 0, maintenance: 0 };
         res.data.forEach((e: any) => { s[e.status] = (s[e.status] || 0) + 1; });
         setStats(s);
       }
@@ -464,7 +470,17 @@ export default function Equipment() {
               </Space>
             }
           >
-            <Table className="mobile-card-list" columns={columns} dataSource={equipments} rowKey="_id" loading={loading} pagination={{ pageSize: 20 }} />
+            <Table className="mobile-card-list" columns={columns} dataSource={equipments} rowKey="_id" loading={loading}
+              pagination={{
+                current: page,
+                pageSize,
+                total,
+                showSizeChanger: true,
+                showQuickJumper: true,
+                showTotal: (t) => `共 ${t} 条`,
+                onChange: (p, ps) => { setPage(p); setPageSize(ps || 20); },
+              }}
+            />
           </Card>
         </Col>
       </Row>
