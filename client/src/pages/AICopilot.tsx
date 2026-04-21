@@ -16,13 +16,16 @@ const QUICK_ACTIONS = [
   { label: '⚠️ 预测告警', prompt: '有哪些活跃的预测预警？' },
   { label: '🏥 健康分', prompt: '健康分最低的设备有哪些？' },
   { label: '📋 待处理工单', prompt: '待处理的工单有哪些？' },
+  { label: '📝 生成周报', prompt: '帮我生成运维周报' },
 ];
 
+// Quick actions for suggestion rotation
 const SUGGESTIONS = [
   '苏州站本周发电量多少？',
   '哪些设备需要巡检？',
   '帮我生成运维周报',
   '过去一周告警统计',
+  '健康分最低的设备有哪些？',
 ];
 
 export default function AICopilot() {

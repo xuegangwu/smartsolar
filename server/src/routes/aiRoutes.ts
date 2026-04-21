@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { auth } from '../middleware/auth.js';
-import { buildContext, handleAIChat } from '../services/aiCopilotService.js';
+import { buildContext, handleAIChat, generateMaintenanceSuggestion } from '../services/aiCopilotService.js';
 import { analyzeFault } from '../services/kimiService.js';
 
 const router = Router();
@@ -39,21 +39,19 @@ router.post('/ai/fault-analysis', auth, async (req, res) => {
   }
 });
 
-// ─── GET /api/ai/capabilities ─────────────────────────────────────────────────
-router.get('/ai/capabilities', auth, async (req, res) => {
-  res.json({
-    success: true,
-    data: {
-      features: [
-        '数据统计查询（电站、设备、工单数量）',
-        '告警与预测预警查询',
-        '设备健康分分析',
-        '运维报告生成（开发中）',
-      ],
-      model: 'Rule-based AI (Phase 1)',
-      version: '1.0',
-    },
-  });
+// ─── POST /api/ai/maintenance-suggestion ─────────────────────────────────────
+router.post('/ai/maintenance-suggestion', auth, async (req, res) => {
+  try {
+    const { equipmentId } = req.body;
+    if (!equipmentId?.trim()) {
+      return res.status(400).json({ success: false, message: '设备ID不能为空' });
+    }
+    const reply = await generateMaintenanceSuggestion(equipmentId);
+    res.json({ success: true, data: { reply } });
+  } catch (err: any) {
+    console.error('[AI Maintenance Suggestion]', err);
+    res.status(500).json({ success: false, message: err.message || 'AI 服务暂时不可用' });
+  }
 });
 
 export { router as aiRoutes };
