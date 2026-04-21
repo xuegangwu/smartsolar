@@ -375,3 +375,77 @@ partnerTransferSchema.index({ installerId: 1, createdAt: -1 });
 export const PartnerTransfer = mongoose.model('PartnerTransfer', partnerTransferSchema);
 
 export { LEVEL_THRESHOLDS, LEVEL_MULTIPLIERS, PARTNER_LEVELS as PARTNER_LEVEL };
+
+// ─── 项目阶段定义 ────────────────────────────────────────────────────────────────
+export const PROJECT_PHASES = ['设计', '设计审批', '设备采购', '施工建设', '并网申请', '并网验收', '完工移交'] as const;
+export type ProjectPhase = typeof PROJECT_PHASES[number];
+
+// ─── Project（项目建设）─────────────────────────────────────────────────────────
+const milestoneSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  phase: { type: String, enum: PROJECT_PHASES, required: true },
+  dueDate: Date,
+  completedAt: Date,
+  completedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Personnel' },
+  remark: String,
+}, { timestamps: true });
+
+const projectDocSchema = new mongoose.Schema({
+  projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: true },
+  name: { type: String, required: true },
+  category: { type: String, enum: ['合同', '审批文件', '图纸', '检测报告', '发票', '其他'], default: '其他' },
+  fileUrl: String,
+  uploadedAt: { type: Date, default: Date.now },
+  uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Personnel' },
+}, { timestamps: true });
+
+const projectSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  code: { type: String, unique: true },            // 项目编号 PJ20260420-001
+  type: { type: String, enum: ['solar', 'storage', 'solar_storage'], required: true },
+  location: { address: String, lat: Number, lng: Number },
+  capacity: Number,                              // kW / kWh
+
+  // 业主信息（独立档案）
+  owner: {
+    name: String, contact: String, phone: String,
+    idCard: String, address: String,
+  },
+
+  // 关联
+  installerPartnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Partner' },
+  stationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Station' },  // 并网后关联电站
+
+  // 进度
+  phase: { type: String, enum: PROJECT_PHASES, default: '设计' },
+  progress: { type: Number, default: 0, min: 0, max: 100 },  // 0-100
+
+  // 时间
+  planStartDate: Date,
+  planEndDate: Date,
+  actualStartDate: Date,
+  actualEndDate: Date,
+
+  // 预算与成本
+  budget: Number,         // 预算万元
+  actualCost: Number,     // 实际成本万元
+
+  // 阶段状态
+  phases: [{
+    name: { type: String, enum: PROJECT_PHASES },
+    status: { type: String, enum: ['pending', 'in_progress', 'completed'], default: 'pending' },
+    progress: { type: Number, default: 0 },
+    startDate: Date,
+    endDate: Date,
+    remark: String,
+  }],
+
+  // 负责人
+  managerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Personnel' },
+  status: { type: String, enum: ['planning', 'in_progress', 'suspended', 'completed', 'cancelled'], default: 'planning' },
+}, { timestamps: true });
+
+projectSchema.index({ status: 1, phase: 1 });
+export const Project = mongoose.model('Project', projectSchema);
+export const Milestone = mongoose.model('Milestone', milestoneSchema);
+export const ProjectDoc = mongoose.model('ProjectDoc', projectDocSchema);

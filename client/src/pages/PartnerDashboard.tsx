@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Card, Row, Col, Statistic, Progress, Tag, Table, Typography, Space, Button, Spin, List, Badge } from 'antd';
-import { ThunderboltOutlined, GiftOutlined, TeamOutlined, ShopOutlined, LogoutOutlined, HomeOutlined } from '@ant-design/icons';
+import { Card, Row, Col, Statistic, Progress, Tag, Table, Typography, Space, Button, Spin, List, Badge, Tabs, Rate } from 'antd';
+import { ThunderboltOutlined, GiftOutlined, TeamOutlined, ShopOutlined, LogoutOutlined, HomeOutlined, StarOutlined } from '@ant-design/icons';
 import { useNavigate, Link } from 'react-router-dom';
+import type { ColumnsType } from 'antd/es/table';
 
 const { Title, Text } = Typography;
 
@@ -10,9 +11,17 @@ const LEVEL_COLOR: Record<string, string> = { bronze: '#cd7f32', silver: '#c0c0c
 const TXN_TYPE_TEXT: Record<string, string> = { earn: '赚取', redeem: '兑换', adjust: '调整', expire: '过期', deduct: '扣分' };
 const TXN_COLOR: Record<string, string> = { earn: 'green', redeem: 'blue', adjust: 'orange', expire: 'default', deduct: 'red' };
 
+interface Installer extends any {
+  _id: string; name: string; level: string; region: string;
+  totalInstallations: number; totalCapacity: number; rating: number;
+  totalPoints: number; availablePoints: number; phone: string; contactPerson: string;
+}
+
 export default function PartnerDashboard() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('overview');
+  const [installers, setInstallers] = useState<Installer[]>([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -29,16 +38,41 @@ export default function PartnerDashboard() {
       .finally(() => setLoading(false));
   }, []);
 
-  function handleLogout() {
-    localStorage.removeItem('partner_token');
-    localStorage.removeItem('partner_user');
-    navigate('/partner-login');
+  async function loadInstallers() {
+    if (!data?.partner?._id) return;
+    const token = localStorage.getItem('partner_token');
+    const res = await fetch(`/api/partners/installers/${data.partner._id}`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json());
+    if (res.success) setInstallers(res.data);
+  }
+
+  function handleTabChange(tab: string) {
+    setActiveTab(tab);
+    if (tab === 'installers') loadInstallers();
   }
 
   if (loading) return <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}><Spin size="large" /></div>;
   if (!data) return null;
 
   const { partner, levelProgress, stats, recentTransactions, subPartners } = data;
+
+  const installerColumns: ColumnsType<Installer> = [
+    { title: '安装商', render: (_, r) => (
+      <Space direction="vertical" size={0}>
+        <Text strong>{r.name}</Text>
+        <Text type="secondary" style={{ fontSize: 12 }}>{r.contactPerson} · {r.phone}</Text>
+      </Space>
+    ), width: 200 },
+    { title: '等级', dataIndex: 'level', render: v => (
+      <Tag style={{ background: LEVEL_COLOR[v] + '20', border: `1px solid ${LEVEL_COLOR[v]}`, color: LEVEL_COLOR[v] }}>{LEVEL_TEXT[v]}</Tag>
+    ), width: 80 },
+    { title: '区域', dataIndex: 'region', width: 90 },
+    { title: '累计安装', dataIndex: 'totalInstallations', render: v => <Text strong style={{ fontFamily: 'JetBrains Mono, monospace' }}>{v ?? 0}</Text>, width: 100 },
+    { title: '累计容量', dataIndex: 'totalCapacity', render: v => <Text style={{ fontFamily: 'JetBrains Mono, monospace' }}>{v ? `${(v/1000).toFixed(1)}k kW` : '-'}</Text>, width: 110 },
+    { title: '客户评分', dataIndex: 'rating', render: v => <Rate disabled value={v || 5} style={{ fontSize: 12 }} />, width: 130 },
+    { title: '累计积分', dataIndex: 'totalPoints', render: v => <Text style={{ fontFamily: 'JetBrains Mono, monospace' }}>{v?.toLocaleString() || 0}</Text>, width: 100 },
+    { title: '可用积分', dataIndex: 'availablePoints', render: v => <Text style={{ color: '#f59e0b', fontFamily: 'JetBrains Mono, monospace' }}>{v?.toLocaleString() || 0}</Text>, width: 100 },
+    { title: '状态', dataIndex: 'status', render: s => <Badge status={s === 'active' ? 'success' : 'default'} text={s === 'active' ? '正常' : '已禁用'} />, width: 80 },
+  ];
 
   return (
     <div style={{ padding: 24, background: '#f5f6f8', minHeight: '100vh' }}>
@@ -59,8 +93,8 @@ export default function PartnerDashboard() {
         </Space>
       </div>
 
+      {/* Stats Row */}
       <Row gutter={16} style={{ marginBottom: 24 }}>
-        {/* 积分卡片 */}
         <Col span={8}>
           <Card style={{ borderRadius: 12, background: 'linear-gradient(135deg, #1a1a2e, #2d2d44)' }}>
             <div style={{ color: '#9ca3af', fontSize: 12, marginBottom: 8 }}>可用积分</div>
@@ -70,40 +104,26 @@ export default function PartnerDashboard() {
             <div style={{ color: '#6b7280', fontSize: 12, marginTop: 4 }}>累计 {partner.totalPoints.toLocaleString()} 分</div>
           </Card>
         </Col>
-
-        {/* 等级进度 */}
         <Col span={8}>
           <Card style={{ borderRadius: 12 }} bodyStyle={{ padding: 20 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
               <Text strong>等级进度</Text>
               <Text type="secondary" style={{ fontSize: 12 }}>{LEVEL_TEXT[partner.level]} → {levelProgress.nextLevel ? LEVEL_TEXT[levelProgress.nextLevel] : '已满级'}</Text>
             </div>
-            <Progress
-              percent={levelProgress.progress}
-              strokeColor={LEVEL_COLOR[partner.level]}
-              trailColor="#e5e7eb"
-              size="small"
-            />
+            <Progress percent={levelProgress.progress} strokeColor={LEVEL_COLOR[partner.level]} trailColor="#e5e7eb" size="small" />
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
               <Text type="secondary" style={{ fontSize: 11 }}>{partner.totalPoints.toLocaleString()} 分</Text>
               <Text type="secondary" style={{ fontSize: 11 }}>{levelProgress.nextThreshold ? `${levelProgress.nextThreshold.toLocaleString()} 分升级` : '已满级'}</Text>
             </div>
             <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
               {['bronze', 'silver', 'gold', 'diamond'].map(lv => (
-                <div key={lv} style={{
-                  flex: 1, textAlign: 'center', padding: '4px 0', borderRadius: 6,
-                  background: partner.level === lv ? LEVEL_COLOR[lv] + '20' : '#f3f4f6',
-                  color: partner.level === lv ? LEVEL_COLOR[lv] : '#9ca3af',
-                  fontSize: 10, fontWeight: 700,
-                }}>
+                <div key={lv} style={{ flex: 1, textAlign: 'center', padding: '4px 0', borderRadius: 6, background: partner.level === lv ? LEVEL_COLOR[lv] + '20' : '#f3f4f6', color: partner.level === lv ? LEVEL_COLOR[lv] : '#9ca3af', fontSize: 10, fontWeight: 700 }}>
                   {LEVEL_TEXT[lv]}
                 </div>
               ))}
             </div>
           </Card>
         </Col>
-
-        {/* 快捷统计 */}
         <Col span={8}>
           <Card style={{ borderRadius: 12 }} bodyStyle={{ padding: 20 }}>
             <Row gutter={[8, 8]}>
@@ -116,81 +136,127 @@ export default function PartnerDashboard() {
         </Col>
       </Row>
 
-      <Row gutter={16}>
-        {/* 积分流水 */}
-        <Col span={14}>
-          <Card title="💰 积分流水" extra={<Button size="small" onClick={() => navigate('/partner-transactions')}>查看全部</Button>} style={{ borderRadius: 12 }} bodyStyle={{ padding: 0 }}>
-            {recentTransactions.length === 0 ? (
-              <div style={{ padding: 40, textAlign: 'center', color: '#9ca3af' }}>暂无流水记录</div>
-            ) : (
-              <List
-                dataSource={recentTransactions}
-                renderItem={(item: any) => (
-                  <List.Item style={{ padding: '12px 20px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                      <div>
-                        <div style={{ fontSize: 13, color: '#1a1a2e' }}>{item.description}</div>
-                        <div style={{ fontSize: 11, color: '#9ca3af' }}>{new Date(item.createdAt).toLocaleString('zh-CN')}</div>
-                      </div>
-                      <Space>
-                        <Tag color={TXN_COLOR[item.type]}>{TXN_TYPE_TEXT[item.type] || item.type}</Tag>
-                        <Text strong style={{ color: item.amount > 0 ? '#22c55e' : '#ef4444', fontFamily: 'JetBrains Mono, monospace' }}>
-                          {item.amount > 0 ? '+' : ''}{item.amount.toLocaleString()}
-                        </Text>
-                      </Space>
-                    </div>
-                  </List.Item>
-                )}
-              />
-            )}
-          </Card>
-        </Col>
+      {/* Tab Navigation */}
+      <Tabs
+        activeKey={activeTab}
+        onChange={handleTabChange}
+        items={[
+          {
+            key: 'overview',
+            label: '📊 总览',
+            children: (
+              <Row gutter={16}>
+                {/* 积分流水 */}
+                <Col span={14}>
+                  <Card title="💰 积分流水" extra={<Button size="small" onClick={() => navigate('/partner-transactions')}>查看全部</Button>} style={{ borderRadius: 12 }} bodyStyle={{ padding: 0 }}>
+                    {recentTransactions.length === 0 ? (
+                      <div style={{ padding: 40, textAlign: 'center', color: '#9ca3af' }}>暂无流水记录</div>
+                    ) : (
+                      <List
+                        dataSource={recentTransactions}
+                        renderItem={(item: any) => (
+                          <List.Item style={{ padding: '12px 20px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                              <div>
+                                <div style={{ fontSize: 13, color: '#1a1a2e' }}>{item.description}</div>
+                                <div style={{ fontSize: 11, color: '#9ca3af' }}>{new Date(item.createdAt).toLocaleString('zh-CN')}</div>
+                              </div>
+                              <Space>
+                                <Tag color={TXN_COLOR[item.type]}>{TXN_TYPE_TEXT[item.type] || item.type}</Tag>
+                                <Text strong style={{ color: item.amount > 0 ? '#22c55e' : '#ef4444', fontFamily: 'JetBrains Mono, monospace' }}>
+                                  {item.amount > 0 ? '+' : ''}{item.amount.toLocaleString()}
+                                </Text>
+                              </Space>
+                            </div>
+                          </List.Item>
+                        )}
+                      />
+                    )}
+                  </Card>
+                </Col>
 
-        {/* 积分商城 */}
-        <Col span={10}>
-          <Card title="🎁 积分商城" extra={<Button size="small" type="primary" icon={<ShopOutlined />} onClick={() => navigate('/partner-mall')}>兑换</Button>} style={{ borderRadius: 12 }} bodyStyle={{ padding: 0 }}>
-            <div style={{ padding: 20 }}>
-              {[
-                { name: '小米充电宝 10000mAh', points: 500, img: '🔋' },
-                { name: '公牛插排 6位', points: 300, img: '🔌' },
-                { name: '光伏运维工具套装', points: 2000, img: '🛠️' },
-                { name: '大疆无人机 Mavic 3', points: 50000, img: '🚁' },
-              ].map((item, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: i < 3 ? '1px solid #f0f2f5' : 'none' }}>
-                  <div style={{ fontSize: 28 }}>{item.img}</div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600 }}>{item.name}</div>
-                    <div style={{ fontSize: 12, color: '#f59e0b', fontFamily: 'JetBrains Mono, monospace' }}>{item.points.toLocaleString()} 分</div>
+                {/* 积分商城 + 下级渠道 */}
+                <Col span={10}>
+                  <Card title="🎁 积分商城" extra={<Button size="small" type="primary" icon={<ShopOutlined />} onClick={() => navigate('/partner-mall')}>兑换</Button>} style={{ borderRadius: 12 }} bodyStyle={{ padding: 0 }}>
+                    <div style={{ padding: 20 }}>
+                      {[
+                        { name: '小米充电宝 10000mAh', points: 500, img: '🔋' },
+                        { name: '公牛插排 6位', points: 300, img: '🔌' },
+                        { name: '光伏运维工具套装', points: 2000, img: '🛠️' },
+                        { name: '大疆无人机 Mavic 3', points: 50000, img: '🚁' },
+                      ].map((item, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: i < 3 ? '1px solid #f0f2f5' : 'none' }}>
+                          <div style={{ fontSize: 28 }}>{item.img}</div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 13, fontWeight: 600 }}>{item.name}</div>
+                            <div style={{ fontSize: 12, color: '#f59e0b', fontFamily: 'JetBrains Mono, monospace' }}>{item.points.toLocaleString()} 分</div>
+                          </div>
+                          <Button size="small" disabled={partner.availablePoints < item.points}>兑换</Button>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+
+                  {subPartners.length > 0 && (
+                    <Card title="🏗️ 下级渠道" style={{ borderRadius: 12, marginTop: 16 }} bodyStyle={{ padding: 0 }}>
+                      <List
+                        dataSource={subPartners}
+                        renderItem={(item: any) => (
+                          <List.Item style={{ padding: '10px 16px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                              <Text>{item.name}</Text>
+                              <Space>
+                                <Tag style={{ background: LEVEL_COLOR[item.level] + '20', border: `1px solid ${LEVEL_COLOR[item.level]}`, color: LEVEL_COLOR[item.level] }}>{LEVEL_TEXT[item.level]}</Tag>
+                                <Text type="secondary" style={{ fontSize: 12, fontFamily: 'JetBrains Mono, monospace' }}>{item.totalPoints.toLocaleString()} 分</Text>
+                              </Space>
+                            </div>
+                          </List.Item>
+                        )}
+                      />
+                    </Card>
+                  )}
+                </Col>
+              </Row>
+            ),
+          },
+          {
+            key: 'installers',
+            label: `🔧 安装商管理 ${subPartners.length > 0 ? `(${subPartners.length})` : ''}`,
+            children: (
+              <Card title="🔧 我的安装商团队" style={{ borderRadius: 12 }}>
+                {installers.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>
+                    {installers.length === 0 && subPartners.length === 0 ? '暂无绑定安装商' : '加载中...'}
                   </div>
-                  <Button size="small" disabled={partner.availablePoints < item.points}>兑换</Button>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          {/* 下级渠道 */}
-          {subPartners.length > 0 && (
-            <Card title="🏗️ 下级渠道" style={{ borderRadius: 12, marginTop: 16 }} bodyStyle={{ padding: 0 }}>
-              <List
-                dataSource={subPartners}
-                renderItem={(item: any) => (
-                  <List.Item style={{ padding: '10px 16px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                      <Text>{item.name}</Text>
-                      <Space>
-                        <Tag style={{ background: LEVEL_COLOR[item.level] + '20', border: `1px solid ${LEVEL_COLOR[item.level]}`, color: LEVEL_COLOR[item.level] }}>
-                          {LEVEL_TEXT[item.level]}
-                        </Tag>
-                        <Text type="secondary" style={{ fontSize: 12, fontFamily: 'JetBrains Mono, monospace' }}>{item.totalPoints.toLocaleString()} 分</Text>
-                      </Space>
-                    </div>
-                  </List.Item>
+                ) : (
+                  <>
+                    {/* 汇总卡片 */}
+                    <Row gutter={12} style={{ marginBottom: 16 }}>
+                      <Col span={4}><Statistic title="安装商数量" value={installers.length} prefix={<TeamOutlined />} /></Col>
+                      <Col span={5}><Statistic title="累计安装总量" value={installers.reduce((s, i) => s + (i.totalInstallations || 0), 0)} valueStyle={{ color: '#3b82f6' }} /></Col>
+                      <Col span={5}><Statistic title="累计装机容量" value={`${(installers.reduce((s, i) => s + (i.totalCapacity || 0), 0) / 1000).toFixed(1)}k kW`} valueStyle={{ color: '#8b5cf6' }} /></Col>
+                      <Col span={5}><Statistic title="平均评分" value={installers.length ? (installers.reduce((s, i) => s + (i.rating || 5), 0) / installers.length).toFixed(1) : '5.0'} prefix={<StarOutlined />} suffix="/ 5" valueStyle={{ color: '#f59e0b' }} /></Col>
+                    </Row>
+                    <Table
+                      columns={installerColumns}
+                      dataSource={installers}
+                      rowKey="_id"
+                      pagination={{ pageSize: 10 }}
+                      size="small"
+                    />
+                  </>
                 )}
-              />
-            </Card>
-          )}
-        </Col>
-      </Row>
+              </Card>
+            ),
+          },
+        ]}
+      />
     </div>
   );
+
+  function handleLogout() {
+    localStorage.removeItem('partner_token');
+    localStorage.removeItem('partner_user');
+    navigate('/partner-login');
+  }
 }

@@ -148,7 +148,15 @@ router.get('/dashboard', partnerAuth, async (req: any, res) => {
           pendingRedemptions: pendingRedemptions.length,
         },
         recentTransactions: transactions.slice(0, 10),
-        subPartners: subPartners.map((p: any) => ({ id: p._id, name: p.name, level: p.level, totalPoints: p.totalPoints })),
+        subPartners: subPartners.map((p: any) => ({
+          _id: p._id, name: p.name, level: p.level,
+          totalPoints: p.totalPoints, availablePoints: p.availablePoints,
+          totalInstallations: p.totalInstallations || 0,
+          totalCapacity: p.totalCapacity || 0,
+          rating: p.rating || 5,
+          phone: p.phone, contactPerson: p.contactPerson,
+          region: p.region, status: p.status,
+        })),
       },
     });
   } catch (err: any) {

@@ -35,6 +35,8 @@ const PartnerAdmin = lazy(() => import('./pages/PartnerAdmin'));
 const Installers = lazy(() => import('./pages/Installers'));
 const InstallerStats = lazy(() => import('./pages/InstallerStats'));
 const InstallerPortal = lazy(() => import('./pages/InstallerPortal'));
+const Projects = lazy(() => import('./pages/Projects'));
+const Customers = lazy(() => import('./pages/Customers'));
 
 const PageLoader = ({ children }: { children: ReactNode }) => (
   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
@@ -100,6 +102,8 @@ export default function App() {
                   <Route path="/partner-admin" element={<PartnerAdmin />} />
                   <Route path="/installers" element={<Installers />} />
                   <Route path="/installer-stats" element={<InstallerStats />} />
+                  <Route path="/projects" element={<Projects />} />
+                  <Route path="/customers" element={<Customers />} />
                   {/* 首页重定向到 dashboard */}
                   <Route index element={<Navigate to="/dashboard" replace />} />
                 </Route>

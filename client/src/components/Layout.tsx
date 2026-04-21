@@ -31,6 +31,8 @@ const NAV_ITEMS = [
   { key: '/partner-admin', icon: <TeamOutlined />, label: '渠道管理' },
   { key: '/installers', icon: <ToolOutlined />, label: '安装商' },
   { key: '/installer-stats', icon: <RiseOutlined />, label: '安装商统计' },
+  { key: '/projects', icon: <BuildOutlined />, label: '项目建设' },
+  { key: '/customers', icon: <UserOutlined />, label: '业主管理' },
 ];
 
 // ─── Mobile Bottom Tab Bar ─────────────────────────────────────────────────────

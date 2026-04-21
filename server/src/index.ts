@@ -20,6 +20,7 @@ import { healthScoreRoutes } from './routes/healthScoreRoutes.js';
 import { aiRoutes } from './routes/aiRoutes.js';
 import partnerRoutes from './routes/partnerRoutes.js';
 import installerStatsRoutes from './routes/installerStatsRoutes.js';
+import projectRoutes from './routes/projectRoutes.js';
 import { startDailyHealthJob } from './jobs/dailyHealthJob.js';
 import { startTelemetryCollector } from './services/telemetryCollector.js';
 import { seedAllTelemetry } from './seed/seedTelemetry.js';
@@ -63,6 +64,7 @@ app.use('/api/spare-parts', sparePartRoutes);  // 备件仓库
 app.use('/api/personnel', personnelRoutes);      // 人员档案
 app.use('/api/partners', partnerRoutes);       // 渠道商 + 积分体系
 app.use('/api/installer-stats', installerStatsRoutes); // 安装商业绩统计
+app.use('/api/projects', projectRoutes);               // 项目建设管理
 app.use('/api', aiRoutes);                    // AI 运维助手
 app.use('/api', healthScoreRoutes);           // 健康分 + 预测告警
 app.use('/api', stationRoutes);  // Catch-all, MUST be LAST

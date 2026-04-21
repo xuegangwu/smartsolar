@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Form, Input, Button, Card, message, Typography, Space } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { DashboardOutlined, ToolOutlined } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
 
@@ -29,214 +28,190 @@ export default function Login() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#f5f6f8',
+      background: '#f0f2f5',
       display: 'flex',
-      flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: 20,
-      position: 'relative',
-      overflow: 'hidden',
+      padding: '40px 20px',
     }}>
-      {/* Subtle bg pattern */}
-      <div style={{
-        position: 'absolute', inset: 0, pointerEvents: 'none',
-        backgroundImage: `
-          linear-gradient(rgba(230,52,42,0.03) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(230,52,42,0.03) 1px, transparent 1px)
-        `,
-        backgroundSize: '48px 48px',
-      }} />
-
       {/* Top accent line */}
       <div style={{
-        position: 'absolute', top: 0, left: 0, right: 0, height: 4,
-        background: 'linear-gradient(90deg, #e6342a, #ff6b6b)',
+        position: 'fixed', top: 0, left: 0, right: 0, height: 4,
+        background: portal === 'admin'
+          ? 'linear-gradient(90deg, #e6342a, #ff6b6b)'
+          : 'linear-gradient(90deg, #059669, #10b981)',
+        transition: 'background 0.3s',
       }} />
 
-      {/* Portal selector */}
-      <div style={{ display: 'flex', gap: 16, marginBottom: 24, zIndex: 1 }}>
-        <Card
-          onClick={() => setPortal('admin')}
-          style={{
-            width: 200, cursor: 'pointer', borderRadius: 16,
-            border: portal === 'admin' ? '2px solid #e6342a' : '2px solid transparent',
-            background: portal === 'admin' ? '#fff' : '#fafafa',
-            boxShadow: portal === 'admin' ? '0 4px 20px rgba(230,52,42,0.2)' : 'none',
-            transition: 'all 0.2s',
-          }}
-          bodyStyle={{ padding: '20px 24px', textAlign: 'center' }}
-        >
-          <div style={{
-            width: 48, height: 48, borderRadius: 12, margin: '0 auto 12px',
-            background: portal === 'admin' ? 'linear-gradient(135deg, #e6342a, #ff6b6b)' : '#f0f0f0',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <DashboardOutlined style={{ fontSize: 22, color: portal === 'admin' ? '#fff' : '#888' }} />
-          </div>
-          <Title level={5} style={{ margin: 0, color: portal === 'admin' ? '#1a1a2e' : '#888' }}>
-            系统管理员
-          </Title>
-          <Text style={{ fontSize: 11, color: '#9ca3af' }}>内部运维管理平台</Text>
-        </Card>
-
-        <Card
-          onClick={() => navigate('/installer-portal')}
-          style={{
-            width: 200, cursor: 'pointer', borderRadius: 16,
-            border: portal === 'installer' ? '2px solid #059669' : '2px solid transparent',
-            background: portal === 'installer' ? '#fff' : '#fafafa',
-            boxShadow: portal === 'installer' ? '0 4px 20px rgba(5,150,105,0.2)' : 'none',
-            transition: 'all 0.2s',
-          }}
-          bodyStyle={{ padding: '20px 24px', textAlign: 'center' }}
-        >
-          <div style={{
-            width: 48, height: 48, borderRadius: 12, margin: '0 auto 12px',
-            background: portal === 'installer' ? 'linear-gradient(135deg, #059669, #10b981)' : '#f0f0f0',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <ToolOutlined style={{ fontSize: 22, color: portal === 'installer' ? '#fff' : '#888' }} />
-          </div>
-          <Title level={5} style={{ margin: 0, color: portal === 'installer' ? '#059669' : '#888' }}>
-            安装商平台
-          </Title>
-          <Text style={{ fontSize: 11, color: '#9ca3af' }}>安装商专属工作台</Text>
-        </Card>
+      {/* Logo + Brand */}
+      <div style={{ textAlign: 'center', marginBottom: 32 }}>
+        <div style={{
+          width: 64, height: 64, borderRadius: 16,
+          background: portal === 'admin'
+            ? 'linear-gradient(135deg, #e6342a, #ff6b6b)'
+            : 'linear-gradient(135deg, #059669, #10b981)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 32, margin: '0 auto 16px',
+          boxShadow: portal === 'admin'
+            ? '0 8px 24px rgba(230,52,42,0.35)'
+            : '0 8px 24px rgba(5,150,105,0.35)',
+          transition: 'all 0.3s',
+        }}>
+          ☀️
+        </div>
+        <Title level={3} style={{ margin: 0, color: '#1a1a2e', fontWeight: 800, letterSpacing: '-0.03em' }}>
+          Smart<span style={{ color: portal === 'admin' ? '#e6342a' : '#059669', transition: 'color 0.3s' }}>Solar</span>
+        </Title>
+        <Text style={{ color: '#8896a6', fontSize: 13 }}>
+          光储电站智能运维管理平台
+        </Text>
       </div>
 
-      {/* Login form */}
-      {portal === 'admin' && (
-        <Card
-          style={{
-            width: 380, maxWidth: '100%',
-            background: '#ffffff',
-            border: '1px solid #e8eaed',
-            borderRadius: 18,
-            boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
-            position: 'relative', zIndex: 1,
-          }}
-          bodyStyle={{ padding: '36px 32px' }}
-        >
-          <div style={{ textAlign: 'center', marginBottom: 28 }}>
-            <div style={{
-              width: 52, height: 52, borderRadius: 12,
-              background: 'linear-gradient(135deg, #e6342a, #ff6b6b)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 26, margin: '0 auto 14px',
-              boxShadow: '0 4px 16px rgba(230,52,42,0.3)',
-            }}>
-              ☀️
-            </div>
-            <Title level={3} style={{ color: '#1a1a2e', margin: 0, fontWeight: 800 }}>
-              Smart<span style={{ color: '#e6342a' }}>Solar</span>
-            </Title>
-            <Text style={{ color: '#8896a6', fontSize: 13, display: 'block', marginTop: 6 }}>
-              光储电站运维管理平台
-            </Text>
-          </div>
-
-          <div style={{ height: 1, background: '#f0f2f5', marginBottom: 24 }} />
-
-          <Form layout="vertical" onFinish={handleAdminLogin}>
-            <Form.Item name="username" label={
-              <span style={{ color: '#4a5568', fontSize: 12, fontWeight: 500 }}>用户名</span>
-            } rules={[{ required: true }]}>
-              <Input
-                placeholder="admin"
-                size="large"
-                style={{ background: '#fafbfc', border: '1px solid #e8eaed', borderRadius: 10, height: 46 }}
-              />
-            </Form.Item>
-            <Form.Item name="password" label={
-              <span style={{ color: '#4a5568', fontSize: 12, fontWeight: 500 }}>密码</span>
-            } rules={[{ required: true }]}>
-              <Input.Password
-                placeholder="••••••"
-                size="large"
-                style={{ background: '#fafbfc', border: '1px solid #e8eaed', borderRadius: 10, height: 46 }}
-              />
-            </Form.Item>
-            <Button
-              type="primary"
-              htmlType="submit"
-              loading={loading}
-              block
-              size="large"
-              style={{
-                height: 48, borderRadius: 10,
-                fontWeight: 600, fontSize: 15,
-                background: '#e6342a', border: 'none',
-                boxShadow: '0 4px 16px rgba(230,52,42,0.25)',
-                marginTop: 4,
-              }}
-            >
-              登录
-            </Button>
-          </Form>
-
-          <div style={{ marginTop: 20, textAlign: 'center' }}>
-            <Text style={{ color: '#b8c0cc', fontSize: 12 }}>
-              演示账号 · admin / admin
-            </Text>
-          </div>
-        </Card>
-      )}
-
-      {portal === 'installer' && (
-        <Card
-          style={{
-            width: 380, maxWidth: '100%',
-            background: '#ffffff',
-            border: '1px solid #e8eaed',
-            borderRadius: 18,
-            boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
-            position: 'relative', zIndex: 1,
-          }}
-          bodyStyle={{ padding: '36px 32px' }}
-        >
-          <div style={{ textAlign: 'center', marginBottom: 28 }}>
-            <div style={{
-              width: 52, height: 52, borderRadius: 12,
-              background: 'linear-gradient(135deg, #059669, #10b981)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 26, margin: '0 auto 14px',
-              boxShadow: '0 4px 16px rgba(5,150,105,0.3)',
-            }}>
-              🔧
-            </div>
-            <Title level={3} style={{ color: '#1a1a2e', margin: 0, fontWeight: 800 }}>
-              安装商<span style={{ color: '#059669' }}>平台</span>
-            </Title>
-            <Text style={{ color: '#8896a6', fontSize: 13, display: 'block', marginTop: 6 }}>
-              专属工作台 · 安装统计 · 积分体系
-            </Text>
-          </div>
-
-          <div style={{ height: 1, background: '#f0f2f5', marginBottom: 24 }} />
-
-          <Button
-            type="primary"
-            block
-            size="large"
-            onClick={() => navigate('/installer-portal')}
+      {/* Portal Tabs */}
+      <div style={{
+        display: 'flex',
+        background: '#e8eaed',
+        borderRadius: 12,
+        padding: 4,
+        marginBottom: 24,
+        gap: 4,
+      }}>
+        {[
+          { key: 'admin', label: '系统管理员', icon: '🏢', color: '#e6342a' },
+          { key: 'installer', label: '安装商平台', icon: '🔧', color: '#059669' },
+        ].map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setPortal(tab.key as Portal)}
             style={{
-              height: 48, borderRadius: 10,
-              fontWeight: 600, fontSize: 15,
-              background: '#059669', border: 'none',
-              boxShadow: '0 4px 16px rgba(5,150,105,0.25)',
+              flex: 1,
+              padding: '10px 24px',
+              border: 'none',
+              borderRadius: 8,
+              cursor: 'pointer',
+              fontSize: 14,
+              fontWeight: 600,
+              transition: 'all 0.2s',
+              background: portal === tab.key ? '#fff' : 'transparent',
+              color: portal === tab.key ? tab.color : '#8896a6',
+              boxShadow: portal === tab.key ? '0 2px 8px rgba(0,0,0,0.1)' : 'none',
             }}
           >
-            进入安装商工作台 →
-          </Button>
+            <Space size={6}>
+              <span>{tab.icon}</span>
+              <span>{tab.label}</span>
+            </Space>
+          </button>
+        ))}
+      </div>
 
-          <div style={{ marginTop: 16, textAlign: 'center' }}>
-            <Text style={{ color: '#b8c0cc', fontSize: 12 }}>
-              演示账号 · dist_admin / partner123
-            </Text>
-          </div>
-        </Card>
-      )}
+      {/* Login Card */}
+      <Card
+        style={{
+          width: 400,
+          borderRadius: 20,
+          border: 'none',
+          boxShadow: '0 8px 40px rgba(0,0,0,0.10)',
+        }}
+        bodyStyle={{ padding: '36px 32px' }}
+      >
+        {portal === 'admin' ? (
+          <>
+            <Title level={5} style={{ marginBottom: 24, color: '#1a1a2e' }}>
+              登录到管理平台
+            </Title>
+
+            <Form layout="vertical" onFinish={handleAdminLogin}>
+              <Form.Item name="username" label="用户名" rules={[{ required: true }]}>
+                <Input
+                  placeholder="admin"
+                  size="large"
+                  style={{ borderRadius: 10, height: 46 }}
+                />
+              </Form.Item>
+              <Form.Item name="password" label="密码" rules={[{ required: true }]}>
+                <Input.Password
+                  placeholder="••••••"
+                  size="large"
+                  style={{ borderRadius: 10, height: 46 }}
+                />
+              </Form.Item>
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={loading}
+                block
+                size="large"
+                style={{
+                  height: 48, borderRadius: 10,
+                  fontWeight: 600, fontSize: 15,
+                  background: '#e6342a', border: 'none',
+                  boxShadow: '0 4px 16px rgba(230,52,42,0.25)',
+                  marginTop: 8,
+                }}
+              >
+                登录
+              </Button>
+            </Form>
+
+            <div style={{ marginTop: 20, textAlign: 'center' }}>
+              <Text style={{ color: '#b8c0cc', fontSize: 12 }}>
+                演示账号 · admin / admin
+              </Text>
+            </div>
+          </>
+        ) : (
+          <>
+            <Title level={5} style={{ marginBottom: 24, color: '#1a1a2e' }}>
+              登录安装商工作台
+            </Title>
+
+            <Form
+              layout="vertical"
+              onFinish={async (values) => {
+                // Delegate to installer portal
+                navigate('/installer-portal');
+              }}
+            >
+              <Form.Item name="username" label="用户名" rules={[{ required: true }]}>
+                <Input
+                  placeholder="安装商用户名"
+                  size="large"
+                  style={{ borderRadius: 10, height: 46 }}
+                />
+              </Form.Item>
+              <Form.Item name="password" label="密码" rules={[{ required: true }]}>
+                <Input.Password
+                  placeholder="••••••"
+                  size="large"
+                  style={{ borderRadius: 10, height: 46 }}
+                />
+              </Form.Item>
+              <Button
+                type="primary"
+                htmlType="submit"
+                block
+                size="large"
+                style={{
+                  height: 48, borderRadius: 10,
+                  fontWeight: 600, fontSize: 15,
+                  background: '#059669', border: 'none',
+                  boxShadow: '0 4px 16px rgba(5,150,105,0.25)',
+                  marginTop: 8,
+                }}
+              >
+                进入安装商工作台
+              </Button>
+            </Form>
+
+            <div style={{ marginTop: 20, textAlign: 'center' }}>
+              <Text style={{ color: '#b8c0cc', fontSize: 12 }}>
+                演示账号 · dist_admin / partner123
+              </Text>
+            </div>
+          </>
+        )}
+      </Card>
     </div>
   );
 }
