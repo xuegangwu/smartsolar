@@ -5,7 +5,7 @@ import {
   DashboardOutlined, HomeOutlined, ToolOutlined, FileTextOutlined,
   BellOutlined, CalendarOutlined, UserOutlined, LogoutOutlined,
   InboxOutlined, RiseOutlined, ApiOutlined, DownloadOutlined, PlusSquareOutlined,
-  EnvironmentOutlined, TeamOutlined, MoreOutlined, ExperimentOutlined, RobotOutlined, ToolOutlined, BarChartOutlined,
+  EnvironmentOutlined, TeamOutlined, MoreOutlined, ExperimentOutlined, RobotOutlined, ToolOutlined, BarChartOutlined, BuildOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
