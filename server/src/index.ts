@@ -29,19 +29,26 @@ import { seedPartners } from './seed/seedPartners.js';
 
 dotenv.config();
 
-// ─── Sentry 错误监控初始化 ────────────────────────────────────────────────
+const PORT = process.env.PORT || 3003;
+const MONGO_URI = process.env.MONGO_URI;
+const USE_MEMORY = process.env.MONGO_MEMORY === 'true' || !MONGO_URI;
+
+// ─── Sentry 错误监控初始化 (v10 API) ──────────────────────────────────────
 if (process.env.SENTRY_DSN) {
   Sentry.init({
     dsn: process.env.SENTRY_DSN,
     environment: process.env.NODE_ENV || 'development',
-    // 生产环境采样率 10%
     tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
+    integrations: [
+      Sentry.expressIntegration(),
+    ],
   });
-  // Sentry Express 中间件（必须在所有路由之前）
-  app.use(Sentry.Handlers.requestHandler());
 }
 
 const app = express();
+
+// ─── Sentry 请求处理中间件 (v10) ──────────────────────────────────────────
+// v10: expressIntegration 在 init() 中设置，这里不再需要手动 add requestHandler
 
 // Shared MongoDB Memory Server instance (for dev mode)
 let _memServer: MongoMemoryServer | null = null;
@@ -53,13 +60,9 @@ async function getMongoUri(): Promise<string> {
     _memServer = await MongoMemoryServer.create();
   }
   const uri = _memServer.getUri();
-  // Write URI to temp file so seed script can reuse the same instance
   writeFileSync(MEM_SERVER_FILE, uri);
   return uri;
 }
-const PORT = process.env.PORT || 3003;
-const MONGO_URI = process.env.MONGO_URI;
-const USE_MEMORY = process.env.MONGO_MEMORY === 'true' || !MONGO_URI;
 
 app.use(cors());
 app.use(express.json());
@@ -82,9 +85,11 @@ app.use('/api', aiRoutes);                    // AI 运维助手
 app.use('/api', healthScoreRoutes);           // 健康分 + 预测告警
 app.use('/api', stationRoutes);  // Catch-all, MUST be LAST
 
-// ─── Sentry 错误处理中间件 ───────────────────────────────────────────────
+// ─── Sentry 错误处理中间件 (v10) ─────────────────────────────────────────
 if (process.env.SENTRY_DSN) {
-  app.use(Sentry.Handlers.errorHandler());
+  Sentry.setupExpressErrorHandler(app, {
+    shouldHandleError: () => true,
+  });
 }
 
 // Health check
@@ -141,7 +146,8 @@ start().catch((err) => {
   console.error('❌ Server start error:', err);
   if (process.env.SENTRY_DSN) {
     Sentry.captureException(err);
-    await Sentry.flush(2000);
+    // flush 是异步的，不需要 await
+    Sentry.flush(2000).catch(() => {});
   }
   process.exit(1);
 });
