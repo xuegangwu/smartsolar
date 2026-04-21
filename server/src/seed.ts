@@ -26,7 +26,10 @@ async function seed() {
   // ── 清空所有集合 ──────────────────────────────────────────────────────────────
   const models = [
     'Station', 'EquipmentCategory', 'Equipment',
-    'WorkOrder', 'Alert', 'InspectionPlan', 'SparePart', 'Technician', 'Personnel',
+    'WorkOrder', 'Alert', 'InspectionPlan', 'SparePart', 'Personnel',
+    'Partner', 'PartnerUser', 'Project', 'Milestone', 'ProjectDoc',
+    'InstallerStats', 'PointRule', 'PointTransaction', 'PointRedemption',
+    'Notification',
   ];
   for (const name of models) {
     try {
@@ -193,6 +196,147 @@ async function seed() {
   ];
   const createdAlerts = await Alert.insertMany(alerts);
   console.log(`✅ Inserted ${createdAlerts.length} alerts\n`);
+
+  // ── Partners（分销商 + 安装商）────────────────────────────────────────────────
+  const { Partner, PartnerUser, Project, InstallerStats, PROJECT_PHASES, Notification } = await import('./models/index.js');
+  const bcrypt = await import('bcrypt');
+
+  const distPartner = await Partner.create({
+    name: '华东新能源分销有限公司', type: 'distributor', level: 'gold',
+    region: '华东', address: '上海市浦东新区张江高科技园区',
+    contactPerson: '李明辉', phone: '138-1700-0001', status: 'active',
+    totalPoints: 28500, availablePoints: 14200,
+  });
+
+  const installer1 = await Partner.create({
+    name: '南京光腾光伏安装有限公司', type: 'installer', level: 'silver',
+    region: '华东', address: '南京市栖霞区经开区',
+    contactPerson: '张伟强', phone: '138-1700-0002', status: 'active',
+    parentId: distPartner._id,
+    totalPoints: 8200, availablePoints: 5600,
+    totalInstallations: 47, totalCapacity: 235000,
+    staffCount: 28, serviceRegions: ['南京市', '镇江市', '扬州市'],
+    specializedTypes: ['residential', 'commercial'],
+    businessLicense: '91320114MA1XXXXXXXX',
+    rating: 4.7,
+  });
+
+  const installer2 = await Partner.create({
+    name: '苏州绿能电气安装有限公司', type: 'installer', level: 'bronze',
+    region: '华东', address: '苏州市工业园区星湖街328号',
+    contactPerson: '王建林', phone: '138-1700-0003', status: 'active',
+    parentId: distPartner._id,
+    totalPoints: 3400, availablePoints: 2100,
+    totalInstallations: 18, totalCapacity: 90000,
+    staffCount: 12, serviceRegions: ['苏州市', '无锡市', '常州市'],
+    specializedTypes: ['residential'],
+    businessLicense: '91320594MA1XXXXXXXX',
+    rating: 4.5,
+  });
+
+  const installer3 = await Partner.create({
+    name: '杭州晴天光储安装有限公司', type: 'installer', level: 'gold',
+    region: '华东', address: '杭州市滨江区江南大道388号',
+    contactPerson: '陈志远', phone: '138-1700-0004', status: 'active',
+    totalPoints: 22000, availablePoints: 18500,
+    totalInstallations: 126, totalCapacity: 630000,
+    staffCount: 55, serviceRegions: ['杭州市', '宁波市', '温州市', '嘉兴市'],
+    specializedTypes: ['residential', 'commercial', 'industrial'],
+    businessLicense: '91330108MA2XXXXXXXX',
+    rating: 4.9,
+  });
+
+  // PartnerUser（渠道商账号）
+  await PartnerUser.create({ partnerId: distPartner._id, username: 'dist_admin', password: await bcrypt.hash('partner123', 10), name: '李明辉', role: 'owner' });
+  await PartnerUser.create({ partnerId: installer1._id, username: 'nj_installer', password: await bcrypt.hash('partner123', 10), name: '张伟强', role: 'owner' });
+  await PartnerUser.create({ partnerId: installer2._id, username: 'sz_installer', password: await bcrypt.hash('partner123', 10), name: '王建林', role: 'owner' });
+  await PartnerUser.create({ partnerId: installer3._id, username: 'hz_installer', password: await bcrypt.hash('partner123', 10), name: '陈志远', role: 'owner' });
+  console.log(`✅ Inserted 1 distributor + 3 installers + 4 partner users\n`);
+
+  // ── Projects（项目建设）────────────────────────────────────────────────────
+  const projects = [
+    {
+      name: '苏州工业园光储充一体化项目', code: 'PJ202604-001', type: 'solar_storage',
+      location: { address: '江苏省苏州市工业园区星湖街328号' }, capacity: 2000,
+      owner: { name: '苏州星湖新能源有限公司', contact: '赵海涛', phone: '139-0620-0001' },
+      installerPartnerId: installer2._id,
+      phase: '施工建设', progress: 65,
+      planStartDate: new Date('2026-02-01'), planEndDate: new Date('2026-06-30'),
+      budget: 1200, actualCost: 780,
+      phases: PROJECT_PHASES.map((p, i) => ({
+        name: p, status: i < 3 ? 'completed' : i === 3 ? 'in_progress' : 'pending', progress: i < 3 ? 100 : i === 3 ? 65 : 0,
+      })),
+      status: 'in_progress',
+    },
+    {
+      name: '南京商厦BIPV光伏改造项目', code: 'PJ202604-002', type: 'solar',
+      location: { address: '江苏省南京市鼓楼区中山北路188号' }, capacity: 500,
+      owner: { name: '南京商厦股份有限公司', contact: '周慧敏', phone: '139-0620-0002' },
+      installerPartnerId: installer1._id,
+      phase: '设备采购', progress: 35,
+      planStartDate: new Date('2026-03-15'), planEndDate: new Date('2026-08-15'),
+      budget: 350, actualCost: 120,
+      phases: PROJECT_PHASES.map((p, i) => ({
+        name: p, status: i < 2 ? 'completed' : i === 2 ? 'in_progress' : 'pending', progress: i < 2 ? 100 : i === 2 ? 35 : 0,
+      })),
+      status: 'in_progress',
+    },
+    {
+      name: '杭州未来社区光储一体化项目', code: 'PJ202604-003', type: 'solar_storage',
+      location: { address: '浙江省杭州市滨江区江南大道388号' }, capacity: 3500,
+      owner: { name: '杭州未来社区开发有限公司', contact: '陈志强', phone: '139-0620-0003' },
+      installerPartnerId: installer3._id,
+      phase: '设计审批', progress: 20,
+      planStartDate: new Date('2026-04-01'), planEndDate: new Date('2026-12-31'),
+      budget: 2800, actualCost: 560,
+      phases: PROJECT_PHASES.map((p, i) => ({
+        name: p, status: i < 1 ? 'completed' : i === 1 ? 'in_progress' : 'pending', progress: i < 1 ? 100 : i === 1 ? 20 : 0,
+      })),
+      status: 'in_progress',
+    },
+    {
+      name: '无锡分布式光伏发电项目', code: 'PJ202604-004', type: 'solar',
+      location: { address: '江苏省无锡市新吴区太湖大道888号' }, capacity: 800,
+      owner: { name: '无锡太湖科技园管理委员会', contact: '吴晓峰', phone: '139-0620-0004' },
+      phase: '完工移交', progress: 100,
+      planStartDate: new Date('2025-10-01'), planEndDate: new Date('2026-03-31'),
+      budget: 560, actualCost: 545,
+      phases: PROJECT_PHASES.map(p => ({ name: p, status: 'completed', progress: 100 })),
+      status: 'completed', actualEndDate: new Date('2026-03-28'),
+    },
+  ];
+  const createdProjects = await Project.insertMany(projects);
+  console.log(`✅ Inserted ${createdProjects.length} projects\n`);
+
+  // ── InstallerStats（月度业绩）───────────────────────────────────────────────
+  const months = ['2026-01', '2026-02', '2026-03', '2026-04'];
+  const statsData = [];
+  for (const inst of [installer1, installer2, installer3]) {
+    for (const month of months) {
+      const isRecent = month === '2026-04';
+      statsData.push({
+        installerId: inst._id, month,
+        totalInstallations: isRecent ? Math.floor(Math.random() * 5) + 1 : Math.floor(Math.random() * 8) + 2,
+        totalCapacity: isRecent ? Math.floor(Math.random() * 20000) + 5000 : Math.floor(Math.random() * 30000) + 10000,
+        workOrderCount: isRecent ? Math.floor(Math.random() * 8) + 2 : Math.floor(Math.random() * 12) + 3,
+        qualityScore: (4 + Math.random()).toFixed(2),
+        complaintCount: Math.floor(Math.random() * 3),
+      });
+    }
+  }
+  await InstallerStats.insertMany(statsData);
+  console.log(`✅ Inserted ${statsData.length} installer stats records\n`);
+
+  // ── Notifications（通知）────────────────────────────────────────────────────
+  const notifications = [
+    { type: 'system', title: '系统已升级到 v1.2.0', content: '本次更新：新增项目建设管理、安装商管理模块，优化了工单处理流程。', read: false, createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000) },
+    { type: 'alert', title: '南京商厦项目设备采购阶段延迟', content: '因供应商交期调整，南京商厦BIPV项目设备采购阶段预计延期3天。', read: false, createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000) },
+    { type: 'system', title: '苏州工业园项目施工进度更新', content: '苏州工业园光储充一体化项目已完成基础施工，进入设备安装阶段，当前进度65%。', read: true, createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+    { type: 'system', title: '积分体系上线公告', content: '渠道商积分体系正式上线，工单完成后自动赚取积分，可用于兑换商城礼品。', read: true, createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) },
+    { type: 'system', title: '无锡分布式项目并网验收通过', content: '无锡分布式光伏发电项目已通过电网公司并网验收，正式投入运行！', read: false, createdAt: new Date(Date.now() - 30 * 60 * 1000) },
+  ];
+  const createdNotifications = await Notification.insertMany(notifications);
+  console.log(`✅ Inserted ${createdNotifications.length} notifications\n`);
 
   // ── 汇总 ─────────────────────────────────────────────────────────────────────
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');

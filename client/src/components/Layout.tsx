@@ -5,7 +5,7 @@ import {
   DashboardOutlined, HomeOutlined, ToolOutlined, FileTextOutlined,
   BellOutlined, CalendarOutlined, UserOutlined, LogoutOutlined,
   InboxOutlined, RiseOutlined, ApiOutlined, DownloadOutlined, PlusSquareOutlined,
-  EnvironmentOutlined, TeamOutlined, MoreOutlined, ExperimentOutlined, RobotOutlined, ToolOutlined,
+  EnvironmentOutlined, TeamOutlined, MoreOutlined, ExperimentOutlined, RobotOutlined, ToolOutlined, BarChartOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
@@ -33,6 +33,8 @@ const NAV_ITEMS = [
   { key: '/installer-stats', icon: <RiseOutlined />, label: '安装商统计' },
   { key: '/projects', icon: <BuildOutlined />, label: '项目建设' },
   { key: '/customers', icon: <UserOutlined />, label: '业主管理' },
+  { key: '/notifications', icon: <BellOutlined />, label: '通知中心' },
+  { key: '/reports', icon: <BarChartOutlined />, label: '报表导出' },
 ];
 
 // ─── Mobile Bottom Tab Bar ─────────────────────────────────────────────────────

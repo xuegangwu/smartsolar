@@ -1,200 +1,200 @@
-import { useState, useEffect } from 'react';
-import { Card, Row, Col, Select, DatePicker, Typography, Button, Spin, Tag, Divider, Space } from 'antd';
-import { FileTextOutlined, DownloadOutlined, ExperimentOutlined, SafetyCertificateOutlined, ThunderboltOutlined, CheckCircleOutlined, AlertOutlined } from '@ant-design/icons';
-import { stationApi, healthApi, alertApi, workOrderApi } from '../services/api';
+import { useState } from 'react';
+import {
+  Card, Button, Space, Typography, Row, Col, Table, Tag, DatePicker,
+  Select, message, Tabs, Divider,
+} from 'antd';
+import {
+  DownloadOutlined, FileExcelOutlined, FilePdfOutlined,
+  TableOutlined, BarChartOutlined, HomeOutlined, ThunderboltOutlined,
+} from '@ant-design/icons';
+import type { ColumnsType } from 'antd/es/table';
 
-const { Text } = Typography;
+const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
 
-// ─── 报告模板 ───────────────────────────────────────────────────────────────
-async function generateReport(params: {
-  stationId?: string;
-  dateRange: [string, string];
-}): Promise<string> {
-  const { stationId, dateRange } = params;
-  const [start, end] = dateRange;
+const REPORTS = [
+  { key: 'workorders', label: '工单汇总', icon: <FileExcelOutlined />, desc: '导出所有工单，含状态、类型、负责人等' },
+  { key: 'stations', label: '电站台账', icon: <HomeOutlined />, desc: '导出所有电站信息，含容量、位置、状态' },
+  { key: 'partners', label: '渠道商积分', icon: <BarChartOutlined />, desc: '导出分销商/安装商积分、等级、安装量' },
+  { key: 'projects', label: '项目建设', icon: <TableOutlined />, desc: '导出所有项目，含阶段、进度、预算' },
+];
 
-  // 收集数据
-  const [stations, allHealth, alertRes, orderRes] = await Promise.all([
-    stationApi.getAll(),
-    healthApi.getAll(),
-    alertApi.getStats(stationId ? { stationId } : {}),
-    workOrderApi.getAll(stationId ? { stationId } : {}),
-  ]);
-
-  const healthStats = allHealth.stats || {};
-  const stations_data = stationId
-    ? (stations.data || []).filter((s: any) => s._id === stationId)
-    : stations.data || [];
-
-  const avgScore = healthStats.avgScore || 'N/A';
-  const gradeA = healthStats.gradeA || 0;
-  const gradeD = (healthStats.gradeC || 0) + (healthStats.gradeD || 0);
-
-  const alertData = alertRes.data || {};
-  const orders = (orderRes.data || []).filter((o: any) => o.status !== 'closed');
-
-  // 设备健康分布
-  const healthGrades = `A:${healthStats.gradeA || 0} / B:${healthStats.gradeB || 0} / C:${healthStats.gradeC || 0} / D:${healthStats.gradeD || 0}`;
-
-  const reportLines: string[] = [];
-  reportLines.push(`╔══════════════════════════════════════════════════════════════╗`);
-  reportLines.push(`║          SmartSolar 运维日报 / 周报                            ║`);
-  reportLines.push(`╠══════════════════════════════════════════════════════════════╣`);
-  reportLines.push(`║  报告周期：${start} ~ ${end}`);
-  reportLines.push(`║  生成时间：${new Date().toLocaleString('zh-CN')}`);
-  reportLines.push(`╠══════════════════════════════════════════════════════════════╣`);
-  reportLines.push(`║  📊 场站概况                                                ║`);
-  reportLines.push(`║     接入电站：${String(stations_data.length).padStart(3)} 个`);
-  reportLines.push(`║     接入设备：${String(healthStats.total || 0).padStart(3)} 台`);
-  reportLines.push(`╠══════════════════════════════════════════════════════════════╣`);
-  reportLines.push(`║  🏥 设备健康                                                ║`);
-  reportLines.push(`║     综合健康分：${String(avgScore).padStart(3)} / 100  ${avgScore >= 80 ? '✅ 良好' : avgScore >= 60 ? '⚠️ 一般' : '🔴 较差'}`);
-  reportLines.push(`║     等级分布：${healthGrades}`);
-  reportLines.push(`║     A级(优秀)：${String(gradeA).padStart(3)} 台  D级(需关注)：${String(gradeD).padStart(3)} 台`);
-  reportLines.push(`╠══════════════════════════════════════════════════════════════╣`);
-  reportLines.push(`║  ⚠️  告警统计                                                ║`);
-  reportLines.push(`║     严重告警：${String(alertData.critical || 0).padStart(3)} 次  重要告警：${String(alertData.major || 0).padStart(3)} 次  一般告警：${String(alertData.minor || 0).padStart(3)} 次`);
-  reportLines.push(`║     未确认告警：${String(alertData.unacknowledged || 0).padStart(3)} 次`);
-  reportLines.push(`╠══════════════════════════════════════════════════════════════╣`);
-  reportLines.push(`║  📋  工单情况                                                ║`);
-  reportLines.push(`║     待处理工单：${String(orders.length).padStart(3)} 个`);
-  reportLines.push(`║     紧急工单：${String(orders.filter((o: any) => o.priority === 'urgent').length).padStart(3)} 个`);
-  reportLines.push(`╠══════════════════════════════════════════════════════════════╣`);
-  reportLines.push(`║  🤖  AI 建议                                                  ║`);
-  reportLines.push(`║     ${gradeD > 0 ? `⚠️  当前有 ${gradeD} 台设备健康等级为 C/D，建议优先巡检` : '✅ 各设备健康状况良好，继续保持'}`.slice(0, 62) + '║');
-  reportLines.push(`║     ${alertData.critical > 0 ? `🔴  有 ${alertData.critical} 个严重告警待处理，请尽快处理` : '✅ 无严重告警，系统运行正常'}`.slice(0, 62) + '║');
-  reportLines.push(`╚══════════════════════════════════════════════════════════════╝`);
-
-  return reportLines.join('\n');
+function downloadCSV(data: any[], filename: string, columns: { title: string; key: string }[]) {
+  const header = columns.map(c => c.title).join(',');
+  const rows = data.map(row =>
+    columns.map(c => {
+      let val = row[c.key];
+      if (val === null || val === undefined) return '';
+      val = String(val).replace(/"/g, '""');
+      return `"${val}"`;
+    }).join(',')
+  );
+  const csv = [header, ...rows].join('\n');
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${filename}_${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 export default function Reports() {
-  const [stations, setStations] = useState<any[]>([]);
-  const [stationId, setStationId] = useState<string>('');
-  const [reportType, setReportType] = useState<'daily' | 'weekly'>('daily');
-  const [generating, setGenerating] = useState(false);
-  const [report, setReport] = useState<string | null>(null);
+  const [loading, setLoading] = useState('');
 
-  useEffect(() => {
-    stationApi.getAll().then(r => { if (r.success) setStations(r.data || []); });
-  }, []);
+  async function handleExport(key: string) {
+    setLoading(key);
+    const token = localStorage.getItem('smartsolar_token') || '';
+    const headers = { Authorization: `Bearer ${token}` };
 
-  async function handleGenerate() {
-    const now = new Date();
-    let start: string, end: string;
-    if (reportType === 'daily') {
-      end = start = now.toISOString().slice(0, 10);
-    } else {
-      const weekAgo = new Date(now.getTime() - 7 * 24 * 3600 * 1000);
-      start = weekAgo.toISOString().slice(0, 10);
-      end = now.toISOString().slice(0, 10);
-    }
-
-    setGenerating(true);
     try {
-      const text = await generateReport({ stationId: stationId || undefined, dateRange: [start, end] });
-      setReport(text);
-    } finally {
-      setGenerating(false);
-    }
-  }
+      if (key === 'workorders') {
+        const res = await fetch('/api/work-orders', { headers }).then(r => r.json());
+        if (!res.success) throw new Error(res.message);
+        const items = res.data || [];
+        downloadCSV(items.map((w: any) => ({
+          orderNo: w.orderNo, title: w.title, type: w.type, priority: w.priority,
+          status: w.status, station: (w.stationId as any)?.name || '-',
+          equipment: (w.equipmentId as any)?.name || '-',
+          createdAt: new Date(w.createdAt).toLocaleDateString('zh-CN'),
+          updatedAt: new Date(w.updatedAt).toLocaleDateString('zh-CN'),
+        })), '工单汇总', [
+          { title: '工单号', key: 'orderNo' }, { title: '标题', key: 'title' },
+          { title: '类型', key: 'type' }, { title: '优先级', key: 'priority' },
+          { title: '状态', key: 'status' }, { title: '电站', key: 'station' },
+          { title: '设备', key: 'equipment' }, { title: '创建日期', key: 'createdAt' },
+          { title: '更新日期', key: 'updatedAt' },
+        ]);
+        message.success(`已导出 ${items.length} 条工单数据`);
+      }
 
-  function handleDownload() {
-    if (!report) return;
-    const blob = new Blob([report], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `SmartSolar运维报告_${new Date().toISOString().slice(0, 10)}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
+      else if (key === 'stations') {
+        const res = await fetch('/api/stations', { headers }).then(r => r.json());
+        if (!res.success) throw new Error(res.message);
+        const items = res.data || [];
+        downloadCSV(items.map((s: any) => ({
+          name: s.name, type: s.type, capacity: s.capacity,
+          installedCapacity: s.installedCapacity,
+          owner: s.owner, contact: s.contact,
+          address: s.location?.address || s.address || '-',
+          status: s.status,
+          gridConnectionDate: s.gridConnectionDate || '-',
+        })), '电站台账', [
+          { title: '电站名称', key: 'name' }, { title: '类型', key: 'type' },
+          { title: '容量(kW/kWh)', key: 'capacity' }, { title: '已安装容量', key: 'installedCapacity' },
+          { title: '业主', key: 'owner' }, { title: '联系人', key: 'contact' },
+          { title: '地址', key: 'address' }, { title: '状态', key: 'status' },
+          { title: '并网日期', key: 'gridConnectionDate' },
+        ]);
+        message.success(`已导出 ${items.length} 条电站数据`);
+      }
+
+      else if (key === 'partners') {
+        const res = await fetch('/api/partners', { headers }).then(r => r.json());
+        if (!res.success) throw new Error(res.message);
+        const items = res.data || [];
+        downloadCSV(items.map((p: any) => ({
+          name: p.name, type: p.type === 'distributor' ? '分销商' : '安装商',
+          level: p.level, region: p.region || '-',
+          totalInstallations: p.totalInstallations || 0,
+          totalCapacity: p.totalCapacity ? `${(p.totalCapacity/1000).toFixed(1)}k kW` : '-',
+          totalPoints: p.totalPoints || 0, availablePoints: p.availablePoints || 0,
+          status: p.status === 'active' ? '正常' : '已禁用',
+        })), '渠道商积分', [
+          { title: '名称', key: 'name' }, { title: '类型', key: 'type' },
+          { title: '等级', key: 'level' }, { title: '区域', key: 'region' },
+          { title: '累计安装量', key: 'totalInstallations' }, { title: '累计容量', key: 'totalCapacity' },
+          { title: '累计积分', key: 'totalPoints' }, { title: '可用积分', key: 'availablePoints' },
+          { title: '状态', key: 'status' },
+        ]);
+        message.success(`已导出 ${items.length} 条渠道商数据`);
+      }
+
+      else if (key === 'projects') {
+        const res = await fetch('/api/projects', { headers }).then(r => r.json());
+        if (!res.success) throw new Error(res.message);
+        const items = res.data || [];
+        downloadCSV(items.map((p: any) => ({
+          code: p.code, name: p.name, type: p.type === 'solar' ? '光伏' : p.type === 'storage' ? '储能' : '光储',
+          phase: p.phase, progress: `${p.progress}%`,
+          budget: p.budget ? `${p.budget}万元` : '-',
+          actualCost: p.actualCost ? `${p.actualCost}万元` : '-',
+          installer: (p.installerPartnerId as any)?.name || '-',
+          planStart: p.planStartDate ? new Date(p.planStartDate).toLocaleDateString('zh-CN') : '-',
+          planEnd: p.planEndDate ? new Date(p.planEndDate).toLocaleDateString('zh-CN') : '-',
+          status: p.status === 'planning' ? '规划中' : p.status === 'in_progress' ? '进行中' : p.status === 'completed' ? '已完成' : '已暂停',
+        })), '项目建设', [
+          { title: '项目编号', key: 'code' }, { title: '名称', key: 'name' },
+          { title: '类型', key: 'type' }, { title: '当前阶段', key: 'phase' },
+          { title: '进度', key: 'progress' }, { title: '预算', key: 'budget' },
+          { title: '实际成本', key: 'actualCost' }, { title: '安装商', key: 'installer' },
+          { title: '计划开工', key: 'planStart' }, { title: '计划完工', key: 'planEnd' },
+          { title: '状态', key: 'status' },
+        ]);
+        message.success(`已导出 ${items.length} 条项目数据`);
+      }
+    } catch (e: any) {
+      message.error('导出失败：' + e.message);
+    } finally {
+      setLoading('');
+    }
   }
 
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto' }}>
-      <div style={{ marginBottom: 24 }}>
-        <Text strong style={{ fontSize: 16, color: '#1a1a2e' }}>📋 运维报告生成</Text>
-        <br />
-        <Text style={{ fontSize: 12, color: '#9ca3af' }}>基于真实运行数据，自动生成日报 / 周报</Text>
-      </div>
+    <div style={{ padding: 24 }}>
+      <Title level={4}>📊 报表中心</Title>
+      <Text type="secondary" style={{ display: 'block', marginBottom: 24 }}>
+        选择报表类型，一键导出为 CSV 文件，可用 Excel 打开编辑
+      </Text>
 
-      {/* 配置 */}
-      <Card style={{ borderRadius: 12, marginBottom: 16 }} bodyStyle={{ padding: 20 }}>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          <div>
-            <Text style={{ fontSize: 12, color: '#6b7280', display: 'block', marginBottom: 4 }}>报告类型</Text>
-            <Select
-              value={reportType}
-              onChange={v => setReportType(v)}
-              options={[
-                { value: 'daily', label: '日报' },
-                { value: 'weekly', label: '周报' },
-              ]}
-              style={{ width: 120 }}
-            />
-          </div>
-          <div>
-            <Text style={{ fontSize: 12, color: '#6b7280', display: 'block', marginBottom: 4 }}>电站（可选）</Text>
-            <Select
-              value={stationId}
-              onChange={setStationId}
-              allowClear
-              placeholder="全部电站"
-              options={stations.map((s: any) => ({ value: s._id, label: s.name }))}
-              style={{ width: 200 }}
-            />
-          </div>
-          <Button
-            type="primary"
-            icon={<FileTextOutlined />}
-            loading={generating}
-            onClick={handleGenerate}
-            style={{ background: '#e6342a', border: 'none', height: 36 }}
-          >
-            生成报告
-          </Button>
-        </div>
-      </Card>
+      <Row gutter={[16, 16]}>
+        {REPORTS.map(report => (
+          <Col span={12} key={report.key}>
+            <Card
+              hoverable
+              style={{ borderRadius: 12 }}
+              bodyStyle={{ padding: 24 }}
+              onClick={() => handleExport(report.key)}
+            >
+              <Space direction="vertical" size={12} style={{ width: '100%' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{
+                    width: 48, height: 48, borderRadius: 12,
+                    background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 22,
+                  }}>
+                    {report.icon}
+                  </div>
+                  <div>
+                    <Title level={5} style={{ margin: 0 }}>{report.label}</Title>
+                    <Text type="secondary" style={{ fontSize: 12 }}>{report.desc}</Text>
+                  </div>
+                </div>
+                <Button
+                  type="primary"
+                  icon={<DownloadOutlined />}
+                  loading={loading === report.key}
+                  style={{ borderRadius: 8 }}
+                  block
+                >
+                  导出 CSV
+                </Button>
+              </Space>
+            </Card>
+          </Col>
+        ))}
+      </Row>
 
-      {/* 报告预览 */}
-      {generating && (
-        <Card style={{ borderRadius: 12, textAlign: 'center', padding: 60 }} bodyStyle={{ padding: 60 }}>
-          <Spin size="large" />
-          <div style={{ marginTop: 16, color: '#9ca3af' }}>正在生成报告...</div>
-        </Card>
-      )}
+      <Divider />
 
-      {report && !generating && (
-        <Card
-          style={{ borderRadius: 12 }}
-          title={<Space><FileTextOutlined /><Text strong>报告预览</Text></Space>}
-          extra={<Button icon={<DownloadOutlined />} onClick={handleDownload}>下载报告</Button>}
-          bodyStyle={{ padding: 0 }}
-        >
-          <pre style={{
-            background: '#1a1a2e',
-            color: '#4ade80',
-            padding: '24px',
-            borderRadius: '0 0 12px 12px',
-            fontSize: 12,
-            fontFamily: 'JetBrains Mono, monospace',
-            lineHeight: 1.8,
-            overflow: 'auto',
-            maxHeight: 500,
-            margin: 0,
-          }}>
-            {report}
-          </pre>
-        </Card>
-      )}
-
-      {/* 说明 */}
-      <Card style={{ borderRadius: 12, marginTop: 16 }} bodyStyle={{ padding: 16 }}>
-        <Text style={{ fontSize: 12, color: '#9ca3af' }}>
-          💡 报告基于当天/本周的设备健康分、告警统计、工单数据自动汇总。
-          如需更详细的分析报告，请使用 <a onClick={() => window.location.href = '/ai'}>AI 助手</a> 进行专项查询。
-        </Text>
+      <Card title="📋 使用说明" size="small" bodyStyle={{ padding: 16 }}>
+        <Space direction="vertical" size={4}>
+          <Text style={{ fontSize: 13 }}>1. 点击「导出 CSV」按钮，数据将自动下载为 CSV 文件</Text>
+          <Text style={{ fontSize: 13 }}>2. 导出的文件可用 Microsoft Excel / WPS 打开，支持筛选、排序、图表生成</Text>
+          <Text style={{ fontSize: 13 }}>3. 如需 PDF 格式，可在 Excel 中另存为 PDF，或使用 WPS 的导出功能</Text>
+          <Text style={{ fontSize: 13 }}>4. 数据范围：当前数据库中的全部记录，建议定期导出备份</Text>
+        </Space>
       </Card>
     </div>
   );
