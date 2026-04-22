@@ -29,6 +29,7 @@ const NAV_ITEMS = [
   { key: '/ems-simulator', icon: <ApiOutlined />, label: 'EMS模拟' },
   { key: '/ai', icon: <RobotOutlined />, label: 'AI助手' },
   { key: '/partner-admin', icon: <TeamOutlined />, label: '渠道管理' },
+  { key: '/partner-leads', icon: <FileTextOutlined />, label: '线索管理' },
   { key: '/installers', icon: <ToolOutlined />, label: '安装商' },
   { key: '/installer-stats', icon: <RiseOutlined />, label: '安装商统计' },
   { key: '/projects', icon: <BuildOutlined />, label: '项目建设' },

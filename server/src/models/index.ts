@@ -423,6 +423,43 @@ const partnerApplicationSchema = new mongoose.Schema({
 partnerApplicationSchema.index({ status: 1, createdAt: -1 });
 export const PartnerApplication = mongoose.model('PartnerApplication', partnerApplicationSchema);
 
+// ─── Lead（客户线索/报备）────────────────────────────────────────────────────────
+const leadSchema = new mongoose.Schema({
+  // 报备人（安装商）
+  installerPartnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Partner', required: true },
+  // 客户基本信息
+  customerName: { type: String, required: true },
+  customerPhone: { type: String, required: true },
+  customerAddress: { type: String, required: true },
+  province: String,
+  city: String,
+  district: String,
+  // 项目信息
+  projectType: { type: String, enum: ['residential', 'commercial', 'industrial'], required: true },
+  estimatedCapacity: Number,        // 预估装机容量 (kW)
+  estimatedBudget: Number,         // 预估预算 (万元)
+  description: String,
+  // 报备状态
+  status: { type: String, enum: ['pending', 'approved', 'rejected', 'converted', 'expired'], default: 'pending' },
+  // 报备有效期（天）
+  protectionDays: { type: Number, default: 30 },
+  protectExpiresAt: Date,         // 保护期截止
+  // 审批信息
+  reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'PartnerUser' },
+  reviewedAt: Date,
+  rejectionReason: String,
+  // 转化信息（批准后填入）
+  convertedProjectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project' },
+  convertedAt: Date,
+  // 关联分销商（审批时填入）
+  distributorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Partner' },
+  // 备注
+  remark: String,
+}, { timestamps: true });
+leadSchema.index({ installerPartnerId: 1, createdAt: -1 });
+leadSchema.index({ status: 1, protectExpiresAt: 1 });
+export const Lead = mongoose.model('Lead', leadSchema);
+
 export const PartnerTransfer = mongoose.model('PartnerTransfer', partnerTransferSchema);
 
 export { LEVEL_THRESHOLDS, LEVEL_MULTIPLIERS, PARTNER_LEVELS as PARTNER_LEVEL };
