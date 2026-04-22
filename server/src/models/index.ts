@@ -282,6 +282,9 @@ const partnerSchema = new mongoose.Schema({
   availablePoints: { type: Number, default: 0 },
   phone: String, address: String, contactPerson: String,
   status: { type: String, enum: ['active', 'suspended'], default: 'active' },
+  // 配额与结算
+  monthlyQuota: { type: Number, default: 0 },        // 月度安装配额（套数）
+  commissionRate: { type: Number, default: 5 },      // 佣金比例（%），默认5%
   region: String, description: String,
 
   // ── 安装商专属字段 ──────────────────────────────────────────────────────────
@@ -459,6 +462,33 @@ const leadSchema = new mongoose.Schema({
 leadSchema.index({ installerPartnerId: 1, createdAt: -1 });
 leadSchema.index({ status: 1, protectExpiresAt: 1 });
 export const Lead = mongoose.model('Lead', leadSchema);
+
+// ─── PartnerSettlement（月度结算）───────────────────────────────────────────────
+const partnerSettlementSchema = new mongoose.Schema({
+  partnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Partner', required: true },
+  yearMonth: { type: String, required: true },           // 格式：YYYY-MM
+  // 安装量统计
+  installationsCount: { type: Number, default: 0 },
+  totalCapacity: { type: Number, default: 0 },              // 总装机容量 (kW)
+  // 配额
+  monthlyQuota: { type: Number, default: 0 },
+  quotaAchieved: { type: Number, default: 0 },             // 配额完成率 %
+  // 结算金额
+  commissionRate: { type: Number, default: 0 },            // 佣金比例 %
+  commissionAmount: { type: Number, default: 0 },           // 佣金金额（元）
+  pointsEarned: { type: Number, default: 0 },              // 本月获得积分
+  // 结算状态
+  status: { type: String, enum: ['pending', 'confirmed', 'paid'], default: 'pending' },
+  // 对账信息
+  confirmedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'PartnerUser' },
+  confirmedAt: Date,
+  paidAt: Date,
+  paymentMethod: String,
+  paymentNote: String,
+  remark: String,
+}, { timestamps: true });
+partnerSettlementSchema.index({ partnerId: 1, yearMonth: -1 });
+export const PartnerSettlement = mongoose.model('PartnerSettlement', partnerSettlementSchema);
 
 export const PartnerTransfer = mongoose.model('PartnerTransfer', partnerTransferSchema);
 
