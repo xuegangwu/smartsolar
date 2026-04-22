@@ -192,6 +192,10 @@ export const partnerApi = {
   getById: (id: string) => api.get<any, any>(`/partners/${id}`).then(r => r.data),
   create: (data: any) => api.post('/partners', data).then(r => r.data),
   update: (id: string, data: any) => api.put(`/partners/${id}`, data).then(r => r.data),
+  apply: (data: any) => api.post('/partners/apply', data).then(r => r.data),
+  getApplications: (status?: string) => api.get<any, any>('/partners/applications', { params: { status } || {} }).then(r => r.data),
+  approveApplication: (id: string, data: any) => api.patch<any, any>(`/partners/applications/${id}/approve`, data).then(r => r.data),
+  rejectApplication: (id: string, reason: string) => api.patch<any, any>(`/partners/applications/${id}/reject`, { reason }).then(r => r.data),
   getRedemptions: () =>
     fetch('/api/partners/redemptions', { headers: { Authorization: `Bearer ${localStorage.getItem('partner_token') || ''}` } }).then(r => r.json()),
 };

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { Partner, PartnerUser, PointTransaction, PointRedemption, PointRule, WorkOrder, PartnerTransfer, PartnerComplaint, LEVEL_THRESHOLDS, LEVEL_MULTIPLIERS } from '../models/index.js';
+import { Partner, PartnerUser, PointTransaction, PointRedemption, PointRule, WorkOrder, PartnerTransfer, PartnerComplaint, PartnerApplication, LEVEL_THRESHOLDS, LEVEL_MULTIPLIERS } from '../models/index.js';
 
 const router = Router();
 const PARTNER_JWT_SECRET = process.env.PARTNER_JWT_SECRET || 'smartsolar_partner_secret';
@@ -699,6 +699,157 @@ router.patch('/complaints/:id/resolve', partnerAuth, async (req: any, res) => {
       { new: true },
     );
     res.json({ success: true, data: complaint });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ─── 安装商入驻申请 ───────────────────────────────────────────────────────────
+
+// 提交入驻申请（公开）
+router.post('/apply', async (req, res) => {
+  try {
+    const { companyName, contactPerson, phone, email, address,
+      serviceRegions, specializedTypes, staffCount, establishmentDate,
+      businessLicense, description, qualifications } = req.body;
+
+    if (!companyName || !contactPerson || !phone) {
+      return res.status(400).json({ success: false, message: '请填写必填项：公司名称、联系人、电话' });
+    }
+
+    // 查重：同一电话或统一社会信用代码不能重复申请
+    const existing = await PartnerApplication.findOne({
+      $or: [{ phone }, businessLicense ? { businessLicense } : {}],
+    }).lean();
+    if (existing && existing.status === 'pending') {
+      return res.status(400).json({ success: false, message: '该信息已有待审核的申请，请等待审批' });
+    }
+
+    const application = await PartnerApplication.create({
+      companyName, contactPerson, phone, email, address,
+      serviceRegions: serviceRegions || [],
+      specializedTypes: specializedTypes || [],
+      staffCount, establishmentDate, businessLicense, description,
+      qualifications: qualifications || [],
+    });
+
+    res.json({ success: true, data: application });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// 获取申请列表（分销商：看自己下级；管理员：看全部）
+router.get('/applications', partnerAuth, async (req: any, res) => {
+  try {
+    const { status } = req.query;
+    const filter: any = { status: status || 'pending' };
+
+    // 如果是分销商，只能看自己的区域/下级安装商申请
+    const partner = await Partner.findById(req.partnerUser.partnerId);
+    if (!partner) return res.status(404).json({ success: false });
+
+    if (partner.type === 'distributor') {
+      // 分销商看所有 pending（简化，实际可按区域过滤）
+      // 不额外加 filter，让分销商看到所有申请再决定
+    } else if (partner.type === 'installer') {
+      // 安装商自己看自己的申请记录
+      filter.parentDistributorId = partner._id;
+    }
+
+    const applications = await PartnerApplication.find(filter)
+      .sort({ createdAt: -1 }).lean();
+    res.json({ success: true, data: applications });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// 审批通过 → 创建 Partner + PartnerUser（分销商或管理员）
+router.patch('/applications/:id/approve', partnerAuth, async (req: any, res) => {
+  try {
+    const { parentDistributorId, initialPassword } = req.body;
+    const application = await PartnerApplication.findById(req.params.id);
+    if (!application) return res.status(404).json({ success: false, message: '申请不存在' });
+    if (application.status !== 'pending') return res.status(400).json({ success: false, message: '该申请已处理' });
+
+    // 生成随机密码
+    const rawPassword = initialPassword || `partner${Math.floor(100000 + Math.random() * 900000)}`;
+    const hashedPassword = await bcrypt.hash(rawPassword, 10);
+
+    // 创建 Partner（安装商）
+    const partner = await Partner.create({
+      name: application.companyName,
+      type: 'installer',
+      parentId: parentDistributorId || null,
+      level: 'bronze',
+      totalPoints: 0,
+      availablePoints: 0,
+      phone: application.phone,
+      address: application.address,
+      contactPerson: application.contactPerson,
+      region: (application.serviceRegions || []).join('、'),
+      description: application.description,
+      staffCount: application.staffCount,
+      businessLicense: application.businessLicense,
+      establishmentDate: application.establishmentDate,
+      qualifications: application.qualifications,
+      specializedTypes: application.specializedTypes,
+      totalInstallations: 0,
+      totalCapacity: 0,
+      rating: 5.0,
+      complaintCount: 0,
+      status: 'active',
+    });
+
+    // 创建 PartnerUser（主账号）
+    const user = await PartnerUser.create({
+      partnerId: partner._id,
+      username: `installer_${partner._id.toString().slice(-6)}`,
+      password: hashedPassword,
+      name: application.contactPerson,
+      phone: application.phone,
+      email: application.email,
+      role: 'owner',
+      status: 'active',
+    });
+
+    // 更新申请记录
+    application.status = 'approved';
+    application.parentDistributorId = parentDistributorId || null;
+    application.reviewedBy = req.partnerUser.sub as any;
+    application.reviewedAt = new Date();
+    application.createdPartnerId = partner._id;
+    await application.save();
+
+    res.json({
+      success: true,
+      data: {
+        application,
+        partner: { id: partner._id, name: partner.name },
+        login: { username: user.username, password: rawPassword },
+      },
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// 驳回申请
+router.patch('/applications/:id/reject', partnerAuth, async (req: any, res) => {
+  try {
+    const { reason } = req.body;
+    const application = await PartnerApplication.findById(req.params.id);
+    if (!application) return res.status(404).json({ success: false, message: '申请不存在' });
+    if (application.status !== 'pending') return res.status(400).json({ success: false, message: '该申请已处理' });
+
+    application.status = 'rejected';
+    application.rejectionReason = reason || '';
+    application.reviewedBy = req.partnerUser.sub as any;
+    application.reviewedAt = new Date();
+    await application.save();
+
+    res.json({ success: true, data: application });
   } catch (err: any) {
     res.status(500).json({ success: false, message: err.message });
   }

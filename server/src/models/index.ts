@@ -388,6 +388,41 @@ const partnerComplaintSchema = new mongoose.Schema({
 partnerComplaintSchema.index({ partnerId: 1, createdAt: -1 });
 export const PartnerComplaint = mongoose.model('PartnerComplaint', partnerComplaintSchema);
 
+// ─── PartnerApplication（安装商入驻申请）─────────────────────────────────────────
+const partnerApplicationSchema = new mongoose.Schema({
+  // 公司基本信息
+  companyName: { type: String, required: true },
+  contactPerson: { type: String, required: true },
+  phone: { type: String, required: true },
+  email: String,
+  address: String,
+  // 业务信息
+  serviceRegions: [{ type: String }],          // 服务区域，如 ["上海市", "江苏省"]
+  specializedTypes: [{ type: String, enum: ['residential', 'commercial', 'industrial'] }],
+  staffCount: Number,                          // 员工数量
+  establishmentDate: Date,                    // 成立时间
+  businessLicense: String,                    // 统一社会信用代码
+  description: String,                          // 公司简介
+  // 资质证书
+  qualifications: [{
+    name: String,
+    number: String,
+    expireDate: Date,
+  }],
+  // 申请状态
+  status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+  // 关联分销商（审批通过后填入）
+  parentDistributorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Partner' },
+  // 审批信息
+  rejectionReason: String,
+  reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'PartnerUser' },
+  reviewedAt: Date,
+  // 审批通过后生成的账号
+  createdPartnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Partner' },
+}, { timestamps: true });
+partnerApplicationSchema.index({ status: 1, createdAt: -1 });
+export const PartnerApplication = mongoose.model('PartnerApplication', partnerApplicationSchema);
+
 export const PartnerTransfer = mongoose.model('PartnerTransfer', partnerTransferSchema);
 
 export { LEVEL_THRESHOLDS, LEVEL_MULTIPLIERS, PARTNER_LEVELS as PARTNER_LEVEL };

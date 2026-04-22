@@ -6,6 +6,7 @@ import {
 import {
   PlusOutlined, EditOutlined, DeleteOutlined, TeamOutlined,
   GiftOutlined, SwapOutlined, ArrowRightOutlined, HistoryOutlined,
+  UserAddOutlined, CheckCircleOutlined, CloseCircleOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { partnerApi } from '../services/api';
@@ -42,6 +43,11 @@ export default function PartnerAdmin() {
         {/* ── 兑换审核 ─────────────────────────────────────────────── */}
         <TabPane tab={<><GiftOutlined /> 兑换审核</>} key="redemptions">
           <RedemptionTab />
+        </TabPane>
+
+        {/* ── 入驻申请 ─────────────────────────────────────────────── */}
+        <TabPane tab={<><UserAddOutlined /> 入驻申请</>} key="applications">
+          <ApplicationsTab />
         </TabPane>
       </Tabs>
     </div>
@@ -493,6 +499,74 @@ function RedemptionTab() {
           ]}
         />
       )}
+    </Card>
+  );
+}
+
+// ─── 入驻申请 Tab ──────────────────────────────────────────────────────────────
+function ApplicationsTab() {
+  const [apps, setApps] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [rejectModal, setRejectModal] = useState<any>(null);
+  const [rejectReason, setRejectReason] = useState('');
+
+  function loadApps() {
+    setLoading(true);
+    partnerApi.getApplications('pending').then((d: any) => {
+      if (d.success) setApps(d.data || []);
+    }).finally(() => setLoading(false));
+  }
+
+  useEffect(() => { loadApps(); }, []);
+
+  async function handleApprove(id: string) {
+    const res = await partnerApi.approveApplication(id, {});
+    if (res.success) { message.success('已批准入驻申请！'); loadApps(); }
+    else message.error(res.message || '操作失败');
+  }
+
+  async function handleRejectConfirm() {
+    if (!rejectReason.trim()) { message.warning('请填写驳回原因'); return; }
+    const res = await partnerApi.rejectApplication(rejectModal._id, rejectReason);
+    if (res.success) { message.success('已驳回'); setRejectModal(null); setRejectReason(''); loadApps(); }
+    else message.error(res.message);
+  }
+
+  const columns = [
+    { title: '公司名称', dataIndex: 'companyName', key: 'name' },
+    { title: '联系人', dataIndex: 'contactPerson', key: 'contact' },
+    { title: '电话', dataIndex: 'phone', key: 'phone' },
+    { title: '服务区域', dataIndex: 'serviceRegions', key: 'regions', render: (r: string[]) => r?.join('、') || '—' },
+    { title: '擅长类型', dataIndex: 'specializedTypes', key: 'types', render: (r: string[]) => r?.map((t: string) => ({ residential: '家用', commercial: '商用', industrial: '工业' }[t] || t)).join('、') || '—' },
+    { title: '申请时间', dataIndex: 'createdAt', key: 'time', render: (t: string) => new Date(t).toLocaleString('zh-CN') },
+    { title: '操作', key: 'action', render: (_: any, r: any) => (
+      <Space>
+        <Button size="small" type="primary" icon={<CheckCircleOutlined />} onClick={() => handleApprove(r._id)}>批准</Button>
+        <Button size="small" danger icon={<CloseCircleOutlined />} onClick={() => { setRejectModal(r); setRejectReason(''); }}>驳回</Button>
+      </Space>
+    )},
+  ];
+
+  return (
+    <Card size="small">
+      {apps.length === 0 && !loading && <div style={{ textAlign: 'center', padding: 32, color: '#999' }}>暂无待审核申请 ✅</div>}
+      <Table dataSource={apps} columns={columns} rowKey="_id" loading={loading} pagination={{ pageSize: 10 }}
+        expandable={{ expandedRowRender: (r) => (
+          <div style={{ padding: '4px 0' }}>
+            <p><b>邮箱：</b>{r.email || '—'} &nbsp;&nbsp; <b>地址：</b>{r.address || '—'} &nbsp;&nbsp; <b>员工数：</b>{r.staffCount || '—'}</p>
+            {r.description && <p><b>简介：</b>{r.description}</p>}
+            {r.businessLicense && <p><b>信用代码：</b>{r.businessLicense}</p>}
+          </div>
+        ) }}
+      />
+      <Modal open={!!rejectModal} title="驳回入驻申请" onCancel={() => { setRejectModal(null); setRejectReason(''); }} footer={null}>
+        <p>确定驳回 <b>{rejectModal?.companyName}</b> 的入驻申请？</p>
+        <Input.TextArea rows={3} placeholder="请输入驳回原因" value={rejectReason} onChange={e => setRejectReason(e.target.value)} style={{ marginTop: 12 }} />
+        <Space style={{ marginTop: 16 }}>
+          <Button type="primary" onClick={handleRejectConfirm}>确认驳回</Button>
+          <Button onClick={() => { setRejectModal(null); setRejectReason(''); }}>取消</Button>
+        </Space>
+      </Modal>
     </Card>
   );
 }

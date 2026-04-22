@@ -33,6 +33,7 @@ const PartnerTransactions = lazy(() => import('./pages/PartnerTransactions'));
 const PartnerMall = lazy(() => import('./pages/PartnerMall'));
 const PartnerAdmin = lazy(() => import('./pages/PartnerAdmin'));
 const Installers = lazy(() => import('./pages/Installers'));
+const PartnerRegister = lazy(() => import('./pages/PartnerRegister'));
 const InstallerStats = lazy(() => import('./pages/InstallerStats'));
 const InstallerPortal = lazy(() => import('./pages/InstallerPortal'));
 const Projects = lazy(() => import('./pages/Projects'));
@@ -71,6 +72,7 @@ export default function App() {
                 <Route path="/" element={<Home />} />
                 <Route path="/login" element={<AuthRoute><Login /></AuthRoute>} />
                 <Route path="/partner-login" element={<PartnerLogin />} />
+                <Route path="/partner-register" element={<PartnerRegister />} />
                 <Route path="/installer-portal" element={<InstallerPortal />} />
 
                 {/* ── 渠道商 Portal ── */}

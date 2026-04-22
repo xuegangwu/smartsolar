@@ -139,6 +139,11 @@ export default function PartnerLogin() {
             🔧 我是安装商，直接进入工作台 →
           </Button>
         </div>
+        <div style={{ marginTop: 8, textAlign: 'center' }}>
+          <Button type="link" onClick={() => navigate('/partner-register')} style={{ color: '#e6342a', fontSize: 13 }}>
+            🏗️ 我是安装商，申请入驻 →
+          </Button>
+        </div>
       </Card>
     </div>
   );
