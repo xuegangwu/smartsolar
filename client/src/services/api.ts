@@ -127,7 +127,8 @@ export const workOrderApi = {
   getById: (id: string) => api.get<any, any>(`/work-orders/${id}`).then(r => r.data),
   create: (data: Partial<WorkOrder>) => api.post('/work-orders', data).then(r => r.data),
   update: (id: string, data: Partial<WorkOrder>) => api.put(`/work-orders/${id}`, data).then(r => r.data),
-  updateStatus: (id: string, status: string) => api.patch(`/work-orders/${id}/status`, { status }).then(r => r.data),
+  updateStatus: (id: string, status: string, rating?: number) =>
+    api.patch(`/work-orders/${id}/status`, rating !== undefined ? { status, rating } : { status }).then(r => r.data),
   delete: (id: string) => api.delete(`/work-orders/${id}`).then(r => r.data),
 };
 

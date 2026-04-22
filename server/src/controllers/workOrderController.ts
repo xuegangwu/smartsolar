@@ -110,7 +110,7 @@ export const workOrderController = {
 
   // 状态变更（简化状态机）
   updateStatus: async (req: Request, res: Response) => {
-    const { status } = req.body;
+    const { status, rating } = req.body;
     const workOrder = await WorkOrder.findById(req.params.id);
     if (!workOrder) return res.status(404).json({ success: false, message: 'Work order not found' });
 
@@ -139,6 +139,10 @@ export const workOrderController = {
     if (status === 'closed') {
       workOrder.closedAt = new Date();
       workOrder.completedAt = new Date();
+      // 保存评分
+      if (typeof rating === 'number' && rating >= 1 && rating <= 5) {
+        (workOrder as any).rating = rating;
+      }
 
       // ── 触发积分赚取（安装商）─────────────────────────────────────
       if ((workOrder as any).partnerId) {
@@ -207,6 +211,24 @@ export const workOrderController = {
           }
         } catch (e) {
           console.error('[Points] Failed to award points:', e);
+        }
+
+        // ── 更新 Partner 评分（加权平均）─────────────────────────────────
+        if (typeof rating === 'number' && rating >= 1 && rating <= 5) {
+          try {
+            const { Partner: P2 } = await import('../models/index.js');
+            const ratingPartner = await P2.findById((workOrder as any).partnerId).lean();
+            if (ratingPartner) {
+              const totalInstallations = ratingPartner.totalInstallations || 0;
+              const newRating = totalInstallations > 0
+                ? ((ratingPartner.rating || 5) * totalInstallations + rating) / (totalInstallations + 1)
+                : rating;
+              await P2.findByIdAndUpdate((workOrder as any).partnerId, { rating: newRating });
+              console.log(`[Rating] Partner ${ratingPartner.name} updated to ${newRating.toFixed(2)}`);
+            }
+          } catch (ratingErr) {
+            console.error('[Rating] Failed to update partner rating:', ratingErr);
+          }
         }
       }
     }

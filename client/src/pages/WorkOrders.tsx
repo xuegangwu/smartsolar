@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
   Card, Table, Tag, Button, Space, Modal, Form, Input, Select, message,
-  Row, Col, Statistic, Typography, Timeline, Descriptions, Divider, Popconfirm, Steps,
+  Row, Col, Statistic, Typography, Timeline, Descriptions, Divider, Popconfirm, Steps, Rate,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -83,6 +83,9 @@ export default function WorkOrders() {
   const [filterPriority, setFilterPriority] = useState<string>('');
   const [spareParts, setSpareParts] = useState<any[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
+  const [ratingModalOpen, setRatingModalOpen] = useState(false);
+  const [ratingTargetId, setRatingTargetId] = useState<string>('');
+  const [ratingValue, setRatingValue] = useState<number>(5);
   const [personnel, setPersonnel] = useState<any[]>([]);
   const [partners, setPartners] = useState<any[]>([]);
   const [equipmentList, setEquipmentList] = useState<any[]>([]);
@@ -193,6 +196,12 @@ export default function WorkOrders() {
   }
 
   async function handleStatusChange(id: string, newStatus: string) {
+    if (newStatus === 'closed') {
+      setRatingTargetId(id);
+      setRatingValue(5);
+      setRatingModalOpen(true);
+      return;
+    }
     const res = await workOrderApi.updateStatus(id, newStatus);
     if (res.success) {
       message.success(`已更新为：${WORKFLOW_LABELS[WORKFLOW.indexOf(newStatus)]}`);
@@ -203,6 +212,21 @@ export default function WorkOrders() {
       }
     } else {
       message.error(res.message || '状态更新失败');
+    }
+  }
+
+  async function handleRatingConfirm() {
+    const res = await workOrderApi.updateStatus(ratingTargetId, 'closed', ratingValue);
+    if (res.success) {
+      message.success('工单已关闭，感谢评分！');
+      setRatingModalOpen(false);
+      loadOrders();
+      if (detailOpen && detail?._id === ratingTargetId) {
+        const refreshed = await workOrderApi.getById(ratingTargetId);
+        if (refreshed.success) setDetail(refreshed.data);
+      }
+    } else {
+      message.error(res.message || '关闭失败');
     }
   }
 
@@ -562,6 +586,26 @@ export default function WorkOrders() {
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{aiResult}</ReactMarkdown>
           </div>
         ) : null}
+      </Modal>
+
+      {/* 关闭工单评分弹窗 */}
+      <Modal
+        title="关闭工单"
+        open={ratingModalOpen}
+        onOk={handleRatingConfirm}
+        onCancel={() => setRatingModalOpen(false)}
+        okText="确认关闭"
+        cancelText="取消"
+      >
+        <div style={{ padding: '16px 0' }}>
+          <p style={{ marginBottom: 12, color: '#555' }}>请对本次服务进行评分：</p>
+          <div style={{ textAlign: 'center', padding: '8px 0' }}>
+            <Rate value={ratingValue} onChange={setRatingValue} allowHalf />
+          </div>
+          <p style={{ textAlign: 'center', marginTop: 8, color: '#888', fontSize: 12 }}>
+            {ratingValue <= 2 ? '😞 感谢反馈，我们会改进' : ratingValue <= 3 ? '😐 感谢您的评价' : ratingValue <= 4 ? '😊 感谢好评！' : '🌟 感谢您的满分支持！'}
+          </p>
+        </div>
       </Modal>
 
       <style>{`

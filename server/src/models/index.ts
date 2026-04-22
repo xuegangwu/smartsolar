@@ -83,6 +83,8 @@ const workOrderSchema = new mongoose.Schema({
   // AI预测相关
   relatedAlertId: { type: mongoose.Schema.Types.ObjectId },
   tags: [String],
+  // 客户评分（工单关闭时填写，1-5星）
+  rating: { type: Number, min: 1, max: 5 },
   // 时间戳
   assignedAt: Date,
   acceptedAt: Date,
@@ -372,6 +374,20 @@ const partnerTransferSchema = new mongoose.Schema({
   operatorName: { type: String },
 }, { timestamps: true });
 partnerTransferSchema.index({ installerId: 1, createdAt: -1 });
+// ─── PartnerComplaint（安装商投诉记录）─────────────────────────────────────────
+const partnerComplaintSchema = new mongoose.Schema({
+  partnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Partner', required: true },
+  complainantName: { type: String, required: true },
+  complainantPhone: String,
+  reason: { type: String, required: true },
+  status: { type: String, enum: ['pending', 'resolved', 'dismissed'], default: 'pending' },
+  resolution: String,
+  resolvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'PartnerUser' },
+  resolvedAt: Date,
+}, { timestamps: true });
+partnerComplaintSchema.index({ partnerId: 1, createdAt: -1 });
+export const PartnerComplaint = mongoose.model('PartnerComplaint', partnerComplaintSchema);
+
 export const PartnerTransfer = mongoose.model('PartnerTransfer', partnerTransferSchema);
 
 export { LEVEL_THRESHOLDS, LEVEL_MULTIPLIERS, PARTNER_LEVELS as PARTNER_LEVEL };

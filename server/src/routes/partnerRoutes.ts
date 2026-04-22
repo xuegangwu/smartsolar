@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { Partner, PartnerUser, PointTransaction, PointRedemption, PointRule, WorkOrder, PartnerTransfer, LEVEL_THRESHOLDS, LEVEL_MULTIPLIERS } from '../models/index.js';
+import { Partner, PartnerUser, PointTransaction, PointRedemption, PointRule, WorkOrder, PartnerTransfer, PartnerComplaint, LEVEL_THRESHOLDS, LEVEL_MULTIPLIERS } from '../models/index.js';
 
 const router = Router();
 const PARTNER_JWT_SECRET = process.env.PARTNER_JWT_SECRET || 'smartsolar_partner_secret';
@@ -114,10 +114,18 @@ router.get('/dashboard', partnerAuth, async (req: any, res) => {
       (currentLevel === 'gold' ? 'diamond' : currentLevel === 'silver' ? 'gold' : 'silver');
     const nextThreshold = nextLevel ? LEVEL_THRESHOLDS[nextLevel] : null;
 
-    // 工单统计（该渠道商关联的工单，通过 WorkOrder 的 partnerId 或其他字段，这里简化为全部工单的统计）
-    // 实际项目中工单应该关联到安装商
-    const totalWorkOrders = await WorkOrder.countDocuments().lean();
-    const openWorkOrders = await WorkOrder.countDocuments({ status: { $nin: ['closed'] } }).lean();
+    // 工单统计 — 按渠道商网络过滤
+    // 安装商只看自己的工单；分销商看所有下级安装商的工单
+    let partnerWorkOrderFilter: any = {};
+    if (partner.type === 'installer') {
+      // 安装商：只统计自己承接的工单
+      partnerWorkOrderFilter.partnerId = partnerId;
+    } else if (partner.type === 'distributor' && subPartners.length > 0) {
+      // 分销商：统计所有下级安装商的工单
+      partnerWorkOrderFilter.partnerId = { $in: subPartners.map((p: any) => p._id) };
+    }
+    const totalWorkOrders = await WorkOrder.countDocuments(partnerWorkOrderFilter).lean();
+    const openWorkOrders = await WorkOrder.countDocuments({ ...partnerWorkOrderFilter, status: { $nin: ['closed'] } }).lean();
 
     res.json({
       success: true,
@@ -282,6 +290,7 @@ router.get('/installer/dashboard', partnerAuth, async (req: any, res) => {
           totalInstallations: partner.totalInstallations || 0,
           totalCapacity: partner.totalCapacity || 0,
           region: partner.region, status: partner.status,
+          complaintCount: (partner as any).complaintCount || 0,
         },
         stats: {
           totalStations: stations.length,
@@ -607,5 +616,92 @@ router.put('/:id', async (req, res) => {
   }
 });
 
+
+// ─── 投诉管理 ───────────────────────────────────────────────────────────────
+
+// 提交投诉（任何人可提交）
+router.post('/complaints', async (req, res) => {
+  try {
+    const { partnerId, complainantName, complainantPhone, reason } = req.body;
+    if (!partnerId || !complainantName || !reason) {
+      return res.status(400).json({ success: false, message: '缺少必要信息' });
+    }
+
+    const partner = await Partner.findById(partnerId);
+    if (!partner) return res.status(404).json({ success: false, message: '渠道商不存在' });
+
+    // 创建投诉记录
+    const complaint = await PartnerComplaint.create({
+      partnerId, complainantName, complainantPhone, reason,
+    });
+
+    // 增加投诉计数
+    const p = partner as any;
+    p.complaintCount = (p.complaintCount || 0) + 1;
+
+    // 触发降级 / 封禁
+    const LEVEL_ORDER: Array<'bronze'|'silver'|'gold'|'diamond'> = ['bronze', 'silver', 'gold', 'diamond'];
+    const DEMOTE_THRESHOLD = 3;
+    const SUSPEND_THRESHOLD = 5;
+
+    if (p.complaintCount >= SUSPEND_THRESHOLD) {
+      p.status = 'suspended';
+      await PointTransaction.create({
+        partnerId: partner._id,
+        type: 'deduct',
+        amount: 0,
+        balance: p.availablePoints,
+        description: `累计${p.complaintCount}次投诉，账号被封禁`,
+      });
+    } else if (p.complaintCount >= DEMOTE_THRESHOLD) {
+      const currentIdx = LEVEL_ORDER.indexOf(p.level);
+      if (currentIdx > 0) {
+        const newLevel = LEVEL_ORDER[currentIdx - 1];
+        const deductedPoints = p.totalPoints;
+        p.level = newLevel;
+        p.totalPoints = 0;
+        p.availablePoints = 0;
+        await PointTransaction.create({
+          partnerId: partner._id,
+          type: 'deduct',
+          amount: -deductedPoints,
+          balance: 0,
+          description: `累计${p.complaintCount}次投诉，降级至${newLevel}，积分清零`,
+        });
+      }
+    }
+    await partner.save();
+
+    res.json({ success: true, data: complaint });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// 获取某渠道商的投诉列表（管理员）
+router.get('/complaints/:partnerId', async (req, res) => {
+  try {
+    const complaints = await PartnerComplaint.find({ partnerId: req.params.partnerId })
+      .sort({ createdAt: -1 }).lean();
+    res.json({ success: true, data: complaints });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// 处理投诉（管理员）
+router.patch('/complaints/:id/resolve', partnerAuth, async (req: any, res) => {
+  try {
+    const { status, resolution } = req.body;
+    const complaint = await PartnerComplaint.findByIdAndUpdate(
+      req.params.id,
+      { status, resolution, resolvedBy: req.partnerUser.sub, resolvedAt: new Date() },
+      { new: true },
+    );
+    res.json({ success: true, data: complaint });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
 
 export default router;
