@@ -58,6 +58,9 @@ export default function PartnerAdmin() {
 function PartnerList() {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [dispatchModal, setDispatchModal] = useState<any>(null);
+  const [trackingNumber, setTrackingNumber] = useState('');
+  const [shippingMethod, setShippingMethod] = useState('');
   const [modal, setModal] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [form] = Form.useForm();

@@ -361,9 +361,14 @@ const pointRedemptionSchema = new mongoose.Schema({
   partnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Partner', required: true },
   itemName: { type: String, required: true },
   pointsCost: { type: Number, required: true },
-  status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+  status: { type: String, enum: ['pending', 'approved', 'rejected', 'dispatched', 'completed', 'cancelled'], default: 'pending' },
   shippingAddress: String, contactPhone: String, remark: String,
   handledBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Personnel' }, handledAt: Date,
+  shippingMethod: String,
+  trackingNumber: String,
+  dispatchedAt: Date,
+  dispatchedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'PartnerUser' },
+  completedAt: Date,
 }, { timestamps: true });
 export const PointRedemption = mongoose.model('PointRedemption', pointRedemptionSchema);
 

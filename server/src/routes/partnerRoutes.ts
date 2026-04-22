@@ -561,6 +561,45 @@ router.patch('/admin/redemptions/:id', async (req, res) => {
         await PointTransaction.create({
           partnerId: partner._id,
           type: 'adjust',
+
+// [REDEEM] Dispatch
+router.patch('/admin/redemptions/:id/dispatch', partnerAuth, async (req: any, res) => {
+  try {
+    const { shippingMethod, trackingNumber } = req.body;
+    const redemption = await PointRedemption.findById(req.params.id);
+    if (!redemption) return res.status(404).json({ success: false, message: '兑换记录不存在' });
+    if (redemption.status !== 'approved') return res.status(400).json({ success: false, message: '只能对已批准的兑换发货' });
+
+    redemption.status = 'dispatched';
+    redemption.shippingMethod = shippingMethod || '';
+    redemption.trackingNumber = trackingNumber || '';
+    redemption.dispatchedAt = new Date();
+    redemption.dispatchedBy = req.partnerUser.sub as any;
+    await redemption.save();
+
+    res.json({ success: true, data: redemption });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// [REDEEM] Complete
+router.patch('/admin/redemptions/:id/complete', partnerAuth, async (req: any, res) => {
+  try {
+    const redemption = await PointRedemption.findById(req.params.id);
+    if (!redemption) return res.status(404).json({ success: false, message: '兑换记录不存在' });
+    if (redemption.status !== 'dispatched') return res.status(400).json({ success: false, message: '只能确认已发货的兑换' });
+
+    redemption.status = 'completed';
+    redemption.completedAt = new Date();
+    await redemption.save();
+
+    res.json({ success: true, data: redemption });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
           amount: redemption.pointsCost,
           balance: partner.availablePoints,
           description: `兑换拒绝退款：${redemption.itemName}`,
