@@ -572,3 +572,36 @@ projectSchema.index({ status: 1, phase: 1 });
 export const Project = mongoose.model('Project', projectSchema);
 export const Milestone = mongoose.model('Milestone', milestoneSchema);
 export const ProjectDoc = mongoose.model('ProjectDoc', projectDocSchema);
+
+// ─── Notification（站内通知）───────────────────────────────────────────────────
+const notificationSchema = new mongoose.Schema({
+  recipientPartnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Partner', required: true },
+  type: { type: String, enum: [
+    'application_received',   // 新入驻申请
+    'application_approved',    // 申请通过
+    'application_rejected',    // 申请被拒
+    'complaint_received',      // 收到投诉
+    'complaint_resolved',      // 投诉已处理
+    'lead_approved',           // 线索审批通过
+    'lead_rejected',           // 线索被驳回
+    'lead_converted',         // 线索已转化
+    'settlement_generated',   // 结算单生成
+    'settlement_confirmed',    // 结算已确认
+    'settlement_paid',         // 结算已付款
+    'redemption_approved',    // 兑换审批通过
+    'redemption_dispatched',   // 兑换已发货
+    'level_up',               // 等级提升
+    'level_down',             // 等级下降
+    'account_suspended',       // 账号被封
+  ], required: true },
+  title: { type: String, required: true },
+  content: { type: String, required: true },
+  // 关联数据（可选）
+  relatedId: mongoose.Schema.Types.ObjectId,
+  relatedType: String,          // 'Lead' | 'WorkOrder' | 'Settlement' | 'PartnerApplication' etc.
+  isRead: { type: Boolean, default: false },
+  readAt: Date,
+}, { timestamps: true });
+notificationSchema.index({ recipientPartnerId: 1, isRead: 1, createdAt: -1 });
+notificationSchema.index({ recipientPartnerId: 1, createdAt: -1 });
+export const PartnerNotification = mongoose.model('PartnerNotification', notificationSchema);

@@ -1,47 +1,90 @@
 import { Router } from 'express';
-import { Notification } from '../models/index.js';
+import jwt from 'jsonwebtoken';
+import { PartnerNotification, Partner, PartnerUser } from '../models/index.js';
 
 const router = Router();
 
-// GET /api/notifications - list notifications
-router.get('/', async (req, res) => {
+function partnerAuth(req: any, res: any, next: any) {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  if (!token) return res.status(401).json({ success: false, message: '未登录' });
   try {
-    const { userId = 'admin', limit = 50, offset = 0 } = req.query;
-    const query: any = { userId };
-    const total = await Notification.countDocuments(query);
-    const items = await Notification.find(query)
+    const decoded = jwt.verify(token, process.env.PARTNER_JWT_SECRET || 'smartsolar_partner_secret') as any;
+    req.partnerUser = decoded;
+    next();
+  } catch { return res.status(401).json({ success: false, message: 'Token无效' }); }
+}
+
+// ─── 通知中心：我的通知列表 ─────────────────────────────────────────────────
+router.get('/', partnerAuth, async (req: any, res) => {
+  try {
+    const { partnerId } = req.partnerUser;
+    const { unreadOnly, limit } = req.query;
+
+    const filter: any = { recipientPartnerId: partnerId };
+    if (unreadOnly === 'true') filter.isRead = false;
+
+    const notifications = await PartnerNotification.find(filter)
       .sort({ createdAt: -1 })
-      .skip(Number(offset))
-      .limit(Number(limit));
-    const unread = await Notification.countDocuments({ ...query, read: false });
-    res.json({ success: true, data: items, total, unread });
+      .limit(parseInt(limit) || 50)
+      .lean();
+
+    const unreadCount = await PartnerNotification.countDocuments({ recipientPartnerId: partnerId, isRead: false });
+
+    res.json({ success: true, data: notifications, unreadCount });
   } catch (err: any) {
-    res.json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 
-// PUT /api/notifications/read - mark all/none as read
-router.put('/read', async (req, res) => {
+// ─── 标记已读 ──────────────────────────────────────────────────────────────
+router.patch('/:id/read', partnerAuth, async (req: any, res) => {
   try {
-    const { userId = 'admin', ids } = req.body;
-    if (ids && ids.length > 0) {
-      await Notification.updateMany({ _id: { $in: ids }, userId }, { read: true });
-    } else {
-      await Notification.updateMany({ userId, read: false }, { read: true });
-    }
-    res.json({ success: true });
+    const { partnerId } = req.partnerUser;
+    const notif = await PartnerNotification.findOneAndUpdate(
+      { _id: req.params.id, recipientPartnerId: partnerId },
+      { isRead: true, readAt: new Date() },
+      { new: true },
+    );
+    if (!notif) return res.status(404).json({ success: false, message: '通知不存在' });
+    res.json({ success: true, data: notif });
   } catch (err: any) {
-    res.json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 
-// DELETE /api/notifications/:id
-router.delete('/:id', async (req, res) => {
+// ─── 全部标记已读 ───────────────────────────────────────────────────────────
+router.patch('/read-all', partnerAuth, async (req: any, res) => {
   try {
-    await Notification.deleteOne({ _id: req.params.id });
+    const { partnerId } = req.partnerUser;
+    await PartnerNotification.updateMany(
+      { recipientPartnerId: partnerId, isRead: false },
+      { isRead: true, readAt: new Date() },
+    );
     res.json({ success: true });
   } catch (err: any) {
-    res.json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ─── 删除通知 ────────────────────────────────────────────────────────────────
+router.delete('/:id', partnerAuth, async (req: any, res) => {
+  try {
+    const { partnerId } = req.partnerUser;
+    await PartnerNotification.deleteOne({ _id: req.params.id, recipientPartnerId: partnerId });
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ─── 获取未读数（轻量接口）──────────────────────────────────────────────────
+router.get('/unread-count', partnerAuth, async (req: any, res) => {
+  try {
+    const { partnerId } = req.partnerUser;
+    const count = await PartnerNotification.countDocuments({ recipientPartnerId: partnerId, isRead: false });
+    res.json({ success: true, unreadCount: count });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 

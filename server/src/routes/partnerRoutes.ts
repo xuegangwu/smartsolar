@@ -561,6 +561,22 @@ router.patch('/admin/redemptions/:id', async (req, res) => {
         await PointTransaction.create({
           partnerId: partner._id,
           type: 'adjust',
+          amount: redemption.pointsCost,
+          balance: partner.availablePoints,
+          description: `兑换拒绝退款：${redemption.itemName}`,
+        });
+      }
+    }
+
+    redemption.status = status;
+    redemption.handledAt = new Date();
+    await redemption.save();
+
+    res.json({ success: true, data: redemption });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
 
 // [REDEEM] Dispatch
 router.patch('/admin/redemptions/:id/dispatch', partnerAuth, async (req: any, res) => {
@@ -599,26 +615,7 @@ router.patch('/admin/redemptions/:id/complete', partnerAuth, async (req: any, re
     res.status(500).json({ success: false, message: err.message });
   }
 });
-
-          amount: redemption.pointsCost,
-          balance: partner.availablePoints,
-          description: `兑换拒绝退款：${redemption.itemName}`,
-        });
-      }
-    }
-
-    redemption.status = status;
-    redemption.handledAt = new Date();
-    await redemption.save();
-
-    res.json({ success: true, data: redemption });
-  } catch (err: any) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-});
-
-
-// 获取单个渠道商
+// [REDEEM] Dispatch
 router.get('/:id', async (req, res) => {
   try {
     const partner = await Partner.findById(req.params.id).lean();
