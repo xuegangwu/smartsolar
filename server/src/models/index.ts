@@ -714,3 +714,78 @@ const commissionRuleSchema = new mongoose.Schema({
 }, { timestamps: true });
 commissionRuleSchema.index({ distributorId: 1, installerLevel: 1, projectType: 1, region: 1, status: 1 });
 export const CommissionRule = mongoose.model('CommissionRule', commissionRuleSchema);
+
+// ─── Commission（销售佣金 — PartnerHub 迁移）─────────────────────────────────────
+const commissionSchema = new mongoose.Schema({
+  commissionNo: { type: String, required: true, unique: true, index: true },
+  orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order' },
+  distributorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Partner' },
+  installerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Partner' },
+  amount: { type: Number, default: 0 },
+  type: { type: String, enum: ['sales', 'installation', 'referral', 'override'] },
+  status: { type: String, enum: ['pending', 'approved', 'paid', 'rejected'], default: 'pending' },
+  period: { type: String, index: true },
+  paidDate: Date,
+  paidMethod: String,
+  transactionRef: String,
+  approvalId: { type: mongoose.Schema.Types.ObjectId, ref: 'ApprovalInstance' },
+  notes: String,
+}, { timestamps: true });
+export const Commission = mongoose.model('Commission', commissionSchema);
+
+// ─── ApprovalTemplate（审批模板 — PartnerHub 迁移）──────────────────────────────
+const approvalNodeSchema = new mongoose.Schema({
+  name: String,
+  order: Number,
+  approvalType: { type: String, enum: ['all', 'any'], default: 'any' },
+  approvers: [{
+    type: String,
+    userId: mongoose.Schema.Types.ObjectId,
+    role: String,
+    department: String,
+    partnerType: String,
+    partnerEntityId: String,
+  }],
+}, { _id: false });
+
+const approvalTemplateSchema = new mongoose.Schema({
+  name: String,
+  code: { type: String, unique: true, index: true },
+  description: String,
+  entityType: { type: String, enum: ['order', 'commission', 'partner', 'settlement'] },
+  action: String,
+  isActive: { type: Boolean, default: true },
+  nodes: [approvalNodeSchema],
+}, { timestamps: true });
+export const ApprovalTemplate = mongoose.model('ApprovalTemplate', approvalTemplateSchema);
+
+// ─── ApprovalInstance（审批实例 — PartnerHub 迁移）───────────────────────────────
+const approvalInstanceSchema = new mongoose.Schema({
+  templateId: { type: mongoose.Schema.Types.ObjectId, ref: 'ApprovalTemplate', required: true, index: true },
+  instanceNo: { type: String, required: true, unique: true, index: true },
+  title: { type: String, required: true },
+  entityType: { type: String, required: true, index: true },
+  entityId: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
+  entityCode: String,
+  entityName: String,
+  action: String,
+  actionData: { type: mongoose.Schema.Types.Mixed, default: {} },
+  status: { type: String, enum: ['pending', 'approved', 'rejected', 'cancelled'], default: 'pending', index: true },
+  currentNodeIndex: { type: Number, default: 0 },
+  submitterId: { type: mongoose.Schema.Types.ObjectId, required: true },
+  submitterName: String,
+  completedAt: Date,
+}, { timestamps: true });
+export const ApprovalInstance = mongoose.model('ApprovalInstance', approvalInstanceSchema);
+
+// ─── ApprovalLog（审批日志 — PartnerHub 迁移）───────────────────────────────────
+const approvalLogSchema = new mongoose.Schema({
+  instanceId: { type: mongoose.Schema.Types.ObjectId, ref: 'ApprovalInstance', required: true, index: true },
+  action: { type: String, required: true },
+  actorId: { type: mongoose.Schema.Types.ObjectId, required: true },
+  actorName: String,
+  nodeIndex: Number,
+  nodeName: String,
+  comment: String,
+}, { timestamps: true });
+export const ApprovalLog = mongoose.model('ApprovalLog', approvalLogSchema);

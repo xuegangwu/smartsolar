@@ -25,6 +25,8 @@ import leadRoutes from './routes/leadRoutes.js';
 import settlementRoutes from './routes/settlementRoutes.js';
 import installerStatsRoutes from './routes/installerStatsRoutes.js';
 import projectRoutes from './routes/projectRoutes.js';
+import commissionRoutes from './routes/commissionRoutes.js';
+import approvalRoutes from './routes/approvalRoutes.js';
 import { startDailyHealthJob } from './jobs/dailyHealthJob.js';
 import { startTelemetryCollector } from './services/telemetryCollector.js';
 import { seedAllTelemetry } from './seed/seedTelemetry.js';
@@ -87,6 +89,8 @@ app.use('/api/leads', leadRoutes);              // 客户线索/报备
 app.use('/api/settlements', settlementRoutes);    // 月度结算
 app.use('/api/installer-stats', installerStatsRoutes); // 安装商业绩统计
 app.use('/api/projects', projectRoutes);               // 项目建设管理
+app.use('/api/commissions', commissionRoutes);   // 佣金管理（PartnerHub）
+app.use('/api/approvals', approvalRoutes);        // 审批引擎（PartnerHub）
 app.use('/api', aiRoutes);                    // AI 运维助手
 app.use('/api', healthScoreRoutes);           // 健康分 + 预测告警
 app.use('/api', stationRoutes);  // Catch-all, MUST be LAST
