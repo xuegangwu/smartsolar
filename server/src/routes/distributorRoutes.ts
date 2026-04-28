@@ -7,7 +7,7 @@ import {
 } from '../models/index.js';
 
 const router = Router();
-const DISTRIBUTOR_JWT_SECRET = process.env.DISTRIBUTOR_JWT_SECRET || 'smartsolar_distributor_secret';
+const DISTRIBUTOR_JWT_SECRET = process.env.JWT_SECRET || process.env.DISTRIBUTOR_JWT_SECRET || 'smartsolar_secret_key_change_in_production';
 const DISTRIBUTOR_JWT_EXPIRES = '30d';
 
 // ─── 分销商认证中间件 ─────────────────────────────────────────────────────────

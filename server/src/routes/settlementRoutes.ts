@@ -8,7 +8,7 @@ function partnerAuth(req: any, res: any, next: any) {
   const token = req.headers.authorization?.replace('Bearer ', '');
   if (!token) return res.status(401).json({ success: false, message: '未登录' });
   try {
-    const decoded = jwt.verify(token, process.env.PARTNER_JWT_SECRET || 'smartsolar_partner_secret') as any;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || process.env.PARTNER_JWT_SECRET || 'smartsolar_secret_key_change_in_production') as any;
     if (!decoded.partnerId) return res.status(403).json({ success: false, message: '非渠道商账号' });
     req.partnerUser = decoded;
     next();

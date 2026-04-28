@@ -496,6 +496,20 @@ const leadSchema = new mongoose.Schema({
   distributorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Partner' },
   // 备注
   remark: String,
+  // PartnerHub 迁移扩展字段
+  leadNo: { type: String, index: true },
+  source: String,
+  sourcePartnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Partner' },
+  region: String,
+  propertyType: String,
+  roofType: String,
+  monthlyBill: Number,
+  interestProducts: [String],
+  budgetRange: String,
+  assignedPartnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Partner' },
+  assignedPartnerType: String,
+  expectedCloseDate: Date,
+  lostReason: String,
 }, { timestamps: true });
 leadSchema.index({ installerPartnerId: 1, createdAt: -1 });
 leadSchema.index({ status: 1, protectExpiresAt: 1 });
