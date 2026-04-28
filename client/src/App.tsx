@@ -118,7 +118,6 @@ export default function App() {
                   <Route path="/projects" element={<Projects />} />
                   <Route path="/customers" element={<Customers />} />
                   <Route path="/notifications" element={<Notifications />} />
-                  <Route path="/opportunities" element={<Opportunities />} />
                   {/* 首页重定向到 dashboard */}
                   <Route index element={<Navigate to="/dashboard" replace />} />
                 </Route>
