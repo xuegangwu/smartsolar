@@ -52,7 +52,7 @@ export async function seedPartners() {
   for (const inst of installers) {
     const installer = await Partner.findOneAndUpdate(
       { name: inst.name },
-      { ...inst, type: 'installer', parentId: dist._id, contactPerson: '张三', address: '待填写', status: 'active' },
+      { ...inst, type: 'installer', parentPartnerId: dist._id, contactPerson: '张三', address: '待填写', status: 'active' },
       { upsert: true, new: true }
     );
 

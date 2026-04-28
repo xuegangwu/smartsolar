@@ -37,7 +37,7 @@ router.post('/generate', partnerAuth, async (req: any, res) => {
     } else if (role === 'owner' || role === 'manager') {
       const parent = await Partner.findById(partnerId);
       if (parent?.type === 'distributor') {
-        targetPartners = await Partner.find({ parentId: partnerId, type: 'installer', status: 'active' }).lean();
+        targetPartners = await Partner.find({ parentPartnerId: partnerId, type: 'installer', status: 'active' }).lean();
       } else {
         targetPartners = [parent].filter(Boolean);
       }
@@ -101,7 +101,7 @@ router.get('/', partnerAuth, async (req: any, res) => {
       // 分销商可以看下级安装商和自己
       const p = await Partner.findById(partnerId);
       if (p?.type === 'distributor') {
-        const subIds = (await Partner.find({ parentId: partnerId, type: 'installer' }).lean()).map(x => x._id);
+        const subIds = (await Partner.find({ parentPartnerId: partnerId, type: 'installer' }).lean()).map(x => x._id);
         filter.partnerId = { $in: [...subIds, partnerId] };
       } else {
         filter.partnerId = partnerId;
@@ -167,7 +167,7 @@ router.patch('/set-quota/:partnerId', partnerAuth, async (req: any, res) => {
     // 权限：管理员可设置任何人，分销商只能设置自己下级
     if (role !== 'admin') {
       const me = await Partner.findById(myId);
-      if (me?.type !== 'distributor' || String(target.parentId) !== String(myId)) {
+      if (me?.type !== 'distributor' || String(target.parentPartnerId) !== String(myId)) {
         return res.status(403).json({ success: false, message: '只能设置下级安装商的配额' });
       }
     }

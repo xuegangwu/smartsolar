@@ -105,7 +105,7 @@ router.get('/dashboard', partnerAuth, async (req: any, res) => {
     const pendingRedemptions = await PointRedemption.find({ partnerId, status: 'pending' }).lean();
 
     // 下级安装商（如果是分销商）
-    const subPartners = await Partner.find({ parentId: partnerId }).lean();
+    const subPartners = await Partner.find({ parentPartnerId: partnerId }).lean();
 
     // 等级进度
     const currentLevel = partner.level;
@@ -323,24 +323,24 @@ router.put('/installer/stations/:id', partnerAuth, async (req: any, res) => {
 // ─── 安装商归属分配（放在 /:id 之前，避免被误匹配）──────────────────────────────
 router.put('/:id/assign', async (req, res) => {
   try {
-    const { parentId, reason } = req.body;
+    const { parentPartnerId, reason } = req.body;
     const installer = await Partner.findById(req.params.id);
     if (!installer) return res.status(404).json({ success: false, message: '安装商不存在' });
     if (installer.type !== 'installer') return res.status(400).json({ success: false, message: '只有安装商可以分配归属' });
-    if (parentId) {
-      const dist = await Partner.findById(parentId);
+    if (parentPartnerId) {
+      const dist = await Partner.findById(parentPartnerId);
       if (!dist) return res.status(404).json({ success: false, message: '分销商不存在' });
       if (dist.type !== 'distributor') return res.status(400).json({ success: false, message: '归属对象必须是分销商' });
       if (dist.status !== 'active') return res.status(400).json({ success: false, message: '分销商状态已禁用' });
     }
-    const fromDistributorId = installer.parentId;
+    const fromDistributorId = installer.parentPartnerId;
     await PartnerTransfer.create({
       installerId: installer._id,
       fromDistributorId: fromDistributorId || undefined,
-      toDistributorId: parentId || undefined,
+      toDistributorId: parentPartnerId || undefined,
       reason: reason || '',
     });
-    installer.parentId = parentId || null;
+    installer.parentPartnerId = parentPartnerId || null;
     await installer.save();
     res.json({ success: true, data: installer });
   } catch (err: any) {
@@ -350,7 +350,7 @@ router.put('/:id/assign', async (req, res) => {
 
 router.get('/installers/:distributorId', async (req, res) => {
   try {
-    const installers = await Partner.find({ parentId: req.params.distributorId, type: 'installer' })
+    const installers = await Partner.find({ parentPartnerId: req.params.distributorId, type: 'installer' })
       .sort({ createdAt: -1 }).lean();
     res.json({ success: true, data: installers });
   } catch (err: any) {
@@ -817,7 +817,7 @@ router.patch('/applications/:id/approve', partnerAuth, async (req: any, res) => 
     const partner = await Partner.create({
       name: application.companyName,
       type: 'installer',
-      parentId: parentDistributorId || null,
+      parentPartnerId: parentDistributorId || null,
       level: 'bronze',
       totalPoints: 0,
       availablePoints: 0,

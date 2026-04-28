@@ -274,40 +274,73 @@ installerStatsSchema.index({ installerId: 1, month: 1 }, { unique: true });
 export const InstallerStats = mongoose.model('InstallerStats', installerStatsSchema);
 
 const partnerSchema = new mongoose.Schema({
+  // ── 基础 ─────────────────────────────────────────────────────────────────────
+  code: { type: String, unique: true, sparse: true, index: true },  // PartnerHub 唯一编码（如 DIST-001）
   name: { type: String, required: true },
   type: { type: String, enum: ['distributor', 'installer'], required: true },
-  parentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Partner', default: null },
+  parentPartnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Partner', default: null },  // 上级渠道商
   level: { type: String, enum: Object.values(PARTNER_LEVELS), default: 'bronze' },
+  status: { type: String, enum: ['pending', 'active', 'suspended', 'terminated'], default: 'active' },
+
+  // ── 联系信息 ────────────────────────────────────────────────────────────────
+  contactPerson: String,
+  phone: String,
+  email: String,
+  address: String,
+  region: String,
+  serviceRegions: [{ type: String }],  // 多服务区域
+
+  // ── 公司信息 ────────────────────────────────────────────────────────────────
+  legalPerson: String,               // 法人（PartnerHub Distributor）
+  taxId: String,
+  businessLicense: String,           // 统一社会信用代码
+  establishmentDate: Date,
+
+  // ── 规模 ──────────────────────────────────────────────────────────────────
+  teamSize: Number,                  // 统一：teamSize / staffCount
+  coverageRadius: Number,            // 安装商专属：服务覆盖半径（km）
+
+  // ── 运营数据 ───────────────────────────────────────────────────────────────
+  serviceTypes: [{ type: String, enum: ['pv', 'storage', 'ev_charger', 'hybrid'] }],  // 服务类型
+  specializedTypes: [{ type: String, enum: ['residential', 'commercial', 'industrial'] }],
+  totalInstallations: { type: Number, default: 0 },
+  completedInstallations: { type: Number, default: 0 },  // PartnerHub Installer
+  totalCapacity: { type: Number, default: 0 },
+  rating: { type: Number, default: 5, min: 1, max: 5 },
+  onTimeRate: { type: Number, default: 100 },  // 安装准时率%（PartnerHub）
+
+  // ── 资质证书（统一 qualifications，含过期状态）─────────────────────────────
+  qualifications: [{
+    name: String,
+    number: String,
+    issueDate: Date,
+    expireDate: Date,
+    issuingAuthority: String,
+    fileUrl: String,
+    status: { type: String, enum: ['valid', 'expiring', 'expired'], default: 'valid' }
+  }],
+
+  // ── 渠道体系 ───────────────────────────────────────────────────────────────
   totalPoints: { type: Number, default: 0 },
   availablePoints: { type: Number, default: 0 },
-  phone: String, address: String, contactPerson: String,
-  status: { type: String, enum: ['active', 'suspended'], default: 'active' },
-  // 配额与结算
-  monthlyQuota: { type: Number, default: 0 },        // 月度安装配额（套数）
-  commissionRate: { type: Number, default: 5 },      // 佣金比例（%），默认5%
-  region: String, description: String,
+  monthlyQuota: { type: Number, default: 0 },
+  annualTarget: { type: Number, default: 0 },   // PartnerHub Distributor
+  annualAchieved: { type: Number, default: 0 },
+  quotaAchieved: { type: Number, default: 0 },
+  commissionRate: { type: Number, default: 5 },
 
-  // ── 安装商专属字段 ──────────────────────────────────────────────────────────
-  businessLicense: { type: String, label: '统一社会信用代码' },
-  establishmentDate: { type: Date, label: '成立时间' },
-  staffCount: { type: Number, label: '员工数量' },
-  serviceRegions: [{ type: String, label: '服务区域' }],          // 多选：省/市
-  specializedTypes: [{ type: String, enum: ['residential', 'commercial', 'industrial'], label: '擅长类型' }],
-  qualifications: [{
-    name: String,        // 证书名称
-    number: String,      // 证书编号
-    expireDate: Date,    // 过期时间
-    fileUrl: String,     // 证书扫描件
-  }],
-  totalInstallations: { type: Number, default: 0 },   // 历史累计安装量
-  totalCapacity: { type: Number, default: 0 },         // 历史累计装机容量 (kW)
-  rating: { type: Number, default: 5.0, min: 1, max: 5 },  // 客户评分
+  // ── 信用（分销商专属）─────────────────────────────────────────────────────
+  creditLimit: { type: Number, default: 0 },
+  creditUsed: { type: Number, default: 0 },
+
+  // ── 银行 ──────────────────────────────────────────────────────────────────
   bankAccount: {
     bankName: String,
     accountName: String,
     accountNumber: String,
   },
-  taxId: String,
+
+  description: String,
 }, { timestamps: true });
 partnerSchema.methods.calcLevel = function() {
   if (this.totalPoints >= LEVEL_THRESHOLDS.diamond) return 'diamond';
@@ -324,7 +357,7 @@ const partnerUserSchema = new mongoose.Schema({
   password: { type: String, required: true },
   name: { type: String, required: true },
   phone: String, email: String,
-  role: { type: String, enum: ['owner', 'staff'], default: 'staff' },
+  role: { type: String, enum: ['owner', 'staff', 'admin', 'distributor'], default: 'staff' },
   status: { type: String, enum: ['active', 'disabled'], default: 'active' },
   lastLoginAt: Date,
 }, { timestamps: true });
@@ -572,6 +605,63 @@ projectSchema.index({ status: 1, phase: 1 });
 export const Project = mongoose.model('Project', projectSchema);
 export const Milestone = mongoose.model('Milestone', milestoneSchema);
 export const ProjectDoc = mongoose.model('ProjectDoc', projectDocSchema);
+
+// ─── Opportunity（商机 — PartnerHub 迁移）────────────────────────────────────────
+const opportunitySchema = new mongoose.Schema({
+  oppNo: { type: String, required: true, unique: true, index: true },
+  leadId: { type: mongoose.Schema.Types.ObjectId, ref: 'Lead', index: true },
+  title: { type: String, required: true },
+  customerName: { type: String, required: true },
+  customerPhone: String,
+  assignedPartnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Partner' },
+  productType: { type: String, enum: ['pv', 'storage', 'ev_charger', 'hybrid'] },
+  systemCapacity: Number,
+  estimatedAmount: { type: Number, default: 0 },
+  probability: { type: Number, default: 20 },
+  stage: {
+    type: String,
+    enum: ['discovery', 'site_survey', 'design', 'quotation', 'negotiation', 'contract', 'won', 'lost'],
+    default: 'discovery',
+    index: true,
+  },
+  expectedCloseDate: Date,
+  actualCloseDate: Date,
+  lostReason: String,
+  orderId: { type: mongoose.Schema.Types.ObjectId },
+  notes: String,
+}, { timestamps: true });
+export const Opportunity = mongoose.model('Opportunity', opportunitySchema);
+
+// ─── Order（订单 — PartnerHub 迁移）────────────────────────────────────────────
+const orderSchema = new mongoose.Schema({
+  orderNo: { type: String, required: true, unique: true, index: true },
+  customerName: { type: String, required: true },
+  customerPhone: String,
+  customerAddress: String,
+  region: String,
+  productType: { type: String, enum: ['pv', 'storage', 'ev_charger', 'hybrid'] },
+  productModel: String,
+  quantity: { type: Number, default: 1 },
+  totalAmount: { type: Number, default: 0 },
+  status: {
+    type: String,
+    enum: ['pending', 'confirmed', 'shipped', 'installed', 'completed', 'cancelled'],
+    default: 'pending',
+    index: true,
+  },
+  sourcePartnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Partner' },
+  assignedInstallerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Partner' },
+  leadId: { type: mongoose.Schema.Types.ObjectId, ref: 'Lead' },
+  opportunityId: { type: mongoose.Schema.Types.ObjectId, ref: 'Opportunity' },
+  projectId: { type: mongoose.Schema.Types.ObjectId },
+  installationDate: Date,
+  completionDate: Date,
+  commissionAmount: { type: Number, default: 0 },
+  commissionStatus: { type: String, enum: ['pending', 'calculated', 'paid'], default: 'pending' },
+  workOrderId: { type: mongoose.Schema.Types.ObjectId, ref: 'WorkOrder' },
+  notes: String,
+}, { timestamps: true });
+export const Order = mongoose.model('Order', orderSchema);
 
 // ─── Notification（站内通知）───────────────────────────────────────────────────
 const notificationSchema = new mongoose.Schema({

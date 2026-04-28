@@ -235,7 +235,7 @@ function AssignmentTab({ onAssigned }: { onAssigned?: () => void }) {
     const res = await partnerApi.getAll({});
     if (res.success) {
       setAllPartners(res.data);
-      setUnassignedInstallers(res.data.filter((p: any) => p.type === 'installer' && !p.parentId));
+      setUnassignedInstallers(res.data.filter((p: any) => p.type === 'installer' && !p.parentPartnerId));
     }
     setLoading(false);
   }
@@ -257,7 +257,7 @@ function AssignmentTab({ onAssigned }: { onAssigned?: () => void }) {
 
   async function handleAssign(installer: any) {
     setSelectedInstaller(installer);
-    assignForm.setFieldsValue({ installerName: installer.name, parentId: installer.parentId || undefined, reason: '' });
+    assignForm.setFieldsValue({ installerName: installer.name, parentPartnerId: installer.parentPartnerId || undefined, reason: '' });
     setAssignModal(true);
   }
 
@@ -284,7 +284,7 @@ function AssignmentTab({ onAssigned }: { onAssigned?: () => void }) {
   }
 
   const distributors = allPartners.filter(p => p.type === 'distributor' && p.status === 'active');
-  const unassigned = allPartners.filter(p => p.type === 'installer' && !p.parentId);
+  const unassigned = allPartners.filter(p => p.type === 'installer' && !p.parentPartnerId);
 
   const transferColumns: ColumnsType<any> = [
     { title: '时间', render: (_: any, r: any) => new Date(r.createdAt).toLocaleString('zh-CN'), width: 170 },
@@ -320,7 +320,7 @@ function AssignmentTab({ onAssigned }: { onAssigned?: () => void }) {
       width: 120,
       render: (_, r) => (
         <Button size="small" icon={<SwapOutlined />} onClick={() => handleAssign(r)}>
-          {r.parentId ? '变更归属' : '分配归属'}
+          {r.parentPartnerId ? '变更归属' : '分配归属'}
         </Button>
       ),
     },
@@ -362,7 +362,7 @@ function AssignmentTab({ onAssigned }: { onAssigned?: () => void }) {
                         title: '操作', width: 100,
                         render: (_, r) => (
                           <AntPopconfirm title="确认解除该安装商的归属？" onConfirm={async () => {
-                            await fetch(`/api/partners/${r._id}/assign`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ parentId: null, reason: '手动解除' }) }).then(r => r.json());
+                            await fetch(`/api/partners/${r._id}/assign`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ parentPartnerId: null, reason: '手动解除' }) }).then(r => r.json());
                             message.success('已解除归属');
                             loadAllPartners();
                             loadAssignedInstallers(selectedDistId);
@@ -431,7 +431,7 @@ function AssignmentTab({ onAssigned }: { onAssigned?: () => void }) {
           <Form.Item label="安装商">
             <Input value={selectedInstaller?.name} disabled />
           </Form.Item>
-          <Form.Item name="parentId" label="归属分销商" rules={[{ required: true, message: '请选择分销商' }]}>
+          <Form.Item name="parentPartnerId" label="归属分销商" name="parentPartnerId" rules={[{ required: true, message: '请选择分销商' }]}>
             <Select
               placeholder="选择分销商"
               options={distributors.map(d => ({ value: d._id, label: `${d.name} ${d.region ? `(${d.region})` : ''}` }))}
