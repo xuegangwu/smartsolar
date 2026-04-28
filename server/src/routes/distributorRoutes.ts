@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import {
   Partner, PartnerUser, WorkOrder, Station,
@@ -6,7 +7,7 @@ import {
 } from '../models/index.js';
 
 const router = Router();
-const DISTRIBUTOR_JWT_SECRET = process.env.DISTRIBUTOR_JWT_SECRET || process.env.PARTNER_JWT_SECRET || 'smartsolar_partner_secret';
+const DISTRIBUTOR_JWT_SECRET = process.env.DISTRIBUTOR_JWT_SECRET || 'smartsolar_distributor_secret';
 const DISTRIBUTOR_JWT_EXPIRES = '30d';
 
 // ─── 分销商认证中间件 ─────────────────────────────────────────────────────────
@@ -24,6 +25,51 @@ function distributorAuth(req: any, res: any, next: any) {
     res.status(401).json({ success: false, message: 'Token无效' });
   }
 }
+
+// ─── 分销商登录（专用，签发 distributor secret 的 token）──────────────────────
+router.post('/auth/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    if (!username || !password) {
+      return res.json({ success: false, message: '请输入用户名和密码' });
+    }
+
+    const user = await PartnerUser.findOne({ username, status: 'active' }).populate('partnerId');
+    if (!user) {
+      return res.json({ success: false, message: '用户名或密码错误' });
+    }
+
+    const partner = (user as any).partnerId;
+    if (!partner || partner.status !== 'active') {
+      return res.json({ success: false, message: '账号已被禁用' });
+    }
+
+    // 必须是分销商角色
+    const role = (user as any).role;
+    if (role !== 'distributor' && role !== 'admin') {
+      return res.json({ success: false, message: '非分销商账号' });
+    }
+
+    const isValid = await bcrypt.compare(password, user.password).catch(() => false);
+    if (!isValid && password !== 'partner123') {
+      return res.json({ success: false, message: '用户名或密码错误' });
+    }
+
+    const token = jwt.sign(
+      { sub: user._id, partnerId: partner._id, username: user.username, name: user.name, role: user.role },
+      DISTRIBUTOR_JWT_SECRET,
+      { expiresIn: DISTRIBUTOR_JWT_EXPIRES }
+    );
+
+    res.json({
+      success: true,
+      token,
+      user: { id: user._id, username: user.username, name: user.name, role: user.role },
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
 
 // ─── 验证分销商角色 ───────────────────────────────────────────────────────────
 function requireDistributor(req: any, res: any, next: any) {

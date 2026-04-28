@@ -38,7 +38,7 @@ export async function seedPartners() {
 
   await PartnerUser.findOneAndUpdate(
     { username: 'dist_admin' },
-    { partnerId: dist._id, username: 'dist_admin', password, name: '李明', role: 'owner', status: 'active' },
+    { partnerId: dist._id, username: 'dist_admin', password, name: '李明', role: 'distributor', status: 'active' },
     { upsert: true, new: true }
   );
 

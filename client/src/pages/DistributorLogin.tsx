@@ -12,8 +12,8 @@ export default function DistributorLogin() {
   async function handleLogin(values: { username: string; password: string }) {
     setLoading(true);
     try {
-      // 分销商使用 /api/distributor/auth/login（复用 partner auth）
-      const res = await fetch('/api/partners/auth/login', {
+      // 分销商专用登录（使用 distributor secret 签发 token）
+      const res = await fetch('/api/distributor/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: values.username, password: values.password })
