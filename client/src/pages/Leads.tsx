@@ -12,9 +12,11 @@ const PROJECT_TYPES = [
 ];
 const STATUS_COLORS: Record<string, string> = {
   pending: 'orange', approved: 'green', rejected: 'red', converted: 'blue', expired: 'default',
+  new: 'cyan', contacted: 'blue', qualified: 'purple', lost: 'red',
 };
 const STATUS_TEXT: Record<string, string> = {
   pending: '待审批', approved: '已通过', rejected: '已驳回', converted: '已转化', expired: '已过期',
+  new: '新线索', contacted: '已联系', qualified: '已Qualified', lost: '已流失',
 };
 
 export default function Leads() {
@@ -60,9 +62,11 @@ export default function Leads() {
   }
 
   const columns = [
+    { title: '线索编号', dataIndex: 'leadNo', key: 'leadNo', render: (t: string) => t || '—' },
     { title: '客户名称', dataIndex: 'customerName', key: 'name' },
     { title: '电话', dataIndex: 'customerPhone', key: 'phone' },
     { title: '地址', dataIndex: 'customerAddress', key: 'addr', ellipsis: true },
+    { title: '来源', dataIndex: 'source', key: 'source', render: (t: string) => t || '—' },
     { title: '项目类型', dataIndex: 'projectType', key: 'type', render: (t: string) => PROJECT_TYPES.find(x => x.value === t)?.label || t },
     { title: '预估容量', dataIndex: 'estimatedCapacity', key: 'cap', render: (v: number) => v ? `${v} kW` : '—' },
     { title: '状态', dataIndex: 'status', key: 'status', render: (s: string) => <Tag color={STATUS_COLORS[s]}>{STATUS_TEXT[s] || s}</Tag> },
@@ -92,6 +96,9 @@ export default function Leads() {
   const pendingCount = leads.filter(l => l.status === 'pending').length;
   const approvedCount = leads.filter(l => l.status === 'approved').length;
   const convertedCount = leads.filter(l => l.status === 'converted').length;
+  const newCount = leads.filter(l => l.status === 'new').length;
+  const contactedCount = leads.filter(l => l.status === 'contacted').length;
+  const qualifiedCount = leads.filter(l => l.status === 'qualified').length;
 
   return (
     <div style={{ padding: 24 }}>
@@ -101,19 +108,24 @@ export default function Leads() {
       </div>
 
       <Row gutter={16} style={{ marginBottom: 24 }}>
-        <Col span={8}>
+        <Col span={6}>
           <Card size="small">
-            <Statistic title="待审批" value={pendingCount} valueStyle={{ color: '#fa8c16' }} />
+            <Statistic title="新线索" value={newCount} valueStyle={{ color: '#13c2c2' }} />
           </Card>
         </Col>
-        <Col span={8}>
+        <Col span={6}>
           <Card size="small">
-            <Statistic title="已通过" value={approvedCount} valueStyle={{ color: '#52c41a' }} />
+            <Statistic title="已联系" value={contactedCount} valueStyle={{ color: '#1890ff' }} />
           </Card>
         </Col>
-        <Col span={8}>
+        <Col span={6}>
           <Card size="small">
-            <Statistic title="已转化" value={convertedCount} valueStyle={{ color: '#1890ff' }} />
+            <Statistic title="Qualified" value={qualifiedCount} valueStyle={{ color: '#722ed1' }} />
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card size="small">
+            <Statistic title="已转化" value={convertedCount} valueStyle={{ color: '#52c41a' }} />
           </Card>
         </Col>
       </Row>

@@ -37,6 +37,7 @@ const DistributorDashboard = lazy(() => import('./pages/DistributorDashboard'));
 const Installers = lazy(() => import('./pages/Installers'));
 const PartnerRegister = lazy(() => import('./pages/PartnerRegister'));
 const Leads = lazy(() => import('./pages/Leads'));
+const Opportunities = lazy(() => import('./pages/Opportunities'));
 const Settlements = lazy(() => import('./pages/Settlements'));
 const InstallerStats = lazy(() => import('./pages/InstallerStats'));
 const InstallerPortal = lazy(() => import('./pages/InstallerPortal'));
@@ -111,11 +112,13 @@ export default function App() {
                   <Route path="/health" element={<HealthDashboard />} />
                   <Route path="/ai" element={<AICopilot />} />
                   <Route path="/partner-admin" element={<PartnerAdmin />} />
+                  <Route path="/opportunities" element={<Opportunities />} />
                   <Route path="/installers" element={<Installers />} />
                   <Route path="/installer-stats" element={<InstallerStats />} />
                   <Route path="/projects" element={<Projects />} />
                   <Route path="/customers" element={<Customers />} />
                   <Route path="/notifications" element={<Notifications />} />
+                  <Route path="/opportunities" element={<Opportunities />} />
                   {/* 首页重定向到 dashboard */}
                   <Route index element={<Navigate to="/dashboard" replace />} />
                 </Route>
