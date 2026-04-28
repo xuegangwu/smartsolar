@@ -20,6 +20,7 @@ import { inspectionTemplateRoutes } from './routes/inspectionTemplateRoutes.js';
 import { healthScoreRoutes } from './routes/healthScoreRoutes.js';
 import { aiRoutes } from './routes/aiRoutes.js';
 import partnerRoutes from './routes/partnerRoutes.js';
+import distributorRoutes from './routes/distributorRoutes.js';
 import leadRoutes from './routes/leadRoutes.js';
 import settlementRoutes from './routes/settlementRoutes.js';
 import installerStatsRoutes from './routes/installerStatsRoutes.js';
@@ -81,6 +82,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/spare-parts', sparePartRoutes);  // 备件仓库
 app.use('/api/personnel', personnelRoutes);      // 人员档案
 app.use('/api/partners', partnerRoutes);       // 渠道商 + 积分体系
+app.use('/api/distributor', distributorRoutes);  // 分销商指挥塔（ITER-12）
 app.use('/api/leads', leadRoutes);              // 客户线索/报备
 app.use('/api/settlements', settlementRoutes);    // 月度结算
 app.use('/api/installer-stats', installerStatsRoutes); // 安装商业绩统计

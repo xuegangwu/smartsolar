@@ -32,6 +32,8 @@ const PartnerDashboard = lazy(() => import('./pages/PartnerDashboard'));
 const PartnerTransactions = lazy(() => import('./pages/PartnerTransactions'));
 const PartnerMall = lazy(() => import('./pages/PartnerMall'));
 const PartnerAdmin = lazy(() => import('./pages/PartnerAdmin'));
+const DistributorLogin = lazy(() => import('./pages/DistributorLogin'));
+const DistributorDashboard = lazy(() => import('./pages/DistributorDashboard'));
 const Installers = lazy(() => import('./pages/Installers'));
 const PartnerRegister = lazy(() => import('./pages/PartnerRegister'));
 const Leads = lazy(() => import('./pages/Leads'));
@@ -83,6 +85,8 @@ export default function App() {
                 <Route path="/partner-dashboard" element={<PartnerDashboard />} />
                 <Route path="/partner-transactions" element={<PartnerTransactions />} />
                 <Route path="/partner-mall" element={<PartnerMall />} />
+                <Route path="/distributor-login" element={<DistributorLogin />} />
+                <Route path="/distributor/dashboard" element={<DistributorDashboard />} />
 
                 {/* ── 内部系统（需认证）── */}
                 <Route element={

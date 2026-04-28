@@ -605,3 +605,22 @@ const notificationSchema = new mongoose.Schema({
 notificationSchema.index({ recipientPartnerId: 1, isRead: 1, createdAt: -1 });
 notificationSchema.index({ recipientPartnerId: 1, createdAt: -1 });
 export const PartnerNotification = mongoose.model('PartnerNotification', notificationSchema);
+
+// ─── CommissionRule（分销商佣金规则）────────────────────────────────────────
+const commissionRuleSchema = new mongoose.Schema({
+  name: { type: String, required: true },                   // 规则名称
+  distributorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Partner', required: true },
+  installerLevel: { type: String, enum: ['bronze', 'silver', 'gold', 'diamond'], required: true },
+  projectType: { type: String, enum: ['residential', 'commercial', 'industrial'], required: true },
+  region: { type: String, default: '' },                     // 空=全部区域
+  baseCommission: { type: Number, default: 1000 },         // 单套基础佣金（元）
+  capacityBonus: { type: Number, default: 50 },            // 超容量奖励（元/kW）
+  quotaMultiplier: { type: Number, default: 1.0 },        // 超配额奖励倍数
+  quotaThreshold: { type: Number, default: 100 },          // 超配额触发百分比
+  effectiveFrom: { type: Date, required: true },
+  effectiveTo: Date,
+  status: { type: String, enum: ['active', 'inactive'], default: 'active' },
+  remark: String,
+}, { timestamps: true });
+commissionRuleSchema.index({ distributorId: 1, installerLevel: 1, projectType: 1, region: 1, status: 1 });
+export const CommissionRule = mongoose.model('CommissionRule', commissionRuleSchema);
