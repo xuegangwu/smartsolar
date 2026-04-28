@@ -45,7 +45,7 @@ export default function Opportunities() {
   function loadOpportunities() {
     setLoading(true);
     fetch('/api/opportunities', {
-      headers: { Authorization: `Bearer ${localStorage.getItem('partner_token') || ''}` },
+      headers: { Authorization: `Bearer ${localStorage.getItem('smartsolar_token') || ''}` },
     }).then(r => r.json()).then(d => {
       if (d.success) setOpportunities(d.data || []);
     }).finally(() => setLoading(false));
@@ -59,7 +59,7 @@ export default function Opportunities() {
       setLoading(true);
       const res = await fetch('/api/opportunities', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('partner_token') || ''}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('smartsolar_token') || ''}` },
         body: JSON.stringify(values),
       }).then(r => r.json());
       if (res.success) {
@@ -78,7 +78,7 @@ export default function Opportunities() {
   async function handleDelete(id: string) {
     const res = await fetch(`/api/opportunities/${id}`, {
       method: 'DELETE',
-      headers: { Authorization: `Bearer ${localStorage.getItem('partner_token') || ''}` },
+      headers: { Authorization: `Bearer ${localStorage.getItem('smartsolar_token') || ''}` },
     }).then(r => r.json());
     if (res.success) { message.success('已删除'); loadOpportunities(); }
     else message.error(res.message);

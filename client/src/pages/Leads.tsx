@@ -31,7 +31,7 @@ export default function Leads() {
   function loadLeads() {
     setLoading(true);
     fetch('/api/leads', {
-      headers: { Authorization: `Bearer ${localStorage.getItem('partner_token') || ''}` },
+      headers: { Authorization: `Bearer ${localStorage.getItem('smartsolar_token') || ''}` },
     }).then(r => r.json()).then(d => {
       if (d.success) setLeads(d.data || []);
     }).finally(() => setLoading(false));
@@ -45,7 +45,7 @@ export default function Leads() {
       setLoading(true);
       const res = await fetch('/api/leads', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('partner_token') || ''}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('smartsolar_token') || ''}` },
         body: JSON.stringify(values),
       }).then(r => r.json());
       if (res.success) {
@@ -80,7 +80,7 @@ export default function Leads() {
             <Button size="small" type="primary" onClick={() => {
               fetch(`/api/leads/${r._id}/convert`, {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('partner_token') || ''}` },
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('smartsolar_token') || ''}` },
                 body: JSON.stringify({}),
               }).then(r2 => r2.json()).then(d => {
                 if (d.success) { message.success('已标记为转化'); loadLeads(); }
