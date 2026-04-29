@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { WorkOrder, SparePart, SparePartConsume, Notification, Alert, Personnel, InstallerStats, Partner, Equipment } from '../models/index.js';
+import { WorkOrder, SparePart, SparePartConsume, Notification, Alert, Personnel, InstallerStats, Partner, Equipment, Order, Commission } from '../models/index.js';
 
 // 生成工单号
 function generateOrderNo(): string {
@@ -228,6 +228,73 @@ export const workOrderController = {
             }
           } catch (ratingErr) {
             console.error('[Rating] Failed to update partner rating:', ratingErr);
+          }
+        }
+
+        // ── 订单关联工单完工 → 自动创建佣金记录 ───────────────────────────────
+        if (status === 'closed' && (workOrder as any).orderId) {
+          try {
+            const order = await Order.findById((workOrder as any).orderId).lean();
+            if (order) {
+              const distributor = order.sourcePartnerId ? await Partner.findById(order.sourcePartnerId).lean() : null;
+              const installer = order.assignedInstallerId ? await Partner.findById(order.assignedInstallerId).lean() : null;
+              const total = order.totalAmount || 0;
+
+              // 检查是否已存在该订单的佣金记录
+              const existing = await Commission.findOne({ orderId: order._id }).lean();
+              if (!existing) {
+                const now = new Date();
+                const period = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+                const commissionsToCreate = [];
+
+                // 分销商销售佣金
+                if (distributor) {
+                  const salesAmt = Math.round((distributor.commissionRate || 5) / 100 * total * 100) / 100;
+                  commissionsToCreate.push({
+                    commissionNo: `COMM-${Date.now()}-D`,
+                    orderId: order._id,
+                    distributorId: distributor._id,
+                    installerId: undefined,
+                    amount: salesAmt,
+                    type: 'sales',
+                    status: 'pending',
+                    period,
+                    notes: `订单${order.orderNo}完工佣金（分销商：${distributor.name}）`,
+                  });
+                }
+
+                // 安装商安装佣金
+                if (installer) {
+                  const installAmt = Math.round((installer.commissionRate || 5) / 100 * total * 100) / 100;
+                  commissionsToCreate.push({
+                    commissionNo: `COMM-${Date.now()}-I`,
+                    orderId: order._id,
+                    distributorId: undefined,
+                    installerId: installer._id,
+                    amount: installAmt,
+                    type: 'installation',
+                    status: 'pending',
+                    period,
+                    notes: `订单${order.orderNo}完工佣金（安装商：${installer.name}）`,
+                  });
+                }
+
+                if (commissionsToCreate.length > 0) {
+                  await Commission.insertMany(commissionsToCreate);
+                  console.log(`[Commission] Created ${commissionsToCreate.length} commission(s) for Order ${order.orderNo}`);
+
+                  // 更新订单的佣金状态
+                  const totalCommission = commissionsToCreate.reduce((s, c) => s + c.amount, 0);
+                  await Order.findByIdAndUpdate(order._id, {
+                    commissionAmount: totalCommission,
+                    commissionStatus: 'calculated',
+                  });
+                }
+              }
+            }
+          } catch (commErr) {
+            console.error('[Commission] Failed to auto-create commission:', commErr);
           }
         }
       }

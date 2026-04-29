@@ -67,6 +67,8 @@ const workOrderSchema = new mongoose.Schema({
   assigneeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Personnel' },
   // 关联安装商（工单关闭时给该渠道商计积分）
   partnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Partner' },
+  // 关联订单（完工后自动创建佣金）
+  orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order' },
   // 备件消耗（工单关闭时自动扣减库存）
   spareParts: [{
     sparePartId: { type: mongoose.Schema.Types.ObjectId, ref: 'SparePart' },

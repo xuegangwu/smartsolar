@@ -38,6 +38,8 @@ const Installers = lazy(() => import('./pages/Installers'));
 const PartnerRegister = lazy(() => import('./pages/PartnerRegister'));
 const Leads = lazy(() => import('./pages/Leads'));
 const Opportunities = lazy(() => import('./pages/Opportunities'));
+const Orders = lazy(() => import('./pages/Orders'));
+const Commissions = lazy(() => import('./pages/Commissions'));
 const Settlements = lazy(() => import('./pages/Settlements'));
 const InstallerStats = lazy(() => import('./pages/InstallerStats'));
 const InstallerPortal = lazy(() => import('./pages/InstallerPortal'));
@@ -113,6 +115,8 @@ export default function App() {
                   <Route path="/ai" element={<AICopilot />} />
                   <Route path="/partner-admin" element={<PartnerAdmin />} />
                   <Route path="/opportunities" element={<Opportunities />} />
+                  <Route path="/orders" element={<Orders />} />
+                  <Route path="/commissions" element={<Commissions />} />
                   <Route path="/installers" element={<Installers />} />
                   <Route path="/installer-stats" element={<InstallerStats />} />
                   <Route path="/projects" element={<Projects />} />
