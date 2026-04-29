@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Card, Table, Button, Space, Modal, Tag, message, Typography, Row, Col, Statistic, Select, Divider } from 'antd';
-import { DollarOutlined, CheckCircleOutlined, ExportOutlined } from '@ant-design/icons';
+import { Card, Table, Button, Space, Modal, Tag, message, Typography, Row, Col, Statistic, Select } from 'antd';
+import { DollarOutlined, ExportOutlined } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
 
@@ -77,43 +77,52 @@ export default function Commissions() {
   const totalApproved = commissions.filter(c => c.status === 'approved').reduce((s, c) => s + c.amount, 0);
   const totalPaid = commissions.filter(c => c.status === 'paid').reduce((s, c) => s + c.amount, 0);
 
+  function exportCSV() {
+    const csv = ['佣金单号,类型,分销商,安装商,金额,状态,账期'].concat(
+      commissions.map(c =>
+        `${c.commissionNo},${TYPE_TEXT[c.type] || c.type},${(c.distributorId as any)?.name || ''},${(c.installerId as any)?.name || ''},${c.amount},${STATUS_TEXT[c.status] || c.status},${c.period}`
+      )
+    ).join('\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `commissions_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div style={{ padding: 24 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <Title level={3} style={{ margin: 0 }}>💰 佣金管理</Title>
         <Space>
-          <Select placeholder=\"筛选状态\" allowClear style={{ width: 130 }} onChange={v => setFilterStatus(v || '')}>
-            {Object.entries(STATUS_TEXT).map(([v, label]) => <Select.Option key={v} value={v}>{label}</Select.Option>)}
+          <Select placeholder="筛选状态" allowClear style={{ width: 130 }} onChange={v => setFilterStatus(v || '')}>
+            {Object.entries(STATUS_TEXT).map(([v, label]) => (
+              <Select.Option key={v} value={v}>{label}</Select.Option>
+            ))}
           </Select>
-          <Button icon={<ExportOutlined />} onClick={() => {
-            const csv = ['佣金单号,类型,分销商,安装商,金额,状态,账期'].concat(
-              commissions.map(c => `${c.commissionNo},${TYPE_TEXT[c.type]||c.type},${(c.distributorId as any)?.name||''},${(c.installerId as any)?.name||''},${c.amount},${STATUS_TEXT[c.status]||c.status},${c.period}`)
-            ).join('\n');
-            const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a'); a.href = url; a.download = `commissions_${new Date().toISOString().slice(0,10)}.csv`;
-            a.click(); URL.revokeObjectURL(url);
-          }}>导出CSV</Button>
+          <Button icon={<ExportOutlined />} onClick={exportCSV}>导出CSV</Button>
         </Space>
       </div>
 
       <Row gutter={16} style={{ marginBottom: 24 }}>
         <Col span={6}>
-          <Card size=\"small\"><Statistic title=\"待审批\" value={totalPending} valueStyle={{ color: '#fa8c16' }} prefix=\"¥\" /></Card>
+          <Card size="small"><Statistic title="待审批" value={totalPending} valueStyle={{ color: '#fa8c16' }} prefix="¥" /></Card>
         </Col>
         <Col span={6}>
-          <Card size=\"small\"><Statistic title=\"已通过待付\" value={totalApproved} valueStyle={{ color: '#1890ff' }} prefix=\"¥\" /></Card>
+          <Card size="small"><Statistic title="已通过待付" value={totalApproved} valueStyle={{ color: '#1890ff' }} prefix="¥" /></Card>
         </Col>
         <Col span={6}>
-          <Card size=\"small\"><Statistic title=\"已付款\" value={totalPaid} valueStyle={{ color: '#52c41a' }} prefix=\"¥\" /></Card>
+          <Card size="small"><Statistic title="已付款" value={totalPaid} valueStyle={{ color: '#52c41a' }} prefix="¥" /></Card>
         </Col>
         <Col span={6}>
-          <Card size=\"small\"><Statistic title=\"佣金记录数\" value={commissions.length} /></Card>
+          <Card size="small"><Statistic title="佣金记录数" value={commissions.length} /></Card>
         </Col>
       </Row>
 
       <Card>
-        <Table dataSource={commissions} columns={columns} rowKey=\"_id\" loading={loading} pagination={{ pageSize: 10 }} />
+        <Table dataSource={commissions} columns={columns} rowKey="_id" loading={loading} pagination={{ pageSize: 10 }} />
       </Card>
     </div>
   );
